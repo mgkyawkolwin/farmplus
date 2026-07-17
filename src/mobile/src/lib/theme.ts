@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, type Theme } from 'expo-router/react-navigatio
 
 export const THEME = {
   light: {
-    background: 'hsl(0 0% 100%)',
+    background: 'hsl(136, 88%, 42%)',
     foreground: 'hsl(0 0% 3.9%)',
     card: 'hsl(0 0% 100%)',
     cardForeground: 'hsl(0 0% 3.9%)',
@@ -29,7 +29,7 @@ export const THEME = {
     chart5: 'hsl(27 87% 67%)',
   },
   dark: {
-    background: 'hsl(0 0% 3.9%)',
+    background: 'hsl(307, 86%, 45%)',
     foreground: 'hsl(0 0% 98%)',
     card: 'hsl(0 0% 3.9%)',
     cardForeground: 'hsl(0 0% 98%)',

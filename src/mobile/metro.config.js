@@ -2,5 +2,6 @@ const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require('nativewind/metro');
  
 const config = getDefaultConfig(__dirname)
- 
-module.exports = withNativeWind(config, { input: './global.css', inlineRem: 16 })
+
+// project CSS lives in ./src/global.css — point nativewind to that file
+module.exports = withNativeWind(config, { input: './src/global.css', inlineRem: 16 })
