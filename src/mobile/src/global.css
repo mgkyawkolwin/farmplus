@@ -16,6 +16,8 @@
   :root {
     --background: 0 0% 90%;
     --foreground: 0 0% 3.9%;
+    --text: 0 0% 3.9%;
+    --text-muted: 0 0% 45.1%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
@@ -42,8 +44,10 @@
   }
 
   .dark {
-    --background: 0 0% 100%;
+    --background: 0 0% 10%;
     --foreground: 0 0% 98%;
+    --text: 0 0% 98%;
+    --text-muted: 0 0% 63.9%;
     --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;

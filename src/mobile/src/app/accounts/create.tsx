@@ -55,7 +55,7 @@ export default function CreateAccountScreen() {
           <Input placeholder="Confirm your password" secureTextEntry />
         </View>
 
-        <Button style={styles.continueButton} onPress={() => router.push('../home')}>
+        <Button style={styles.continueButton} onPress={() => router.push('./phone')}>
           <Text>Continue</Text>
         </Button>
       </ScrollView>

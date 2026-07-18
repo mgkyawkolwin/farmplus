@@ -2,6 +2,8 @@
 
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Icon } from '@/components/ui/icon';
+import { Settings } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -13,12 +15,15 @@ export default function AuthScreen() {
 
   return (
     <View className='bg-background' style={[ styles.container, {  }]}>
+      <View>
+        <Icon className="text-foreground" as={Settings} size={24} onPress={() => router.push('../settings')} />
+      </View>
       <View style={styles.topSection}>
         <View style={styles.avatarPlaceholder} />
       </View>
 
       <View className='bg-background' style={styles.centerSection}>
-        <Text style={styles.title}>
+        <Text variant={'h1'} style={styles.title}>
           Welcome to Farm + POS
         </Text>
         <Text style={styles.subtitle}>

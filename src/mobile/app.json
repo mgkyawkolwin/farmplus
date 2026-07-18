@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FarmPlus",
-    "slug": "FarmPlus",
+    "name": "Farm Plus",
+    "slug": "farmplus",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.cluspediadev.FarmPlus"
+      "bundleIdentifier": "com.cluspedia.FarmPlus"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.cluspediadev.FarmPlus"
+      "package": "com.cluspedia.FarmPlus"
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +35,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
