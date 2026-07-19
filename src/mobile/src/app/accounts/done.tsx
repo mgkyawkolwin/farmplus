@@ -52,7 +52,7 @@ export default function DoneScreen() {
                     </CardContent>
                 </Card>
 
-                <Button style={styles.continueButton} onPress={() => router.push('../dashboard')}>
+                <Button style={styles.continueButton} onPress={() => router.push('../home/dashboard')}>
                     <Text>Go To Dashboard</Text>
                 </Button>
             </ScrollView>
