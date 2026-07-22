@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Cluspedia.FarmPlus.Api.Dtos.Users;
 using Cluspedia.FarmPlus.Api.Exceptions;
 using Cluspedia.FarmPlus.Api.Services;
+using Microsoft.AspNetCore.OutputCaching;
+using Cluspedia.FarmPlus.Api.Caching;
 
 namespace Cluspedia.FarmPlus.Api.Controllers;
 
@@ -15,6 +17,7 @@ namespace Cluspedia.FarmPlus.Api.Controllers;
 [Route("api/[controller]")]
 public class UsersController : BaseController
 {
+    private readonly IOutputCacheStore _cacheStore;
     private readonly IUserService _userService;
     private readonly ILogger<UsersController> _logger;
 
@@ -25,6 +28,7 @@ public class UsersController : BaseController
     }
 
     [HttpGet]
+    [OutputCache(PolicyName = CachePolicyKeys.StrictPerUserCache)]
     public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
@@ -46,6 +50,7 @@ public class UsersController : BaseController
     }
 
     [HttpGet("{id:guid}")]
+    [OutputCache(PolicyName = CachePolicyKeys.StrictPerUserCache)]
     public async Task<IActionResult> GetUserById(Guid id)
     {
         try
@@ -78,6 +83,7 @@ public class UsersController : BaseController
         {
             _logger.LogDebug("CALLED: CreateUser(request={Request})", request);
             var user = await _userService.CreateUserAsync(request, GetCurrentUserId() ?? throw new CustomException("Invalid session user."));
+            await _cacheStore.EvictByTagAsync(CachePolicyKeys.StrictPerUserCache, new CancellationToken());
             return Ok(new { Success = true, Data = user });
         }
         catch (CustomException ex)
@@ -99,6 +105,7 @@ public class UsersController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateUser(id={Id}, request={Request})", id, request);
             var user = await _userService.UpdateUserAsync(id, request, GetCurrentUserId() ?? throw new CustomException("Invalid session user."));
+            await _cacheStore.EvictByTagAsync(CachePolicyKeys.StrictPerUserCache, new CancellationToken());
             return Ok(new { Success = true, Data = user });
         }
         catch (CustomException ex)

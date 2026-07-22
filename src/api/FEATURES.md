@@ -11,6 +11,7 @@
 - Database Audit - Table Triggers
 
 ## Authentication
+- .Net Identity
 - JWT Token
 - Cookie-Based JWT Token (To be implemented)
 - OAuth (To be implemented)
@@ -21,7 +22,7 @@
 - Role-Based authorization (To be implemented)
 
 ## Caching
-- To be implemented
+- .Net in-memory output caching
 
 ## Concurrency
 - .Net optimistic concurrency control with RowVersion
