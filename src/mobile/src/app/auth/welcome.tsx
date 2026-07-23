@@ -32,7 +32,7 @@ export default function AuthScreen() {
       </View>
 
       <View style={styles.bottomSection}>
-        <Button style={styles.button} onPress={() => router.push('../accounts/create')}>
+        <Button style={styles.button} onPress={() => router.push('./signin')}>
           <Text>Login</Text>
         </Button>
         <Button style={styles.button} onPress={() => router.push('../home')}>

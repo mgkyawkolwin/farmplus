@@ -76,7 +76,7 @@ const buttonTextVariants = cva(
       },
       size: {
         default: '',
-        sm: '',
+        sm: 'px-4 py-2',
         lg: '',
         icon: '',
       },

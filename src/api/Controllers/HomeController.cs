@@ -38,7 +38,7 @@ public class HomeController : Controller
         catch (CustomException ex)
         {
             _logger.LogError(ex, "Custom Exception: {message}", ex.Message);
-            return StatusCode((int)HttpStatusCode.BadRequest, new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {

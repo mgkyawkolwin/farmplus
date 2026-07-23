@@ -40,7 +40,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -67,7 +67,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -89,7 +89,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -111,7 +111,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -132,7 +132,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -153,7 +153,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -176,7 +176,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -224,7 +224,7 @@ public class UsersController : BaseController
         catch (CustomException ex)
         {
             _logger.LogError("Custom exception occurred: {Message}", ex.Message);
-            return BadRequest(new { Success = false, Message = ex.Message });
+            return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {

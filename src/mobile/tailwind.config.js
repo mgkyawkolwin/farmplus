@@ -17,6 +17,7 @@ module.exports = {
         'text-muted': 'hsl(var(--text-muted))',
         tab: 'hsl(var(--tab))',
         'tab-foreground': 'hsl(var(--tab-foreground))',
+        overlay: 'hsl(var(--overlay))',
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',

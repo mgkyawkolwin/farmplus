@@ -1,4 +1,4 @@
-export default class User {
+export default class SignInResponse {
     id!: string;
     userName?: string;
     displayName?: string;
@@ -6,5 +6,5 @@ export default class User {
     address?: string;
     city?: string;
     profilePictureUrl?: string;
-    token?: string;
+    token!: string;
 }

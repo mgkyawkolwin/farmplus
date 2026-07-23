@@ -15,31 +15,15 @@ import { Icon } from '@/components/ui/icon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
+import HomeTopBar from '@/components/homeTopBar';
 
 export default function DashboardScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
 
-
     return (
         <View className="flex-1 bg-background" style={styles.page}>
-            <StatusBar className='bg-background' barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            <View className="bg-background border-border" style={[styles.headerBar]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                        <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
-                            <Icon className="text-foreground" as={Menu} size={22} />
-                        </Button>
-                        <Select>
-                            <SelectTrigger>
-                                <SelectValue placeholder="ABC Agri Store" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem key="township1" label="Township 1" value="township1" />
-                            </SelectContent>
-                        </Select>
-                    </View>
-                    <Icon className="text-foreground" as={Bell} size={22} />
-            </View>
+            <HomeTopBar />
 
             <ScrollView contentContainerStyle={styles.content}>
                         <Text variant="h2" style={styles.header}>

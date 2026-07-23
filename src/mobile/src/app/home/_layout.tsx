@@ -37,38 +37,38 @@ export default function HomeTabsLayout() {
                 }}
             />
             <Tabs.Screen
-                name="brands"
+                name="sales"
                 options={{
-                    title: 'Brands',
+                    title: 'Sales',
+                    tabBarIcon: ({ color }) => <Icon as={LayoutDashboard} color={color} size={20} />,
+                }}
+            />
+            <Tabs.Screen
+                name="products"
+                options={{
+                    title: 'Products',
                     tabBarIcon: ({ color }) => <Icon as={Box} color={color} size={20} />,
                 }}
             />
             <Tabs.Screen
-                name="dealers"
+                name="reports"
                 options={{
-                    title: 'Dealers',
+                    title: 'Reports',
                     tabBarIcon: ({ color }) => <Icon as={TrendingUp} color={color} size={20} />,
                 }}
             />
             <Tabs.Screen
-                name="vehicles"
+                name="categories"
                 options={{
-                    title: 'Vehicles',
+                    title: 'Categories',
+                    tabBarIcon: ({ color }) => <Icon as={TrendingUp} color={color} size={20} />,
+                }}
+            />
+            <Tabs.Screen
+                name="more"
+                options={{
+                    title: 'More',
                     tabBarIcon: ({ color }) => <Icon as={BarChart2} color={color} size={20} />,
-                }}
-            />
-            <Tabs.Screen
-                name="events"
-                options={{
-                    title: 'Events',
-                    tabBarIcon: ({ color }) => <Icon as={MoreHorizontal} color={color} size={20} />,
-                }}
-            />
-            <Tabs.Screen
-                name="favorites"
-                options={{
-                    title: 'Favorites',
-                    tabBarIcon: ({ color }) => <Icon as={Box} color={color} size={20} />,
                 }}
             />
         </Tabs>
