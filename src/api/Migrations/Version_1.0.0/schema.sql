@@ -36,6 +36,6 @@ CREATE TABLE `Users` (
 ) CHARACTER SET=utf8mb4;
 
 INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
-VALUES ('20260724035208_ver_1.0.0', '9.0.18');
+VALUES ('20260724035439_Ver_1.0.0', '9.0.18');
 
 COMMIT;
