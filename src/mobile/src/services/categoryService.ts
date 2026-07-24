@@ -1,20 +1,5 @@
 import { authenticatedFetchApi } from '@/lib/apiClient';
-
-export interface CategoryItem {
-  id: string;
-  category: string;
-  rowVersion?: string;
-  createdAtUtc?: string;
-  updatedAtUtc?: string;
-}
-
-interface CategoryListPayload {
-  items?: CategoryItem[];
-  page?: number;
-  pageSize?: number;
-  totalCount?: number;
-  totalPages?: number;
-}
+import { CategoryItem, CategoryListPayload } from '@/models/category';
 
 export interface ICategoryService {
   getCategories(page?: number, pageSize?: number): Promise<CategoryItem[]>;
