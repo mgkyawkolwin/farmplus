@@ -7,6 +7,17 @@
 START TRANSACTION;
 ALTER DATABASE CHARACTER SET utf8mb4;
 
+CREATE TABLE `Categories` (
+    `Id` char(36) COLLATE ascii_general_ci NOT NULL,
+    `Category` varchar(50) CHARACTER SET utf8mb4 NOT NULL,
+    `RowVersion` char(36) COLLATE ascii_general_ci NOT NULL,
+    `CreatedAtUtc` datetime(6) NOT NULL,
+    `CreatedById` char(36) COLLATE ascii_general_ci NOT NULL,
+    `UpdatedAtUtc` datetime(6) NOT NULL,
+    `UpdatedById` char(36) COLLATE ascii_general_ci NOT NULL,
+    CONSTRAINT `PK_Categories` PRIMARY KEY (`Id`)
+) CHARACTER SET=utf8mb4;
+
 CREATE TABLE `Users` (
     `Id` char(36) COLLATE ascii_general_ci NOT NULL,
     `UserName` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
@@ -16,6 +27,7 @@ CREATE TABLE `Users` (
     `City` varchar(100) CHARACTER SET utf8mb4 NULL,
     `ProfilePictureUrl` varchar(500) CHARACTER SET utf8mb4 NULL,
     `PasswordHash` varchar(256) CHARACTER SET utf8mb4 NOT NULL,
+    `RowVersion` char(36) COLLATE ascii_general_ci NOT NULL,
     `CreatedAtUtc` datetime(6) NOT NULL,
     `CreatedById` char(36) COLLATE ascii_general_ci NOT NULL,
     `UpdatedAtUtc` datetime(6) NOT NULL,
@@ -24,6 +36,6 @@ CREATE TABLE `Users` (
 ) CHARACTER SET=utf8mb4;
 
 INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
-VALUES ('20260722052213_Ver_1.0.0', '9.0.18');
+VALUES ('20260724035208_ver_1.0.0', '9.0.18');
 
 COMMIT;
