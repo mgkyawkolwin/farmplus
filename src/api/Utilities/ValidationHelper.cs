@@ -6,6 +6,13 @@ namespace Cluspedia.FarmPlus.Api.Utilities;
 
 public static class ValidationHelper
 {
+    public static void ValidateNull<T>(IStringLocalizer localizer, string fieldName, T? value)
+    {
+        if (value == null)
+        {
+            throw new CustomException(localizer[$"Template.Required", fieldName]);
+        }
+    }
     public static void ValidateRequiredGuid(IStringLocalizer localizer, string fieldName, Guid? value)
     {
         if (!value.HasValue || value == Guid.Empty)

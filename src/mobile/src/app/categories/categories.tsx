@@ -1,51 +1,91 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
-import { Plus, Pencil, Trash2, X } from 'lucide-react-native';
+import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { Plus, Pencil, Trash2, X, ChevronLeft } from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import HomeTopBar from '@/components/homeTopBar';
-import { CategoryServiceClient, type CategoryItem } from '@/services/categoryService';
+import { CategoryServiceClient } from '@/services/categoryService';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
+import { CategoryItem } from '@/models/category';
 
 export default function CategoriesScreen() {
+    const router = useRouter();
     const service = React.useMemo(() => new CategoryServiceClient(), []);
 
     const [categories, setCategories] = React.useState<CategoryItem[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
+    const [refreshing, setRefreshing] = React.useState(false);
+    const [loadingMore, setLoadingMore] = React.useState(false);
+    const [page, setPage] = React.useState(1);
+    const [hasMore, setHasMore] = React.useState(true);
     const [modalVisible, setModalVisible] = React.useState(false);
     const [editingCategory, setEditingCategory] = React.useState<CategoryItem | null>(null);
     const [name, setName] = React.useState('');
+    const [isActive, setIsActive] = React.useState(true);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-    const loadCategories = React.useCallback(async () => {
+    const loadCategories = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
         try {
-            setLoading(true);
+            if (requestedPage === 1 && !append) {
+                setLoading(true);
+            }
+            if (requestedPage > 1) {
+                setLoadingMore(true);
+            }
+            if (isRefresh) {
+                setRefreshing(true);
+            }
             setErrorMessage(null);
-            const data = await service.getCategories();
-            setCategories(data);
+
+            const data = await service.getCategories(requestedPage, 20);
+            setCategories((prev) => (requestedPage === 1 || !append ? data : [...prev, ...data]));
+            setPage(requestedPage);
+            setHasMore(data.length >= 20);
         } catch (error: any) {
             setErrorMessage(error?.message || 'Unable to load categories.');
         } finally {
             setLoading(false);
+            setRefreshing(false);
+            setLoadingMore(false);
         }
     }, [service]);
 
     React.useEffect(() => {
-        loadCategories();
+        void loadCategories(1, false, false);
     }, [loadCategories]);
+
+    const handleRefresh = React.useCallback(() => {
+        void loadCategories(1, false, true);
+    }, [loadCategories]);
+
+    const handleLoadMore = React.useCallback(() => {
+        if (loadingMore || !hasMore || loading || refreshing) {
+            return;
+        }
+
+        void loadCategories(page + 1, true, false);
+    }, [hasMore, loading, loadingMore, page, refreshing]);
+
+    const handleScroll = React.useCallback((event: any) => {
+        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 24) {
+            handleLoadMore();
+        }
+    }, [handleLoadMore]);
 
     const openCreateModal = () => {
         setEditingCategory(null);
         setName('');
+        setIsActive(true);
         setErrorMessage(null);
         setModalVisible(true);
     };
@@ -53,6 +93,7 @@ export default function CategoriesScreen() {
     const openEditModal = (category: CategoryItem) => {
         setEditingCategory(category);
         setName(category.category);
+        setIsActive(category.isActive ?? true);
         setErrorMessage(null);
         setModalVisible(true);
     };
@@ -61,6 +102,7 @@ export default function CategoriesScreen() {
         setModalVisible(false);
         setEditingCategory(null);
         setName('');
+        setIsActive(true);
         setErrorMessage(null);
     };
 
@@ -76,12 +118,12 @@ export default function CategoriesScreen() {
             setErrorMessage(null);
 
             if (editingCategory) {
-                await service.updateCategory(editingCategory.id, trimmedName);
+                await service.updateCategory(editingCategory.id, trimmedName, isActive);
             } else {
-                await service.createCategory(trimmedName);
+                await service.createCategory(trimmedName, isActive);
             }
 
-            await loadCategories();
+            await loadCategories(1, false, false);
             closeModal();
         } catch (error: any) {
             setErrorMessage(error?.message || 'Unable to save category.');
@@ -104,7 +146,7 @@ export default function CategoriesScreen() {
     const handleDelete = async (category: CategoryItem) => {
         try {
             await service.deleteCategory(category.id);
-            await loadCategories();
+            await loadCategories(1, false, false);
         } catch (error: any) {
             RNAlert.alert('Delete failed', error?.message || 'Unable to delete category.');
         }
@@ -112,16 +154,26 @@ export default function CategoriesScreen() {
 
     return (
         <SafeAreaView className='bg-background' style={styles.page}>
-            <HomeTopBar />
-            <KeyboardAwareScrollView className='bg-background' style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-                <View style={styles.headerRow}>
-                    <Text variant="h3" className='text-foreground'>Categories</Text>
-                    <Button variant="default" size="sm" onPress={openCreateModal}>
-                        <Icon as={Plus} size={8} className='text-primary-foreground' />
-                        <Text className='text-primary-foreground'>Add New</Text>
-                    </Button>
-                </View>
-                {loading ? (
+            <View className='bg-background border-b border-border' style={styles.headerBar}>
+                <Button variant='ghost' onPress={() => router.back()} style={styles.backButton}>
+                    <Icon as={ChevronLeft} size={22} className='text-foreground' />
+                </Button>
+                <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
+                <Button variant='default' size='sm' onPress={openCreateModal} style={styles.addButton}>
+                    <Icon as={Plus} size={14} className='text-primary-foreground' />
+                    <Text className='text-primary-foreground'>Add</Text>
+                </Button>
+            </View>
+
+            <KeyboardAwareScrollView
+                className='bg-background'
+                style={styles.scrollView}
+                contentContainerStyle={styles.contentContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+                onScroll={handleScroll}
+                scrollEventThrottle={400}
+            >
+                {loading && !refreshing ? (
                     <View style={styles.emptyState}>
                         <ActivityIndicator size="large" />
                         <Text className='text-muted-foreground' style={styles.emptyText}>Loading categories...</Text>
@@ -147,6 +199,12 @@ export default function CategoriesScreen() {
                         ))}
                     </View>
                 )}
+                {loadingMore ? (
+                    <View style={styles.loadMoreRow}>
+                        <ActivityIndicator size='small' />
+                        <Text className='text-muted-foreground'>Loading more...</Text>
+                    </View>
+                ) : null}
                 {errorMessage ? (
                     <Alert variant='destructive' icon={X} className='mt-3'>
                         <AlertTitle>Unable to continue</AlertTitle>
@@ -175,6 +233,11 @@ export default function CategoriesScreen() {
                             style={styles.input}
                         />
 
+                        <View style={styles.switchRow}>
+                            <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+                            <Switch value={isActive} onValueChange={setIsActive} />
+                        </View>
+
                         {errorMessage ? (
                             <Alert variant='destructive' icon={X} className='mt-3'>
                                 <AlertTitle>Unable to save</AlertTitle>
@@ -201,12 +264,29 @@ const styles = StyleSheet.create({
     page: {
         flex: 1,
     },
-    headerRow: {
+    headerBar: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 14,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+    },
+    backButton: {
+        minWidth: 40,
+    },
+    headerTitle: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    addButton: {
+        minWidth: 72,
+        flexDirection: 'row',
+        gap: 4,
+    },
+    headerSpacer: {
+        width: 40,
     },
     scrollView: {
         flex: 1,
@@ -275,6 +355,24 @@ const styles = StyleSheet.create({
     },
     input: {
         marginBottom: 8,
+    },
+    switchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        paddingVertical: 4,
+    },
+    switchLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    loadMoreRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
     },
     modalActions: {
         flexDirection: 'row',

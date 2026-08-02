@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Cluspedia.FarmPlus.Api.Dtos.Categories;
 using Cluspedia.FarmPlus.Api.Exceptions;
 using Cluspedia.FarmPlus.Api.Services;
+using System.Text.Json;
 
 namespace Cluspedia.FarmPlus.Api.Controllers;
 
@@ -22,13 +23,15 @@ public class CategoriesController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetCategories([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetCategories([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? category = null)
     {
         try
         {
-            _logger.LogDebug("CALLED: GetCategories(page={Page}, pageSize={PageSize})", page, pageSize);
+            _logger.LogDebug("CALLED: GetCategories(page={Page}, pageSize={PageSize}, category={Category})", page, pageSize, category ?? "null");
 
-            var result = await _categoryService.GetCategoriesAsync(page, pageSize);
+            var result = await _categoryService.GetCategoriesAsync(page, pageSize, category);
+            _logger.LogTrace("Count : {Count}", result.Items.Count());
+            _logger.LogTrace("Category: {Category}", JsonSerializer.Serialize(result.Items.FirstOrDefault()));
 
             return Ok(new
             {
@@ -45,7 +48,7 @@ public class CategoriesController : BaseController
         }
         catch (CustomException ex)
         {
-            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
             return Ok(new { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -62,16 +65,13 @@ public class CategoriesController : BaseController
         {
             _logger.LogDebug("CALLED: GetCategoryById(id={Id})", id);
             var category = await _categoryService.GetCategoryByIdAsync(id);
-            if (category == null)
-            {
-                return NotFound(new { Success = false, Message = "Category not found." });
-            }
+            _logger.LogTrace("Category: {Category}", JsonSerializer.Serialize(category));
 
             return Ok(new { Success = true, Data = category });
         }
         catch (CustomException ex)
         {
-            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
             return Ok(new { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -88,12 +88,13 @@ public class CategoriesController : BaseController
         {
             _logger.LogDebug("CALLED: CreateCategory(request={Request})", request);
 
-            var categoryEntity = await _categoryService.CreateCategoryAsync(request, GetCurrentUserId() ?? Guid.Empty);
-            return Ok(new { Success = true, Data = categoryEntity });
+            var categoryDto = await _categoryService.CreateCategoryAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            _logger.LogTrace("Created Category: {Category}", categoryDto);
+            return Ok(new { Success = true, Data = categoryDto });
         }
         catch (CustomException ex)
         {
-            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
             return Ok(new { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -110,17 +111,13 @@ public class CategoriesController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateCategory(id={Id}, request={Request})", id, request);
 
-            var category = await _categoryService.UpdateCategoryAsync(id, request, GetCurrentUserId() ?? Guid.Empty);
-            if (category == null)
-            {
-                return NotFound(new { Success = false, Message = "Category not found." });
-            }
-
+            var category = await _categoryService.UpdateCategoryAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            _logger.LogTrace("Updated Category: {Category}", category);
             return Ok(new { Success = true, Data = category });
         }
         catch (CustomException ex)
         {
-            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
             return Ok(new { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -141,7 +138,7 @@ public class CategoriesController : BaseController
         }
         catch (CustomException ex)
         {
-            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
             return Ok(new { Success = false, Message = ex.Message });
         }
         catch (Exception ex)

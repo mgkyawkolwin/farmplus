@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
         }
         catch (CustomException ex)
         {
-            _logger.LogError(ex, "Custom Exception: {message}", ex.Message);
+            _logger.LogWarning(ex, "Custom Exception: {message}", ex.Message);
             return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -54,7 +54,7 @@ public class AuthController : ControllerBase
         }
         catch (CustomException ex)
         {
-            _logger.LogError(ex, "Custom Exception: {message}", ex.Message);
+            _logger.LogWarning(ex, "Custom Exception: {message}", ex.Message);
             return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public class AuthController : ControllerBase
         }
         catch (CustomException ex)
         {
-            _logger.LogError(ex, "Custom Exception: {message}", ex.Message);
+            _logger.LogWarning(ex, "Custom Exception: {message}", ex.Message);
             return Ok(new  { Success = false, Message = ex.Message });
         }
         catch (Exception ex)

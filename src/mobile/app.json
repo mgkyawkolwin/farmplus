@@ -2,7 +2,7 @@
   "expo": {
     "name": "Farm Plus",
     "slug": "farmplus",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "farmplus",
@@ -42,6 +42,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "18db5aa8-98f6-4931-ae6a-7793eb67f82e"
+      }
     }
   }
 }

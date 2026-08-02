@@ -5,7 +5,7 @@ import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useColorScheme, useUnstableNativeVariable } from 'nativewind';
 import { Icon } from '@/components/ui/icon';
-import { LayoutDashboard, Box, TrendingUp, BarChart2, MoreHorizontal } from 'lucide-react-native';
+import { LayoutDashboard, Box, TrendingUp, BarChart2, MoreHorizontal, Group } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 
 export default function HomeTabsLayout() {
@@ -17,7 +17,7 @@ export default function HomeTabsLayout() {
     return (
         <Tabs
             screenOptions={({ route }) => ({
-                tabBarStyle: { backgroundColor: '#ccc' },
+                tabBarStyle: { backgroundColor: '#fff' },
                 tabBarInactiveTintColor: 'hsl(0,0%,39%)',
                 tabBarActiveTintColor: 'hsl(210,100%,50%)',
                 headerShown: false,
@@ -51,24 +51,10 @@ export default function HomeTabsLayout() {
                 }}
             />
             <Tabs.Screen
-                name="reports"
+                name="customerTab"
                 options={{
-                    title: 'Reports',
-                    tabBarIcon: ({ color }) => <Icon as={TrendingUp} color={color} size={20} />,
-                }}
-            />
-            <Tabs.Screen
-                name="categories"
-                options={{
-                    title: 'Categories',
-                    tabBarIcon: ({ color }) => <Icon as={TrendingUp} color={color} size={20} />,
-                }}
-            />
-            <Tabs.Screen
-                name="more"
-                options={{
-                    title: 'More',
-                    tabBarIcon: ({ color }) => <Icon as={BarChart2} color={color} size={20} />,
+                    title: 'Customer',
+                    tabBarIcon: ({ color }) => <Icon as={Group} color={color} size={20} />,
                 }}
             />
         </Tabs>

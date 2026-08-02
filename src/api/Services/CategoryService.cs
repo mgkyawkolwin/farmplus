@@ -6,16 +6,17 @@ using Cluspedia.FarmPlus.Api.Dtos.Categories;
 using Cluspedia.FarmPlus.Api.Entities;
 using Cluspedia.FarmPlus.Api.Exceptions;
 using Cluspedia.FarmPlus.Api.I18N;
+using Cluspedia.FarmPlus.Api.Mappings;
 using Cluspedia.FarmPlus.Api.Utilities;
 
 namespace Cluspedia.FarmPlus.Api.Services;
 
 public interface ICategoryService
 {
-    Task<PaginatedResultDto<CategoryEntity>> GetCategoriesAsync(int page, int pageSize);
-    Task<CategoryEntity?> GetCategoryByIdAsync(Guid id);
-    Task<CategoryEntity> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId);
-    Task<CategoryEntity?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId);
+    Task<PaginatedResultDto<CategoryDto>> GetCategoriesAsync(int page, int pageSize, string? category = null);
+    Task<CategoryDto?> GetCategoryByIdAsync(Guid id);
+    Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId);
+    Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId);
     Task<bool> DeleteCategoryAsync(Guid id);
 }
 
@@ -32,13 +33,20 @@ public class CategoryService : ICategoryService
         _logger = logger;
     }
 
-    public async Task<PaginatedResultDto<CategoryEntity>> GetCategoriesAsync(int page, int pageSize)
+    public async Task<PaginatedResultDto<CategoryDto>> GetCategoriesAsync(int page, int pageSize, string? category = null)
     {
-        _logger.LogDebug("CALLED: GetCategoriesAsync(page={Page}, pageSize={PageSize})", page, pageSize);
+        _logger.LogDebug("CALLED: GetCategoriesAsync(page={Page}, pageSize={PageSize}, category={Category})", page, pageSize, category ?? "null");
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
-        var query = _dbContext.Categories.AsNoTracking().OrderBy(c => c.Category);
+        var query = _dbContext.Categories.AsNoTracking();
+        
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            query = query.Where(c => c.Category.ToLower().Contains(category, StringComparison.OrdinalIgnoreCase));
+        }
+
+        query = query.OrderBy(c => c.Category);
         var total = await query.CountAsync();
 
         var categories = await query
@@ -46,19 +54,22 @@ public class CategoryService : ICategoryService
             .Take(pageSize)
             .ToListAsync();
 
-        return new PaginatedResultDto<CategoryEntity>(categories, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+        var categoryDtos = categories.MapToDtoList();
+        return new PaginatedResultDto<CategoryDto>(categoryDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
-    public async Task<CategoryEntity?> GetCategoryByIdAsync(Guid id)
+    public async Task<CategoryDto?> GetCategoryByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetCategoryByIdAsync(id={Id})", id);
-        return await _dbContext.Categories.AsNoTracking().SingleOrDefaultAsync(c => c.Id == id);
+        var category = await _dbContext.Categories.AsNoTracking().SingleOrDefaultAsync(c => c.Id == id);
+        return category?.MapToDto();
     }
 
-    public async Task<CategoryEntity> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId)
+    public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId)
     {
         _logger.LogDebug("CALLED: CreateCategoryAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "Category", request.Category);
+        ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
         var normalizedCategory = request.Category.Trim();
         var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Category.ToLower() == normalizedCategory.ToLower());
@@ -79,15 +90,16 @@ public class CategoryService : ICategoryService
         _dbContext.Categories.Add(category);
         await _dbContext.SaveChangesAsync();
 
-        return category;
+        return category.MapToDto();
     }
 
-    public async Task<CategoryEntity?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId)
+    public async Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId)
     {
         try
         {
             _logger.LogDebug("CALLED: UpdateCategoryAsync(id={Id}, request={Request})", id, request);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
+            ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
             var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id) ?? throw new CustomException("Category not found.");
 
@@ -108,7 +120,7 @@ public class CategoryService : ICategoryService
             category.UpdatedById = currentUserId;
             await _dbContext.SaveChangesAsync();
 
-            return category;
+            return category.MapToDto();
         }
         catch (DbUpdateConcurrencyException)
         {

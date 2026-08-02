@@ -10,4 +10,7 @@ public class CategoryEntity : EntityBase<Guid>
     [MaxLength(50)]
     public required string Category { get; set; }
 
+    [Required]
+    public bool IsActive { get; set; } = true;
+
 }

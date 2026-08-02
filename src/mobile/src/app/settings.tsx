@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import appConfig from '../../app.json';
 import {
   StyleSheet,
   ScrollView,
@@ -38,6 +39,7 @@ export default function SettingsScreen() {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   const currentLanguage = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
+  const appVersion = appConfig.expo?.version ?? '1.0.0';
 
   const handleLanguageSelect = (code: string) => {
     i18n.changeLanguage(code);
@@ -107,6 +109,10 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Text className='text-muted-foreground' style={styles.versionText}>
+        Version {appVersion}
+      </Text>
 
       {/* Language Selection Modal */}
       <Modal
@@ -182,6 +188,13 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     gap: 8,
+    paddingBottom: 48,
+  },
+  versionText: {
+    position: 'absolute',
+    bottom: 16,
+    alignSelf: 'center',
+    fontSize: 12,
   },
   card: {
     borderRadius: 12,

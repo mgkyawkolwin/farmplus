@@ -3,8 +3,8 @@ import { CategoryItem, CategoryListPayload } from '@/models/category';
 
 export interface ICategoryService {
   getCategories(page?: number, pageSize?: number): Promise<CategoryItem[]>;
-  createCategory(category: string): Promise<CategoryItem>;
-  updateCategory(id: string, category: string): Promise<CategoryItem>;
+  createCategory(category: string, isActive?: boolean): Promise<CategoryItem>;
+  updateCategory(id: string, category: string, isActive?: boolean): Promise<CategoryItem>;
   deleteCategory(id: string): Promise<void>;
 }
 
@@ -18,19 +18,19 @@ export class CategoryServiceClient implements ICategoryService {
     return Array.isArray(payload?.items) ? payload.items.map(mapCategory) : [];
   }
 
-  async createCategory(category: string): Promise<CategoryItem> {
+  async createCategory(category: string, isActive = true): Promise<CategoryItem> {
     const response = await authenticatedFetchApi('/categories', {
       method: 'POST',
-      body: JSON.stringify({ category }),
+      body: JSON.stringify({ category, isActive }),
     });
 
     return mapCategory(response.data as CategoryItem | undefined);
   }
 
-  async updateCategory(id: string, category: string): Promise<CategoryItem> {
+  async updateCategory(id: string, category: string, isActive = true): Promise<CategoryItem> {
     const response = await authenticatedFetchApi(`/categories/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ category }),
+      body: JSON.stringify({ category, isActive }),
     });
 
     return mapCategory(response.data as CategoryItem | undefined);
@@ -47,6 +47,7 @@ function mapCategory(item?: Partial<CategoryItem> | null): CategoryItem {
   return {
     id: item?.id ?? '',
     category: item?.category ?? '',
+    isActive: item?.isActive ?? true,
     rowVersion: item?.rowVersion,
     createdAtUtc: item?.createdAtUtc,
     updatedAtUtc: item?.updatedAtUtc,

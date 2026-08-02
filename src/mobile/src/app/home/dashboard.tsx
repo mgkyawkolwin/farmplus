@@ -16,114 +16,119 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import HomeTopBar from '@/components/homeTopBar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingOverlay from '@/components/loadingOverlay';
 
 export default function DashboardScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
 
     return (
-        <View className="flex-1 bg-background" style={styles.page}>
+        <SafeAreaView className="bg-background" style={styles.page}>
+            <StatusBar
+                className="bg-background"
+                barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
+            />
             <HomeTopBar />
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+                <Text variant="h2" style={styles.header}>
+                    Good Morning, User!
+                </Text>
+                <Text style={styles.subtitle}>
+                    Here's your dashboard overview.
+                </Text>
+                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View>
+                                <Text className="text-text-muted text-sm">Today's Sales</Text>
+                                <Text className="text-text-muted text-lg font-bold">0 MMK</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View>
+                                <Text className="text-text-muted text-sm">Today's Purchases</Text>
+                                <Text className="text-text-muted text-lg font-bold">0 MMK</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View>
+                                <Text className="text-text-muted text-sm">Total Products</Text>
+                                <Text className="text-text-muted text-lg font-bold">0</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View>
+                                <Text className="text-text-muted text-sm">Total Customers</Text>
+                                <Text className="text-text-muted text-lg font-bold">0</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
-                        <Text variant="h2" style={styles.header}>
-                            Good Morning, User!
-                        </Text>
-                        <Text style={styles.subtitle}>
-                            Here's your dashboard overview.
-                        </Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                            <Card style={{ flex: 1 }}>
-                                <CardContent>
-                                    <View>
-                                        <Text className="text-text-muted text-sm">Today's Sales</Text>
-                                        <Text className="text-text-muted text-lg font-bold">0 MMK</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1 }}>
-                                <CardContent>
-                                    <View>
-                                        <Text className="text-text-muted text-sm">Today's Purchases</Text>
-                                        <Text className="text-text-muted text-lg font-bold">0 MMK</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                            <Card style={{ flex: 1 }}>
-                                <CardContent>
-                                    <View>
-                                        <Text className="text-text-muted text-sm">Total Products</Text>
-                                        <Text className="text-text-muted text-lg font-bold">0</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1 }}>
-                                <CardContent>
-                                    <View>
-                                        <Text className="text-text-muted text-sm">Total Customers</Text>
-                                        <Text className="text-text-muted text-lg font-bold">0</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                        </View>
-
-                        <Text className="text-text text-xl font-bold">Quick Actions</Text>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={DollarSign} size={48} />
-                                        <Text className="text-text-muted text-sm">New Sales</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={HandCoins} size={48} />
-                                        <Text className="text-text-muted text-sm">New Products</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={File} size={48} />
-                                        <Text className="text-text-muted text-sm">New Purchases</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                        </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={Calendar} size={48} />
-                                        <Text className="text-text-muted text-sm">New Sales</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={Building} size={48} />
-                                        <Text className="text-text-muted text-sm">New Products</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                            <Card style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                                <CardContent>
-                                    <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                        <Icon className="text-foreground" as={DamIcon} size={48} />
-                                        <Text className="text-text-muted text-sm">New Purchases</Text>
-                                    </View>
-                                </CardContent>
-                            </Card>
-                        </View>
+                <Text className="text-text text-xl font-bold">Quick Actions</Text>
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                    <Card style={{ flex: 1}}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={DollarSign} size={48} />
+                                <Text className="text-text-muted text-sm">New Sales</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1}}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={HandCoins} size={48} />
+                                <Text className="text-text-muted text-sm">New Products</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={File} size={48} />
+                                <Text className="text-text-muted text-sm">New Purchases</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                </View>
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={Calendar} size={48} />
+                                <Text className="text-text-muted text-sm word-break">New Sales</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={Building} size={48} />
+                                <Text className="text-text-muted text-sm word-break">New Products</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                    <Card style={{ flex: 1 }}>
+                        <CardContent>
+                            <View style={{ flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <Icon className="text-foreground" as={DamIcon} size={48} />
+                                <Text className="text-text-muted text-sm word-break">New Purchases</Text>
+                            </View>
+                        </CardContent>
+                    </Card>
+                </View>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -146,8 +151,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         flex: 1,
     },
+    scrollView: {
+        flex: 1,
+    },
     content: {
         paddingHorizontal: 20,
+        paddingTop: 16,
         paddingBottom: 96,
         gap: 20,
     },

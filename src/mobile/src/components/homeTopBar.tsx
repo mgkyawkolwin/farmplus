@@ -4,11 +4,11 @@ import React from 'react';
 import { StatusBar, View, useColorScheme, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Button } from './ui/button';
-import { Bell, Menu } from 'lucide-react-native';
+import { Bell, Menu, Settings } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-export default function FavoritesPlaceholder() {
+export default function HomeTopBar() {
     const router = useRouter();
     const colorScheme = useColorScheme();
 
@@ -17,8 +17,8 @@ export default function FavoritesPlaceholder() {
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
             <View className="bg-red border-border" style={styles.headerBar}>
                 <View style={styles.leftSection}>
-                    <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
-                        <Icon className="text-foreground" as={Menu} size={22} />
+                    <Button variant="ghost" onPress={() => router.push('/settings')} style={styles.iconButton}>
+                        <Icon className="text-foreground" as={Settings} size={22} />
                     </Button>
                     <Select>
                         <SelectTrigger style={styles.selectTrigger}>
@@ -29,7 +29,12 @@ export default function FavoritesPlaceholder() {
                         </SelectContent>
                     </Select>
                 </View>
-                <Icon className="text-foreground" as={Bell} size={22} />
+                <View style={styles.rightSection}>
+                    <Icon className="text-foreground" as={Bell} size={22} />
+                    <Button variant="ghost" onPress={() => router.push('/menu')} style={styles.iconButton}>
+                        <Icon className="text-foreground" as={Menu} size={22} />
+                    </Button>
+                </View>
             </View>
         </View>
     );
@@ -40,6 +45,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: 52,
         maxHeight: 52,
+        marginBottom: 8,
     },
     headerBar: {
         flexDirection: 'row',
@@ -57,9 +63,14 @@ const styles = StyleSheet.create({
         gap: 8,
         flex: 1,
     },
-    backButton: {
+    iconButton: {
         minWidth: 40,
         padding: 0,
+    },
+    rightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     selectTrigger: {
         flex: 1,
