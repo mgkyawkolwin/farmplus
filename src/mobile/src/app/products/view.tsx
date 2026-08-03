@@ -23,6 +23,7 @@ import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import { useFocusEffect } from 'expo-router/react-navigation';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -35,39 +36,37 @@ export default function ProductViewScreen() {
   const [product, setProduct] = React.useState<ProductItem | null>(null);
   const [loading, setLoading] = React.useState(true);
 
+
+
+  const loadProduct = async () => {
+
+    setLoading(true);
+    try {
+      const result = await productService.getProductById(productId ?? "");
+      setProduct(result);
+    } catch (error) {
+      SnackBar.Error('Failed to load product details');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   React.useEffect(() => {
     if (!productId) {
       router.back();
       return;
     }
 
-    let isActive = true;
-
-    const loadProduct = async () => {
-      setLoading(true);
-      try {
-        const result = await productService.getProductById(productId);
-        if (isActive) {
-          setProduct(result);
-        }
-      } catch (error) {
-        if (isActive) {
-          SnackBar.Error('Failed to load product details');
-          router.back();
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadProduct();
-
-    return () => {
-      isActive = false;
-    };
   }, [productId, router]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProduct();
+      return undefined;
+    }, [loadProduct])
+  );
 
   if (!product) {
     return null;
@@ -94,7 +93,7 @@ export default function ProductViewScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
       <StatusBar className="bg-background" barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'} />
-      <LoadingOverlay isLoading={loading} />
+      {/* <LoadingOverlay isLoading={loading} /> */}
 
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>

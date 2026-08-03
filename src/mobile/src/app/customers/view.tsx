@@ -24,6 +24,7 @@ import { CustomerItem } from '@/models/customer';
 import { ICustomerService } from '@/services/customerService';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import { useFocusEffect } from 'expo-router/react-navigation';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
@@ -36,18 +37,12 @@ export default function CustomerViewScreen() {
   const [customer, setCustomer] = React.useState<CustomerItem | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    if (!customerId) {
-      router.back();
-      return;
-    }
+  const loadCustomer = async () => {
 
     let isActive = true;
-
-    const loadCustomer = async () => {
       setLoading(true);
       try {
-        const result = await customerService.getCustomerById(customerId);
+        const result = await customerService.getCustomerById(customerId ?? "");
         if (isActive) {
           setCustomer(result);
         }
@@ -63,12 +58,20 @@ export default function CustomerViewScreen() {
       }
     };
 
+  React.useEffect(() => {
+    if (!customerId) {
+      router.back();
+      return;
+    }
     loadCustomer();
-
-    return () => {
-      isActive = false;
-    };
   }, [customerId, router]);
+  
+    useFocusEffect(
+      React.useCallback(() => {
+        loadCustomer();
+        return undefined;
+      }, [loadCustomer])
+    );
 
   if (!customer) {
     return null;
@@ -118,7 +121,7 @@ export default function CustomerViewScreen() {
         className="bg-background"
         barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
       />
-      <LoadingOverlay isLoading={loading} />
+      {/* <LoadingOverlay isLoading={loading} /> */}
 
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>

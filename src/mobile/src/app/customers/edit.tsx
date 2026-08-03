@@ -179,7 +179,10 @@ export default function EditCustomerScreen() {
           </Text>
         </View>
       ) : (
-        <KeyboardAwareScrollView contentContainerStyle={styles.content} className="bg-background">
+        <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: 40 }}
+          enableOnAndroid={true}
+          extraScrollHeight={40}
+          keyboardShouldPersistTaps="handled" className="bg-background">
           <View style={styles.field}>
             <Label className="text-foreground">
               Name <Text className="text-red-500">*</Text>

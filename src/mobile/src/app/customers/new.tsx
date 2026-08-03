@@ -109,8 +109,10 @@ export default function NewCustomerScreen() {
                 <View></View>
             </View>
 
-            <KeyboardAwareScrollView
-                contentContainerStyle={styles.content}
+            <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: 40 }}
+                enableOnAndroid={true}
+                extraScrollHeight={40}
+                keyboardShouldPersistTaps="handled"
                 className="bg-background"
             >
 

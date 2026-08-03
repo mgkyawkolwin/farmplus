@@ -51,10 +51,10 @@ export default function MenuScreen() {
     {
       title: 'Management',
       items: [
-        { label: 'Customer', icon: Users, path: '/settings' },
+        { label: 'Customer', icon: Users, path: '/customers/list' },
         { label: 'Dealer', icon: Briefcase, path: '/settings' },
         { label: 'Supplier', icon: Building, path: '/settings' },
-        { label: 'Product', icon: Package, path: '/settings' },
+        { label: 'Product', icon: Package, path: '/products/list' },
         { label: 'Inventory', icon: Warehouse, path: '/settings' },
         { label: 'Sale', icon: ShoppingBag, path: '/settings' },
         { label: 'Purchase', icon: HandCoins, path: '/settings' },
@@ -63,10 +63,10 @@ export default function MenuScreen() {
     {
       title: 'Reports',
       items: [
-        { label: 'Customer', icon: Users, path: '/settings' },
+        { label: 'Customer', icon: Users, path: '/customers/list' },
         { label: 'Dealer', icon: Briefcase, path: '/settings' },
         { label: 'Supplier', icon: Building, path: '/settings' },
-        { label: 'Product', icon: Package, path: '/settings' },
+        { label: 'Product', icon: Package, path: '/products/list' },
         { label: 'Inventory', icon: Warehouse, path: '/settings' },
         { label: 'Sale', icon: ShoppingBag, path: '/settings' },
         { label: 'Purchase', icon: HandCoins, path: '/settings' },
