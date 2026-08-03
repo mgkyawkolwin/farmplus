@@ -39,7 +39,7 @@ export default function SignInScreen() {
     <View className="flex-1 bg-background" style={styles.page}>
       <StatusBar className='bg-background' barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <View className="bg-background border-border" style={[styles.headerBar]}> 
-        <Button variant="ghost">
+        <Button variant="ghost" onPress={() => router.replace('/auth/welcome')} style={styles.backButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
             <Text className="text-foreground" style={styles.backButtonText}>
               Back
@@ -56,7 +56,7 @@ export default function SignInScreen() {
         </Text>
 
         <View style={styles.field}>
-          <Label>Email</Label>
+          <Label>Username</Label>
           <Input placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none"
           value={userName} onChangeText={text => setUserName(text)} />
         </View>

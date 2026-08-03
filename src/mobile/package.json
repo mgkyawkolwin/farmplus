@@ -1,7 +1,7 @@
 {
   "name": "farmplus",
   "main": "expo-router/entry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "dependencies": {
     "@expo/ui": "~57.0.4",
     "@react-navigation/native": "^7.3.14",

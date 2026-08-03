@@ -4,6 +4,7 @@ const TOKEN_KEY = 'auth_bearer_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USERNAME_KEY = 'auth_username';
 const PERMISSIONS_KEY = 'auth_permissions';
+const AUTH_USER_STORAGE_KEY = 'auth_user';
 
 export async function storeToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -22,7 +23,13 @@ export async function getRefreshToken(): Promise<string | null> {
 }
 
 export async function clearTokens(): Promise<void> {
-  //await SecureStore.removeItemsAsync([TOKEN_KEY, REFRESH_TOKEN_KEY, USERNAME_KEY, PERMISSIONS_KEY]);
+  await Promise.all([
+    SecureStore.deleteItemAsync(TOKEN_KEY),
+    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    SecureStore.deleteItemAsync(USERNAME_KEY),
+    SecureStore.deleteItemAsync(PERMISSIONS_KEY),
+    SecureStore.deleteItemAsync(AUTH_USER_STORAGE_KEY),
+  ]);
 }
 
 export async function storeUsername(username: string): Promise<void> {

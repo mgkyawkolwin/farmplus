@@ -4,7 +4,7 @@ import React from 'react';
 import { StatusBar, View, useColorScheme, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Button } from './ui/button';
-import { Bell, Menu, Settings } from 'lucide-react-native';
+import { Bell, Menu, Settings, User } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
@@ -17,9 +17,13 @@ export default function HomeTopBar() {
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
             <View className="bg-red border-border" style={styles.headerBar}>
                 <View style={styles.leftSection}>
-                    <Button variant="ghost" onPress={() => router.push('/settings')} style={styles.iconButton}>
-                        <Icon className="text-foreground" as={Settings} size={22} />
+                    <Button variant="ghost" onPress={() => router.push('/profile')} style={styles.iconButton}>
+                        <Icon className="text-foreground" as={User} size={22} />
                     </Button>
+                    <Button variant="ghost" onPress={() => router.push('/menu')} style={styles.iconButton}>
+                        <Icon className="text-foreground" as={Menu} size={22} />
+                    </Button>
+
                     <Select>
                         <SelectTrigger style={styles.selectTrigger}>
                             <SelectValue placeholder="ABC Agri Store" />
@@ -31,8 +35,9 @@ export default function HomeTopBar() {
                 </View>
                 <View style={styles.rightSection}>
                     <Icon className="text-foreground" as={Bell} size={22} />
-                    <Button variant="ghost" onPress={() => router.push('/menu')} style={styles.iconButton}>
-                        <Icon className="text-foreground" as={Menu} size={22} />
+                    
+                    <Button variant="ghost" onPress={() => router.push('/settings')} style={styles.iconButton}>
+                        <Icon className="text-foreground" as={Settings} size={22} />
                     </Button>
                 </View>
             </View>
@@ -51,7 +56,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 8,
         paddingTop: 8,
         paddingBottom: 8,
         borderBottomWidth: 1,
@@ -59,17 +64,19 @@ const styles = StyleSheet.create({
     },
     leftSection: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 8,
         flex: 1,
     },
     iconButton: {
-        minWidth: 40,
+        maxWidth: 30,
+        width: 20,
         padding: 0,
     },
     rightSection: {
         flexDirection: 'row',
         alignItems: 'center',
+        alignContent: 'flex-end',
         gap: 8,
     },
     selectTrigger: {

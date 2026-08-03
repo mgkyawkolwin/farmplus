@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import CustomError from './customError';
 import ApiResponse from '@/models/apiResponse'
-import { getToken } from '@/lib/authStorage';
+import { clearTokens, getToken } from '@/lib/authStorage';
 
 // const DEFAULT_API_BASE_URL = 'http://192.168.50.101:5555/api';
 const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
@@ -29,9 +29,7 @@ export async function fetchJson(path: string, options: RequestInit = {}): Promis
 
   // Handle 401 Unauthorized response - token is invalid/expired
   if (response.status === 401) {
-    // Clear stored auth user
-    await SecureStore.deleteItemAsync(AUTH_USER_STORAGE_KEY);
-    // Redirect to sign in page
+    await clearTokens();
     router.replace('/auth/signin');
   }
 
