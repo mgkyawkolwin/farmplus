@@ -1,0 +1,30 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <FluentNavMenu @bind-Expanded="@Expanded" Width="250" Collapsible="true"
+                   CollapsedChildNavigation="@EnableCollapsedChildNavigation" Title="Collapsible demo">
+        <FluentNavLink  Href="/adminusers/list" Icon="@(new Icons.Regular.Size24.Home())" Tooltip="Admin Users">
+            Admin Users
+        </FluentNavLink>
+        <FluentNavLink Href="/users/list" Icon="@(new Icons.Regular.Size24.Cloud())" Tooltip="Users">
+            Users
+        </FluentNavLink>
+        <FluentNavLink Href="/challenges/list" Icon="@(new Icons.Regular.Size24.Cloud())" Tooltip="Challenges">
+            Challenges
+        </FluentNavLink>
+        <FluentNavGroup Title="Reports" Tooltip="Item 3 tooltip" Icon="@(new Icons.Regular.Size24.EarthLeaf())">
+            <FluentNavLink Icon="@(new Icons.Regular.Size24.LeafOne())" Tooltip="Item 3.1 tooltip">
+                User
+            </FluentNavLink>
+            <FluentNavLink Icon="@(new Icons.Regular.Size24.LeafTwo())" Disabled="true" Tooltip="Item 3.2 tooltip">
+                Customer
+            </FluentNavLink>
+        </FluentNavGroup>
+    </FluentNavMenu>
+</div>
+
+@code
+{
+    bool Expanded = true;
+    bool EnableCollapsedChildNavigation = true;
+}
+
+

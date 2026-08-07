@@ -1,0 +1,526 @@
+@page "/challenges/list"
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations
+@using System.Linq
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Http
+@using BikerHub.Dtos
+@using BikerHub.Services
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IChallengeService ChallengeService
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject ILogger<List> Logger
+
+<PageTitle>Challenges</PageTitle>
+
+@if (_isCheckingAuth)
+{
+    <div class="p-4">Checking authentication...</div>
+    return;
+}
+
+@if (!_isAuthenticated)
+{
+    return;
+}
+
+<div class="p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Challenges</h2>
+        <button type="button" class="btn btn-primary" @onclick="OpenNewChallengeDialog">New Challenge</button>
+    </div>
+
+    <FluentCard>
+        <FluentDataGrid @ref="_challengeGrid" TGridItem="ChallengeDto" ItemsProvider="LoadChallengesProviderAsync"
+                        ItemKey="@(challenge => challenge.Id)" ShowHover="true" DisplayMode="DataGridDisplayMode.Table"
+                        GridTemplateColumns="100px 2fr 1fr 1fr 220px">
+            <TemplateColumn Title="Cover">
+                <ChildContent Context="challenge">
+                    @if (!string.IsNullOrWhiteSpace(challenge.CoverImageUrl))
+                    {
+                        <button type="button" @onclick="() => OpenCoverPreviewDialog(challenge)"
+                                style="all:unset; cursor:pointer; display:inline-block;">
+                            <img src="@challenge.CoverImageUrl" alt="@($"Cover for {challenge.Title}")"
+                                 style="width:72px; height:48px; object-fit:cover; border-radius:6px; border:1px solid #ddd;" />
+                        </button>
+                    }
+                    else
+                    {
+                        <div
+                            style="width:72px; height:48px; display:flex; align-items:center; justify-content:center; background:#f3f3f3; color:#777; font-size:11px; border-radius:6px; border:1px dashed #ccc;">
+                            No cover</div>
+                        }
+                    </ChildContent>
+                </TemplateColumn>
+                <PropertyColumn Title="Title" Property="@(challenge => challenge.Title)" />
+                <TemplateColumn Title="Period">
+                    <ChildContent Context="challenge">
+                        <div>
+                            <div>@(challenge.StartDate?.ToString("yyyy-MM-dd") ?? "-")</div>
+                            <div>@(challenge.EndDate?.ToString("yyyy-MM-dd") ?? "-")</div>
+                        </div>
+                    </ChildContent>
+                </TemplateColumn>
+                <PropertyColumn Title="Participants" Property="@(challenge => challenge.NoOfParticipants)" />
+                <TemplateColumn Title="Actions">
+                    <ChildContent Context="challenge">
+                        <div class="d-flex gap-2">
+                            <FluentButton Appearance="Appearance.Stealth" IconStart="@_editIcon"
+                                          OnClick="() => OpenEditChallengeDialog(challenge)">
+                                <span class="visually-hidden">Edit</span>
+                            </FluentButton>
+                            <FluentButton Appearance="Appearance.Stealth" IconStart="@_deleteIcon"
+                                          OnClick="() => ConfirmDeleteChallengeAsync(challenge)">
+                                <span class="visually-hidden">Delete</span>
+                            </FluentButton>
+                        </div>
+                    </ChildContent>
+                </TemplateColumn>
+            </FluentDataGrid>
+        </FluentCard>
+
+        <FluentDialog @bind-Hidden="_isNewChallengeDialogHidden" Modal="true" TrapFocus="true"
+                      AriaLabel="Create new challenge">
+            <div class="p-4" style="min-width: 520px;">
+                <h4>Create new challenge</h4>
+
+                <EditForm Model="_newChallenge" OnValidSubmit="CreateNewChallengeAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <FluentTextField @bind-Value="_newChallenge.Title" Placeholder="Challenge title"
+                                         Style="width: 100%;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <FluentTextArea @bind-Value="_newChallenge.Description" Placeholder="Description"
+                                        Style="width: 100%; min-height: 120px;" />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col">
+                            <label class="form-label">Start Date</label>
+                            <input class="form-control" type="date" @bind="_newChallenge.StartDate" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">End Date</label>
+                            <input class="form-control" type="date" @bind="_newChallenge.EndDate" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Participant goal</label>
+                        <FluentTextField @bind-Value="_newChallenge.NoOfParticipantsString" Placeholder="0"
+                                         Style="width: 100%;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cover Photo</label>
+                        <InputFile OnChange="OnNewCoverPhotoSelected" />
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_formErrorMessage))
+                    {
+                        <div class="alert alert-danger">@_formErrorMessage</div>
+                    }
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseNewChallengeDialog">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                            @(_isSubmitting ? "Saving..." : "Create Challenge")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </FluentDialog>
+
+        <FluentDialog @bind-Hidden="_isEditChallengeDialogHidden" Modal="true" TrapFocus="true" AriaLabel="Edit challenge">
+            <div class="p-4" style="min-width: 520px;">
+                <h4>Edit challenge</h4>
+
+                <EditForm Model="_editChallenge" OnValidSubmit="UpdateChallengeAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <FluentTextField @bind-Value="_editChallenge.Title" Placeholder="Challenge title"
+                                         Style="width: 100%;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <FluentTextArea @bind-Value="_editChallenge.Description" Placeholder="Description"
+                                        Style="width: 100%; min-height: 120px;" />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col">
+                            <label class="form-label">Start Date</label>
+                            <input class="form-control" type="date" @bind="_editChallenge.StartDate" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">End Date</label>
+                            <input class="form-control" type="date" @bind="_editChallenge.EndDate" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Participant goal</label>
+                        <FluentTextField @bind-Value="_editChallenge.NoOfParticipantsString" Placeholder="0"
+                                         Style="width: 100%;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cover Photo</label>
+                        <InputFile OnChange="OnEditCoverPhotoSelected" />
+                        @if (!string.IsNullOrWhiteSpace(_editingChallenge?.CoverImageUrl))
+                        {
+                            <img src="@_editingChallenge.CoverImageUrl" alt="cover preview"
+                                 style="height:80px; margin-top:8px; border-radius:4px;" />
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_formErrorMessage))
+                    {
+                        <div class="alert alert-danger">@_formErrorMessage</div>
+                    }
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseEditChallengeDialog">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                            @(_isSubmitting ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </FluentDialog>
+
+        <FluentDialog @bind-Hidden="_isCoverPreviewDialogHidden" Modal="true" TrapFocus="true"
+                      AriaLabel="Cover image preview" Style="min-width: 60vw; min-height: 40vh;">
+
+            <!-- Header with centered title and right-aligned close button -->
+            <div class="dialog-header"
+                 style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; max-height: 30px;">
+                <div style="flex: 1;"></div> <!-- Left spacer -->
+
+                <h4 class="mb-0" style="flex: 2; text-align: center; margin: 0;">@(_coverPreviewChallenge?.Title ?? "Cover preview")</h4>
+
+                <div style="flex: 1; display: flex; justify-content: flex-end;">
+                    <span style="cursor: pointer; width: 30px; height: 30px; border: 1px solid #000000; border-radius: 30px;background-color: black; color: white; text-align: center; font-weight: bold; vertical-align: middle;" @onclick="CloseCoverPreviewDialog">X</span>
+                </div>
+            </div>
+
+            <!-- Image content -->
+            <div class="dialog-body"
+                 style="padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 200px;">
+                @if (!string.IsNullOrWhiteSpace(_coverPreviewChallenge?.CoverImageUrl))
+                {
+                    <img src="@_coverPreviewChallenge.CoverImageUrl" alt="@($"Cover for {_coverPreviewChallenge.Title}")"
+                         style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 18px rgba(0,0,0,0.12);" />
+                }
+                else
+                {
+                    <div class="text-muted">No cover image available.</div>
+                }
+            </div>
+        </FluentDialog>
+    </div>
+
+@code {
+    private bool _isCheckingAuth = true;
+    private bool _isAuthenticated;
+    private List<ChallengeDto> _challenges = new();
+    private FluentDataGrid<ChallengeDto>? _challengeGrid;
+    private bool _isNewChallengeDialogHidden = true;
+    private bool _isEditChallengeDialogHidden = true;
+    private bool _isCoverPreviewDialogHidden = true;
+    private bool _isSubmitting;
+    private string? _formErrorMessage;
+    private NewChallengeModel _newChallenge = new();
+    private EditChallengeModel _editChallenge = new();
+    private ChallengeDto? _editingChallenge;
+    private ChallengeDto? _coverPreviewChallenge;
+    private IBrowserFile? _newCoverPhoto;
+    private IBrowserFile? _editCoverPhoto;
+    private readonly Icon _editIcon = new Icon("Edit", IconVariant.Regular, IconSize.Size16, "Edit");
+    private readonly Icon _deleteIcon = new Icon("Delete", IconVariant.Regular, IconSize.Size16, "Delete");
+    private readonly Icon _closeIcon = new Icon("Dismiss", IconVariant.Regular, IconSize.Size16, "Close");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        if (!_isAuthenticated)
+        {
+            Navigation.NavigateTo("/auth/signin", replace: true);
+            return;
+        }
+
+        await LoadChallengesAsync();
+        _isCheckingAuth = false;
+    }
+
+    private async Task LoadChallengesAsync()
+    {
+        try
+        {
+            _challenges = (await ChallengeService.GetAllAsync(null)).ToList();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load challenges.");
+            ToastService.ShowError("Unable to load challenges.", 3000, "Error");
+        }
+    }
+
+    private async ValueTask<GridItemsProviderResult<ChallengeDto>>
+LoadChallengesProviderAsync(GridItemsProviderRequest<ChallengeDto> request)
+    {
+        try
+        {
+            var challenges = (await ChallengeService.GetAllAsync(null)).ToList();
+            return GridItemsProviderResult.From(challenges, challenges.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load challenges for grid.");
+            return GridItemsProviderResult.From(Array.Empty<ChallengeDto>(), 0);
+        }
+    }
+
+    private void OpenNewChallengeDialog()
+    {
+        _formErrorMessage = null;
+        _newChallenge = new NewChallengeModel
+        {
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddDays(7)
+        };
+        _newCoverPhoto = null;
+        _isNewChallengeDialogHidden = false;
+    }
+
+    private void CloseNewChallengeDialog()
+    {
+        _isNewChallengeDialogHidden = true;
+    }
+
+    private void OpenEditChallengeDialog(ChallengeDto challenge)
+    {
+        _formErrorMessage = null;
+        _editingChallenge = challenge;
+        _editChallenge = new EditChallengeModel
+        {
+            Title = challenge.Title ?? string.Empty,
+            Description = challenge.Description,
+            StartDate = challenge.StartDate ?? DateTime.UtcNow.Date,
+            EndDate = challenge.EndDate ?? DateTime.UtcNow.Date,
+            NoOfParticipantsString = challenge.NoOfParticipants?.ToString() ?? ""
+        };
+        _editCoverPhoto = null;
+        _isEditChallengeDialogHidden = false;
+    }
+
+    private void CloseEditChallengeDialog()
+    {
+        _isEditChallengeDialogHidden = true;
+    }
+
+    private void OpenCoverPreviewDialog(ChallengeDto challenge)
+    {
+        _coverPreviewChallenge = challenge;
+        _isCoverPreviewDialogHidden = false;
+    }
+
+    private void CloseCoverPreviewDialog()
+    {
+        _isCoverPreviewDialogHidden = true;
+        _coverPreviewChallenge = null;
+    }
+
+    private async Task OnNewCoverPhotoSelected(InputFileChangeEventArgs args)
+    {
+        _newCoverPhoto = args.File;
+    }
+
+    private async Task OnEditCoverPhotoSelected(InputFileChangeEventArgs args)
+    {
+        _editCoverPhoto = args.File;
+    }
+
+    private async Task CreateNewChallengeAsync()
+    {
+        _formErrorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var dto = new CreateChallengeDto
+            {
+                Title = _newChallenge.Title,
+                Description = _newChallenge.Description,
+                StartDate = _newChallenge.StartDate,
+                EndDate = _newChallenge.EndDate,
+                NoOfParticipants = int.TryParse(_newChallenge.NoOfParticipantsString, out var num) ? num : 0
+            };
+
+            var file = await ConvertBrowserFileToFormFileAsync(_newCoverPhoto);
+            await ChallengeService.CreateAsync(dto, file);
+            await LoadChallengesAsync();
+            _isNewChallengeDialogHidden = true;
+            ToastService.ShowSuccess("Challenge created successfully.", 2000, "Success");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create challenge.");
+            _formErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task UpdateChallengeAsync()
+    {
+        _formErrorMessage = null;
+        _isSubmitting = true;
+
+        if (_editingChallenge is null)
+        {
+            _formErrorMessage = "No challenge selected for editing.";
+            _isSubmitting = false;
+            return;
+        }
+
+        try
+        {
+            var dto = new UpdateChallengeDto
+            {
+                Title = _editChallenge.Title,
+                Description = _editChallenge.Description,
+                StartDate = _editChallenge.StartDate,
+                EndDate = _editChallenge.EndDate,
+                NoOfParticipants = int.TryParse(_editChallenge.NoOfParticipantsString, out var num) ? num : null
+            };
+
+            var file = await ConvertBrowserFileToFormFileAsync(_editCoverPhoto);
+            await ChallengeService.UpdateAsync(_editingChallenge.Id, dto, file);
+            await LoadChallengesAsync();
+            _isEditChallengeDialogHidden = true;
+            ToastService.ShowSuccess("Challenge updated successfully.", 2000, "Success");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update challenge.");
+            _formErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task ConfirmDeleteChallengeAsync(ChallengeDto challenge)
+    {
+        await DialogService.ShowConfirmationAsync(
+            this,
+            async dialogResult =>
+            {
+                if (dialogResult.Cancelled)
+                {
+                    return;
+                }
+
+                _isSubmitting = true;
+                try
+                {
+                    var deleted = await ChallengeService.DeleteAsync(challenge.Id);
+                    if (deleted)
+                    {
+                        await LoadChallengesAsync();
+                        ToastService.ShowSuccess("Challenge deleted successfully.", 2000, "Deleted");
+                    }
+                    else
+                    {
+                        ToastService.ShowError("Failed to delete challenge.", 2000, "Error");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to delete challenge.");
+                    ToastService.ShowError("Failed to delete challenge.", 2000, "Error");
+                }
+                finally
+                {
+                    _isSubmitting = false;
+                }
+            },
+            $"Are you sure you want to delete challenge '{challenge.Title}'?",
+            "Delete",
+            "Cancel",
+            "Confirm delete");
+    }
+
+    private static async Task<IFormFile?> ConvertBrowserFileToFormFileAsync(IBrowserFile? browserFile)
+    {
+        if (browserFile is null)
+        {
+            return null;
+        }
+
+        var ms = new MemoryStream();
+        await browserFile.OpenReadStream(10_000_000).CopyToAsync(ms);
+        ms.Position = 0;
+
+        return new FormFile(ms, 0, ms.Length, browserFile.Name, browserFile.Name)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = browserFile.ContentType
+        };
+    }
+
+    private sealed class NewChallengeModel
+    {
+        [Required(ErrorMessage = "Title is required")]
+        public string Title { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "Start date is required")]
+        public DateTime StartDate { get; set; }
+
+        [Required(ErrorMessage = "End date is required")]
+        public DateTime EndDate { get; set; }
+
+        [Required(ErrorMessage = "Participant goal is required")]
+        [RegularExpression("^[0-9]+$", ErrorMessage = "Enter a valid number")]
+        public string NoOfParticipantsString { get; set; } = "0";
+    }
+
+    private sealed class EditChallengeModel
+    {
+        [Required(ErrorMessage = "Title is required")]
+        public string Title { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "Start date is required")]
+        public DateTime StartDate { get; set; }
+
+        [Required(ErrorMessage = "End date is required")]
+        public DateTime EndDate { get; set; }
+
+        [RegularExpression("^[0-9]*$", ErrorMessage = "Enter a valid number")]
+        public string NoOfParticipantsString { get; set; } = "0";
+    }
+}

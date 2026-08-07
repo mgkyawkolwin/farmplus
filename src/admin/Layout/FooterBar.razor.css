@@ -1,0 +1,9 @@
+::deep .footerx {
+    height: 100px;
+    max-height: 100px;
+    background-color: #00ff00 !important;
+}
+
+::deep .aa {
+    color: '#00ff00';
+}

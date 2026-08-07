@@ -4,8 +4,8 @@ import CustomError from './customError';
 import ApiResponse from '@/models/apiResponse'
 import { clearTokens, getToken } from '@/lib/authStorage';
 
-// const DEFAULT_API_BASE_URL = 'http://192.168.50.101:5555/api';
-const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
+const DEFAULT_API_BASE_URL = 'http://192.168.50.101:5555/api';
+// const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
 // const DEFAULT_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 export const API_BASE_URL = DEFAULT_API_BASE_URL;
 const AUTH_USER_STORAGE_KEY = 'auth_user';

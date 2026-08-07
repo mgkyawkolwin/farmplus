@@ -1,0 +1,123 @@
+@page "/auth/signin"
+@layout PublicLayout
+@* 1. REMOVED @rendermode InteractiveServer — MUST be Static SSR to issue cookies *@
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using BikerHub.Services
+@using BikerHub.Dtos.Auth
+
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<SignIn> Logger
+@inject IHttpContextAccessor HttpContextAccessor
+
+
+<PageTitle>Admin Sign In</PageTitle>
+
+<div class="d-flex justify-content-center align-items-center w-100">
+    <FluentCard Style="max-width: 420px; width: 100%; padding: 2rem;">
+        <div class="text-center mb-4">
+            <h2 class="mt-3 mb-1">Admin Portal</h2>
+            <p class="text-muted">Sign in to continue</p>
+        </div>
+
+        @* 2. Standard HTTP POST form submission *@
+        <EditForm FormName="signInForm" Model="Input" method="post" OnValidSubmit="HandleSignInAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <label class="form-label">Username</label>
+            <FluentTextField Name="Input.Username"
+                             @bind-Value="Input.Username"
+                             Placeholder="Username or email"
+                             Style="width: 100%; margin-bottom: 1rem;" />
+
+            <label class="form-label">Password</label>
+            <FluentTextField Name="Input.Password"
+                             @bind-Value="Input.Password"
+                             TextFieldType="TextFieldType.Password"
+                             Placeholder="Password"
+                             Style="width: 100%; margin-bottom: 1rem;" />
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </EditForm>
+    </FluentCard>
+</div>
+
+@code {
+    // 3. Receives HTTP POST form data automatically
+    [SupplyParameterFromForm]
+    private SignInModel Input { get; set; } = new();
+
+    // 4. Receives HttpContext directly from ASP.NET Core pipeline
+    @* [CascadingParameter]
+    private HttpContext? HttpContext { get; set; } *@
+
+    private string? _errorMessage;
+
+    private async Task HandleSignInAsync()
+    {
+        _errorMessage = null;
+
+        if (HttpContextAccessor.HttpContext is null)
+        {
+            _errorMessage = "Unable to process authentication request.";
+            return;
+        }
+
+        try
+        {
+            // Call your backend/database auth service directly in C# (no self-HTTP request needed)
+            var response = await AuthService.SignInAdminAsync(new LoginDto(Input.Username, Input.Password));
+
+            if (response?.User is null)
+            {
+                _errorMessage = "Invalid username or password.";
+                return;
+            }
+
+            // Create security claims
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, response.User.Id.ToString()),
+                new(ClaimTypes.Name, response.User.UserName ?? Input.Username),
+                new(ClaimTypes.Email, response.User.Email ?? string.Empty),
+                new("jwt_token", response.Token) // Store backend JWT if needed for API calls
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            // 5. Issue the Cookie directly! (Works because this is an HTTP POST request)
+            await HttpContextAccessor.HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                });
+
+            // Redirect to protected dashboard after successful login
+            Navigation.NavigateTo("/users/list", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Admin sign in failed.");
+            _errorMessage = ex.Message;
+        }
+    }
+
+    public sealed class SignInModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

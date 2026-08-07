@@ -1,0 +1,16 @@
+@using System.Reflection
+
+<FluentFooter style="padding: 10px; max-height: 50px; background-color: #333333">
+    <span style="color: #ffffff;">© 2026 BikerHub. All rights reserved.</span>
+    <FluentSpacer />
+    <span style="color: #ffffff;">Version @GetVersion()</span>
+</FluentFooter>
+
+@code {
+    private string GetVersion()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version;
+        return version?.ToString(3) ?? "1.0.0";
+    }
+}

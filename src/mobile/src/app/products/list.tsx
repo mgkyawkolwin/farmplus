@@ -13,7 +13,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { ChevronLeft, Package, Plus, Search } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ import { container, DI_TOKENS } from '@/di';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
-import { useFocusEffect } from 'expo-router/react-navigation';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 

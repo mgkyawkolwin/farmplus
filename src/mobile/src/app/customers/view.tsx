@@ -11,7 +11,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { ChevronLeft, CreditCard, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,6 @@ import { CustomerItem } from '@/models/customer';
 import { ICustomerService } from '@/services/customerService';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
-import { useFocusEffect } from 'expo-router/react-navigation';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
