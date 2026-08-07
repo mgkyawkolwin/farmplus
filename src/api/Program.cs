@@ -1,4 +1,6 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -65,10 +67,28 @@ if (minioSettings is not null)
 }
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = "SmartScheme";// JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = "SmartScheme";// JwtBearerDefaults.AuthenticationScheme;
+}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.Cookie.Name = ".farmplus.auth";
+    // options.Cookie.Domain = ".mydomain.com"; // Shared domain
+    options.Cookie.SameSite = SameSiteMode.None; // Allow cross-origin requests
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Use Secure cookies if the request is HTTPS
+
+    // Prevent API from returning a 302 Redirect to a login page for unauthorized API requests
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
 })
-.AddJwtBearer(options =>
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
@@ -82,11 +102,35 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
     };
+})// 3. Smart Policy Scheme that routes dynamically based on incoming request
+.AddPolicyScheme("SmartScheme", "Bearer or Cookie", options =>
+{
+    options.ForwardDefaultSelector = context =>
+    {
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+        
+        // If request has 'Authorization: Bearer xxx', authenticate via JWT
+        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
+        // Otherwise, attempt to authenticate via Cookie
+        return CookieAuthenticationDefaults.AuthenticationScheme;
+    };
 });
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddDefaultPolicy(policy => policy.SetIsOriginAllowed(origin => 
+        {
+            // Allow any origin for public/mobile requests, 
+            // but explicitly validate web origins if needed
+            return true; 
+        })
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials());
 });
 
 
@@ -94,7 +138,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "MoneyChanger API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Farm Plus API", Version = "v1" });
     
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -121,6 +165,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.Parse("8.0.32-mysql")));
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();

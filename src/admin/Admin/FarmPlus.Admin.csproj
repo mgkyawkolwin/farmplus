@@ -11,9 +11,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\api\FarmPlus.Api.csproj" />
-    <ProjectReference Include="..\Admin.Client\FarmPlus.Admin.Client.csproj" />
+    <ProjectReference Include="..\..\api\FarmPlus.Api.csproj" />
+    <ProjectReference Include="..\AdminClient\FarmPlus.AdminClient.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.10" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.4" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.*" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.*" />
   </ItemGroup>
 
 </Project>

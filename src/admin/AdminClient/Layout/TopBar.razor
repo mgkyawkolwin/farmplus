@@ -1,0 +1,92 @@
+@rendermode InteractiveWebAssembly
+
+@using System.Globalization
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject NavigationManager Navigation
+@* @inject IStringLocalizer<LocalizedStrings> Localizer *@
+
+
+<h3 style="margin: 0;">Admin Portal</h3>
+<FluentSpacer />
+
+@* Icon-Only Theme Selector with String Conversion *@
+<FluentDesignTheme @bind-Mode="@Mode" @bind-OfficeColor="@OfficeColor" StorageName="theme" />
+
+<FluentSelect TOption="string" @bind-Value="@SelectedThemeString" @bind-Value:after="OnThemeChanged"
+              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);"
+              >
+    <FluentOption Value="@DesignThemeModes.System.ToString()">
+        System
+    </FluentOption>
+    <FluentOption Value="@DesignThemeModes.Light.ToString()">
+        Light
+    </FluentOption>
+    <FluentOption Value="@DesignThemeModes.Dark.ToString()">
+        Dark
+    </FluentOption>
+</FluentSelect>
+&nbsp;&nbsp;
+<FluentSelect TOption="string" @bind-Value="@SelectedCulture" @bind-Value:after="OnLanguageChanged"
+              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);"
+              >
+    <FluentOption Value="en-US">
+        English
+    </FluentOption>
+    <FluentOption Value="my-MM">
+        Burmese
+    </FluentOption>
+</FluentSelect>
+&nbsp;&nbsp;
+<button class="btn btn-danger signout-button" type="button" @onclick="SignOutAsync">Sign Out</button>
+
+        
+ 
+
+@code {
+    private string SelectedCulture { get; set; } = "en-US";
+    private string SelectedThemeString { get; set; }
+    private DesignThemeModes Mode { get; set; }
+    private OfficeColor? OfficeColor { get; set; } = Microsoft.FluentUI.AspNetCore.Components.OfficeColor.Visio;
+
+    protected override void OnInitialized()
+    {
+        // Read the currently active culture so the dropdown reflects it after reload
+        SelectedCulture = CultureInfo.CurrentUICulture.Name;
+    }
+    
+    private void OnThemeChanged()
+    {
+        if (Enum.TryParse<DesignThemeModes>(SelectedThemeString, out var parsedMode))
+        {
+            Mode = parsedMode;
+        }
+    }
+    bool ShowHeader = true;
+    bool ShowNavMenu = true;
+    bool ShowBodyContent = true;
+    bool ShowFooter = true;
+    private bool isSidebarOpen = true;
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    private async Task SignOutAsync()
+    {
+        Navigation.NavigateTo("/auth/signout", forceLoad: true);
+    }
+
+    private void OnLanguageChanged()
+    {
+        
+        // Get relative path without the domain (e.g., "dashboard?tab=1")
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        
+        // Ensure it starts with a leading slash '/'
+        var localUrl = "/" + relativePath;
+        var escapedRedirect = Uri.EscapeDataString(localUrl);
+
+        Navigation.NavigateTo($"/Culture/Set?culture={SelectedCulture}&redirectUri={escapedRedirect}", forceLoad: true);
+    }
+}

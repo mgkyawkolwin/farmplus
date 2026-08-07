@@ -2,12 +2,16 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using FarmPlus.Api.Data;
 using FarmPlus.Api.Dtos.Auth;
 using FarmPlus.Api.Dtos.Users;
+using FarmPlus.Api.Dtos.AdminUsers;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.Models;
@@ -27,8 +31,9 @@ public class AuthService : IAuthService
     private readonly JwtSettings _jwtSettings;
     private readonly GoogleAuthSettings _googleAuthSettings;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IPasswordHasher<AdminUserEntity> adminPasswordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer)
+    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IPasswordHasher<AdminUserEntity> adminPasswordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer, IHttpContextAccessor httpContextAccessor)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
@@ -37,27 +42,29 @@ public class AuthService : IAuthService
         _jwtSettings = jwtSettings;
         _googleAuthSettings = googleAuthSettings;
         _localizer = localizer;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    private string CreateJwtToken(UserEntity user)
+    private async Task<string> SignInAndCreateTokenAsync(UserEntity user)
     {
-        return CreateJwtToken((user.Id, user.Email, user.UserName));
+        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName));
     }
 
-    private string CreateJwtToken(AdminUserEntity user)
+    private async Task<string> SignInAndCreateTokenAsync(AdminUserEntity user)
     {
-        return CreateJwtToken((user.Id, user.Email, user.UserName));
+        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName));
     }
 
-    private string CreateJwtToken((Guid Id, string Email, string UserName) user)
+    private async Task<string> SignInAndCreateTokenAsync((Guid Id, string Email, string UserName) user)
     {
+        // 1. Build JWT Claims
         var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
-            new(ClaimTypes.Name, user.UserName),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
+    {
+        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new(JwtRegisteredClaimNames.Email, user.Email),
+        new(ClaimTypes.Name, user.UserName),
+        new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+    };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -70,6 +77,28 @@ public class AuthService : IAuthService
             expires: expires,
             signingCredentials: credentials
         );
+
+        // 2. Issue Cookie if HttpContext is available
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            var cookieClaims = new[]
+            {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Email)
+        };
+
+            var identity = new ClaimsIdentity(cookieClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await httpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+                });
+        }
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
@@ -103,7 +132,7 @@ public class AuthService : IAuthService
         await _dbContext.SaveChangesAsync();
         _logger.LogTrace("User entity persisted with id {UserId}", user.Id);
 
-        var token = CreateJwtToken(user);
+        var token = await SignInAndCreateTokenAsync(user);
         var response = new AuthResponseDto(
             token,
             new UserDto
@@ -146,7 +175,7 @@ public class AuthService : IAuthService
 
         _logger.LogTrace("User {Username} authenticated successfully", dto.Username);
 
-        var token = CreateJwtToken(user);
+        var token = await SignInAndCreateTokenAsync(user);
         var response = new AuthResponseDto(
             token,
             new UserDto
@@ -197,15 +226,14 @@ public class AuthService : IAuthService
 
         _logger.LogTrace("Admin user {Username} authenticated successfully", dto.Username);
 
-        var token = CreateJwtToken(adminUser);
+        var token = await SignInAndCreateTokenAsync(adminUser);
         var response = new AdminAuthResponseDto(
             token,
             new AdminUserDto
             {
                 Id = adminUser.Id,
                 UserName = adminUser.UserName,
-                Email = adminUser.Email,
-                Token = token
+                Email = adminUser.Email
             }
         );
         _logger.LogTrace("AdminAuthResponseDto: {@Response}", response);
@@ -283,7 +311,7 @@ public class AuthService : IAuthService
             }
         }
 
-        var token = CreateJwtToken(user);
+        var token = await SignInAndCreateTokenAsync(user);
         var response = new AuthResponseDto(
             token,
             new UserDto

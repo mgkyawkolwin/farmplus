@@ -1,0 +1,414 @@
+@page "/adminusers/list"
+@rendermode InteractiveWebAssembly
+@layout MainLayout
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.WebAssembly.Http
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+@inject ILogger<List> Logger
+@inject HttpClient _httpClient
+
+<PageTitle>Users</PageTitle>
+
+<div class="p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Admin Users</h2>
+        <button type="button" class="btn btn-primary" @onclick="OpenNewUserDialog">New User</button>
+    </div>
+
+    <FluentCard>
+        <FluentDataGrid @ref="_userGrid" TGridItem="AdminUserDto" ItemsProvider="LoadPageAsync" ItemKey="@(user => user.Id)" Pagination="_paginationState" ShowHover="true" DisplayMode="DataGridDisplayMode.Table" GridTemplateColumns="1fr 1fr 1.5fr 1fr 180px 180px">
+            <TemplateColumn Title="#">
+                <ChildContent Context="user">
+                    <div class="d-flex align-items-center gap-2">
+                        <span>@($"{user.Id.ToString()[..4]}...{user.Id.ToString()[^4..]}")</span>
+                        <FluentIcon Icon="Icons.Regular.Size20.Copy" OnClick="() => CopyIdToClipboard(user.Id)" />
+                    </div>
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Title="Username" Property="@(user => user.UserName)" />
+            <PropertyColumn Title="Email" Property="@(user => user.Email)" />
+            <PropertyColumn Title="Role" Property="@(user => user.Role)" />
+            <TemplateColumn Title="Status">
+                <ChildContent Context="user">
+                    <span>@(user.IsActive ? "Active" : "Inactive")</span>
+                </ChildContent>
+            </TemplateColumn>
+            <TemplateColumn Title="Actions">
+                <ChildContent Context="user">
+                    <div class="d-flex gap-2">
+                        <FluentButton Appearance="Appearance.Stealth" IconStart="@_editIcon" OnClick="() => OpenEditUserDialog(user)">
+                            <span class="visually-hidden">Edit</span>
+                        </FluentButton>
+                        <FluentButton Appearance="Appearance.Stealth" IconStart="@_deleteIcon" OnClick="() => ConfirmDeleteUserAsync(user)">
+                            <span class="visually-hidden">Delete</span>
+                        </FluentButton>
+                    </div>
+                </ChildContent>
+            </TemplateColumn>
+        </FluentDataGrid>
+        <div class="mt-3">
+            <FluentPaginator State="_paginationState" />
+        </div>
+    </FluentCard>
+
+    <FluentDialog @bind-Hidden="_isNewUserDialogHidden" Modal="true" TrapFocus="true" AriaLabel="Create new user">
+        <div class="p-4" style="min-width: 420px;">
+            <h4>Create new user</h4>
+
+            <EditForm Model="_newUser" OnValidSubmit="CreateNewUserAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <FluentTextField @bind-Value="_newUser.UserName" Placeholder="Username" Style="width: 100%;" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <FluentTextField @bind-Value="_newUser.Email" Placeholder="Email address" Style="width: 100%;" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <FluentTextField @bind-Value="_newUser.Password" TextFieldType="TextFieldType.Password" Placeholder="Password" Style="width: 100%;" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <FluentTextField @bind-Value="_newUser.Role" Placeholder="Admin" Style="width: 100%;" />
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="isActiveCheckbox" @bind="_newUser.IsActive" />
+                    <label class="form-check-label" for="isActiveCheckbox">Active</label>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_formErrorMessage))
+                {
+                    <div class="alert alert-danger">@_formErrorMessage</div>
+                }
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseNewUserDialog">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                        @(_isSubmitting ? "Saving..." : "Create User")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </FluentDialog>
+
+    <FluentDialog @bind-Hidden="_isEditUserDialogHidden" Modal="true" TrapFocus="true" AriaLabel="Edit user">
+        <div class="p-4" style="min-width: 420px;">
+            <h4>Edit user</h4>
+
+            <EditForm Model="_editUser" OnValidSubmit="UpdateUserAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <FluentTextField @bind-Value="_editUser.UserName" Placeholder="Username" Style="width: 100%;" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <FluentTextField @bind-Value="_editUser.Email" Placeholder="Email address" Style="width: 100%;" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <FluentTextField @bind-Value="_editUser.Role" Placeholder="Admin" Style="width: 100%;" />
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="editIsActiveCheckbox" @bind="_editUser.IsActive" />
+                    <label class="form-check-label" for="editIsActiveCheckbox">Active</label>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_formErrorMessage))
+                {
+                    <div class="alert alert-danger">@_formErrorMessage</div>
+                }
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditUserDialog">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                        @(_isSubmitting ? "Saving..." : "Save Changes")
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </FluentDialog>
+</div>
+
+@code {
+    private bool _isCheckingAuth = true;
+    private bool _isAuthenticated;
+    private List<AdminUserDto> _users = new();
+    private FluentDataGrid<AdminUserDto>? _userGrid;
+    private readonly PaginationState _paginationState = new PaginationState { ItemsPerPage = 10 };
+    private bool _isNewUserDialogHidden = true;
+    private bool _isEditUserDialogHidden = true;
+    private bool _isSubmitting;
+    private string? _formErrorMessage;
+    private NewUserModel _newUser = new();
+    private EditUserModel _editUser = new();
+    private Guid _editingUserId;
+    private readonly Icon _editIcon = new Icon("Edit", IconVariant.Regular, IconSize.Size16, "Edit");
+    private readonly Icon _deleteIcon = new Icon("Delete", IconVariant.Regular, IconSize.Size16, "Delete");
+    private readonly Icon _copyIcon = new Icon("Copy", IconVariant.Regular, IconSize.Size16, "Copy");
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private async ValueTask<GridItemsProviderResult<AdminUserDto>> LoadPageAsync(GridItemsProviderRequest<AdminUserDto> request)
+    {
+        try
+        {
+            var startIndex = request.StartIndex;
+            var pageSize = request.Count ?? _paginationState.ItemsPerPage;
+            var page = (startIndex / pageSize) + 1;
+            Console.WriteLine(_httpClient.BaseAddress?.ToString() ?? "No BaseAddress set for HttpClient");
+            //var response = await _httpClient.GetFromJsonAsync<ResponseDto<PaginatedResultDto<AdminUserDto>>>($"adminusers?page={page}&pageSize={pageSize}");
+            var relativeUrl = $"adminusers?page={page}&pageSize={pageSize}";
+
+            // 1. Create the HttpRequestMessage
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
+
+            // 2. Instruct the browser to include cookies/credentials in cross-origin fetch calls
+            requestMessage.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+
+            // 3. Send the request
+            var httpResponse = await _httpClient.SendAsync(requestMessage);
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to load admin users. Status code: {httpResponse.StatusCode}");
+            }
+
+            // 4. Read and deserialize the JSON response
+            var response = await httpResponse.Content.ReadFromJsonAsync<ResponseDto<PaginatedResultDto<AdminUserDto>>>();
+            if (response == null || !response.Success || response.Data == null)
+            {
+                throw new InvalidOperationException(response?.Message ?? "Failed to load admin users.");
+            }
+            var result = response.Data;
+            _users = result.Items.ToList();
+            return GridItemsProviderResult.From(_users, result.Total);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load admin users.");
+            return GridItemsProviderResult.From(Array.Empty<AdminUserDto>(), 0);
+        }
+    }
+
+    private void OpenNewUserDialog()
+    {
+        _formErrorMessage = null;
+        _newUser = new NewUserModel();
+        _isNewUserDialogHidden = false;
+    }
+
+    private void CloseNewUserDialog()
+    {
+        _isNewUserDialogHidden = true;
+    }
+
+    private void OpenEditUserDialog(AdminUserDto user)
+    {
+        _formErrorMessage = null;
+        _editingUserId = user.Id;
+        _editUser = new EditUserModel
+        {
+            UserName = user.UserName,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive
+        };
+        _isEditUserDialogHidden = false;
+    }
+
+    private void CloseEditUserDialog()
+    {
+        _isEditUserDialogHidden = true;
+    }
+
+    private async Task ConfirmDeleteUserAsync(AdminUserDto user)
+    {
+        @* var dialog = await  DialogService.ShowConfirmationAsync("Are you <strong>sure</strong> you want to delete this item? <br /><br />This will also remove any linked items");
+        var result = await dialog.Result; *@
+        await DialogService.ShowConfirmationAsync(
+            this,
+            async dialogResult =>
+            {
+                if (dialogResult.Cancelled)
+                {
+                    return;
+                }
+
+                _isSubmitting = true;
+                try
+                {
+                    var response = await _httpClient.DeleteAsync($"/adminusers/{user.Id}");
+                    var payload = await response.Content.ReadFromJsonAsync<ResponseDto<object>>();
+
+                    if (payload == null || !payload.Success)
+                    {
+                        throw new InvalidOperationException(payload?.Message ?? "Failed to delete admin user.");
+                    }
+                    if (payload.Success)
+                    {
+                        if (_userGrid is not null)
+                        {
+                            await _userGrid.RefreshDataAsync(false);
+                        }
+                        ToastService.ShowSuccess("Admin user deleted successfully.", 2000, "Deleted");
+                    }
+                    else
+                    {
+                        ToastService.ShowError("Failed to delete admin user.", 2000, "Error");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to delete admin user.");
+                    ToastService.ShowError("Failed to delete admin user.", 2000, "Error");
+                }
+                finally
+                {
+                    _isSubmitting = false;
+                }
+            },
+            $"Are you sure you want to delete user '{user.UserName}'?",
+            "Delete",
+            "Cancel",
+            "Confirm delete");
+
+    }
+
+    private async Task CreateNewUserAsync()
+    {
+        _formErrorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var dto = new CreateAdminUserDto
+            {
+                UserName = _newUser.UserName,
+                Email = _newUser.Email,
+                Password = _newUser.Password,
+                Role = string.IsNullOrWhiteSpace(_newUser.Role) ? "Admin" : _newUser.Role,
+                IsActive = _newUser.IsActive
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("/adminusers", dto);
+            var payload = await response.Content.ReadFromJsonAsync<ResponseDto<AdminUserDto>>();
+
+            if (payload == null || !payload.Success || payload.Data == null)
+            {
+                throw new InvalidOperationException(payload?.Message ?? "Failed to create admin user.");
+            }
+            if (_userGrid is not null)
+            {
+                await _userGrid.RefreshDataAsync(false);
+            }
+            _isNewUserDialogHidden = true;
+            ToastService.ShowSuccess("New admin user has been created.", 2000, "Success");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create new admin user.");
+            _formErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task UpdateUserAsync()
+    {
+        _formErrorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var dto = new UpdateAdminUserDto
+            {
+                UserName = _editUser.UserName,
+                Email = _editUser.Email,
+                Role = string.IsNullOrWhiteSpace(_editUser.Role) ? "Admin" : _editUser.Role,
+                IsActive = _editUser.IsActive
+            };
+
+            var response = await _httpClient.PutAsJsonAsync($"/adminusers/{_editingUserId}", dto);
+            var payload = await response.Content.ReadFromJsonAsync<ResponseDto<AdminUserDto>>();
+
+            if (payload == null || !payload.Success || payload.Data == null)
+            {
+                throw new InvalidOperationException(payload?.Message ?? "Failed to update admin user.");
+            }
+            if (_userGrid is not null)
+            {
+                await _userGrid.RefreshDataAsync(false);
+            }
+            _isEditUserDialogHidden = true;
+            ToastService.ShowSuccess("Admin user updated successfully.", 2000, "Success");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update admin user.");
+            _formErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task CopyIdToClipboard(Guid userId)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", userId.ToString());
+        ToastService.ShowSuccess("User ID copied to clipboard.", 1500, "Copied");
+    }
+
+    private sealed class NewUserModel
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+
+        public string Role { get; set; } = "Admin";
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    private sealed class EditUserModel
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        public string? Role { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+}

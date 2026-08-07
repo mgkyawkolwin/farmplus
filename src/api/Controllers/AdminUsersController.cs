@@ -10,7 +10,7 @@ using FarmPlus.Api.Caching;
 namespace FarmPlus.Api.Controllers;
 
 [ApiController]
-[Authorize]
+// [Authorize]
 [Route("api/[controller]")]
 public class AdminUsersController : BaseController
 {
@@ -28,6 +28,11 @@ public class AdminUsersController : BaseController
     {
         try
         {
+            // Log all cookies received in the request
+            foreach (var cookie in Request.Cookies)
+            {
+                _logger.LogInformation("Incoming Cookie -> Key: {Key}, Value: {Value}", cookie.Key, cookie.Value);
+            }
             _logger.LogDebug("CALLED: GetAdminUsers(page={Page}, pageSize={PageSize})", page, pageSize);
             var result = await _adminUserService.GetAdminUsersAsync(page, pageSize);
             return Ok(new { Success = true, Data = result });

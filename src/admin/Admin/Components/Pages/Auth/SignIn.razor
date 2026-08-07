@@ -4,10 +4,14 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
-@using FarmPlus.Api.Services
+@using Microsoft.Extensions.Configuration
+@using System.Net.Http.Json
+@using System.Text.Json
 @using FarmPlus.Api.Dtos.Auth
+@using Microsoft.FluentUI.AspNetCore.Components
 
-@inject IAuthService AuthService
+@inject IHttpClientFactory HttpClientFactory
+@inject IConfiguration Configuration
 @inject NavigationManager Navigation
 @inject ILogger<SignIn> Logger
 @inject IHttpContextAccessor HttpContextAccessor
@@ -29,13 +33,13 @@
 
             <label class="form-label">Username</label>
             <FluentTextField Name="Input.Username"
-                             @bind-Value="Input.Username"
+                             @bind="Input.Username"
                              Placeholder="Username or email"
                              Style="width: 100%; margin-bottom: 1rem;" />
 
             <label class="form-label">Password</label>
             <FluentTextField Name="Input.Password"
-                             @bind-Value="Input.Password"
+                             @bind="Input.Password"
                              TextFieldType="TextFieldType.Password"
                              Placeholder="Password"
                              Style="width: 100%; margin-bottom: 1rem;" />
@@ -65,7 +69,8 @@
     {
         _errorMessage = null;
 
-        if (HttpContextAccessor.HttpContext is null)
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext is null)
         {
             _errorMessage = "Unable to process authentication request.";
             return;
@@ -73,39 +78,63 @@
 
         try
         {
-            // Call your backend/database auth service directly in C# (no self-HTTP request needed)
-            var response = await AuthService.SignInAdminAsync(new LoginDto(Input.Username, Input.Password));
-
-            if (response?.User is null)
+            var apiBaseUrl = Configuration["ApiBaseUrl"] ?? string.Empty;
+            Console.WriteLine($"API Base URL: {apiBaseUrl}"); // Debugging line
+            if (string.IsNullOrWhiteSpace(apiBaseUrl))
             {
+                _errorMessage = "API base URL is not configured.";
+                return;
+            }
+
+            var client = HttpClientFactory.CreateClient();
+            var requestUrl = new Uri(new Uri(apiBaseUrl), "auth/signinadmin");
+            Console.WriteLine($"Request URL: {requestUrl}"); // Debugging line
+            var request = new HttpRequestMessage(HttpMethod.Post, requestUrl)
+            {
+                Content = JsonContent.Create(new LoginDto(Input.Username, Input.Password))
+            };
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            // Log all Set-Cookie headers
+            if (response.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+            {
+                foreach (var cookie in cookieValues)
+                {
+                    Console.WriteLine($"Set-Cookie: {cookie}");
+                    // Or use your preferred logging method
+                    // _logger.LogInformation("Set-Cookie: {Cookie}", cookie);
+                }
+            }
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.LogWarning("Admin sign in API returned {Status}. Response: {Response}", response.StatusCode, responseContent);
                 _errorMessage = "Invalid username or password.";
                 return;
             }
 
-            // Create security claims
-            var claims = new List<Claim>
+            // Forward Set-Cookie headers from the API response to the browser
+            if (response.Headers.TryGetValues("Set-Cookie", out var setCookieValues))
             {
-                new(ClaimTypes.NameIdentifier, response.User.Id.ToString()),
-                new(ClaimTypes.Name, response.User.UserName ?? Input.Username),
-                new(ClaimTypes.Email, response.User.Email ?? string.Empty),
-                new("jwt_token", response.Token) // Store backend JWT if needed for API calls
-            };
-
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
-
-            // 5. Issue the Cookie directly! (Works because this is an HTTP POST request)
-            await HttpContextAccessor.HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                new AuthenticationProperties
+                foreach (var headerValue in setCookieValues)
                 {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
-                });
+                    httpContext.Response.Headers.Append("Set-Cookie", headerValue);
+                }
+            }
 
-            // Redirect to protected dashboard after successful login
-            Navigation.NavigateTo("/users/list", forceLoad: true);
+            var apiResult = JsonSerializer.Deserialize<ApiResult<AdminAuthResponseDto>>(responseContent, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (apiResult?.Success != true || apiResult.Data?.User is null)
+            {
+                _errorMessage = apiResult?.Message ?? "Invalid username or password.";
+                return;
+            }
+
+            Navigation.NavigateTo("/counter", forceLoad: true);
         }
         catch (Exception ex)
         {
@@ -113,6 +142,8 @@
             _errorMessage = ex.Message;
         }
     }
+
+    private sealed record ApiResult<T>(bool Success, T? Data, string? Message);
 
     public sealed class SignInModel
     {
