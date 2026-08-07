@@ -6,14 +6,14 @@ using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Cluspedia.FarmPlus.Api.Data;
-using Cluspedia.FarmPlus.Api.Entities;
-using Cluspedia.FarmPlus.Api.Models;
-using Cluspedia.FarmPlus.Api.Services;
-using Cluspedia.FarmPlus.Api.Filters;
+using FarmPlus.Api.Data;
+using FarmPlus.Api.Entities;
+using FarmPlus.Api.Models;
+using FarmPlus.Api.Services;
+using FarmPlus.Api.Filters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Cluspedia.FarmPlus.Api.Caching;
+using FarmPlus.Api.Caching;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -123,10 +123,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.Parse("8.0.32-mysql")));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IPasswordHasher<UserEntity>, PasswordHasher<UserEntity>>();
+builder.Services.AddScoped<IPasswordHasher<AdminUserEntity>, PasswordHasher<AdminUserEntity>>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

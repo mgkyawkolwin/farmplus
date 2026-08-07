@@ -1,11 +1,11 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Cluspedia.FarmPlus.Api.Dtos.Customers;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.Services;
+using FarmPlus.Api.Dtos.Customers;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.Services;
 
-namespace Cluspedia.FarmPlus.Api.Controllers;
+namespace FarmPlus.Api.Controllers;
 
 [ApiController]
 [Authorize]

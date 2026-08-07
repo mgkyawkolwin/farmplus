@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Dtos.Users;
+namespace FarmPlus.Api.Dtos.Users;
 
 public sealed record ChangePasswordRequestDto
 {

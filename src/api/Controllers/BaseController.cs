@@ -3,7 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace Cluspedia.FarmPlus.Api.Controllers;
+namespace FarmPlus.Api.Controllers;
 
 public class BaseController : Controller
 {

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Cluspedia.FarmPlus.Api.Services;
+namespace FarmPlus.Api.Services;
 
 public interface IStorageService
 {

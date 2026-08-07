@@ -1,12 +1,12 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Cluspedia.FarmPlus.Api.Dtos.Auth;
-using Cluspedia.FarmPlus.Api.Services;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.Dtos;
+using FarmPlus.Api.Dtos.Auth;
+using FarmPlus.Api.Services;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.Dtos;
 
-namespace Cluspedia.FarmPlus.Api.Controllers;
+namespace FarmPlus.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -61,6 +61,28 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Unexpected Error Occured.");
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An error occurred while signing in." });
+        }
+    }
+
+    [HttpPost("signinadmin")]
+    public async Task<ActionResult<AuthResponseDto>> SignInAdmin(LoginDto dto)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: SignInAdmin(dto={Dto})", JsonSerializer.Serialize(dto));
+            var response = await _authService.SignInAdminAsync(dto);
+            _logger.LogTrace("AuthResponseDto: {Response}", JsonSerializer.Serialize(response));
+            return Ok(new { Success = true, Data = response });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning(ex, "Custom Exception: {message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected Error Occured.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An error occurred while signing in admin." });
         }
     }
 

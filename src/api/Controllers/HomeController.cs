@@ -3,10 +3,10 @@ using System.Net;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.I18N;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.I18N;
 
-namespace Cluspedia.FarmPlus.Api.Controllers;
+namespace FarmPlus.Api.Controllers;
 
 [ApiController]
 [Route("api")]

@@ -1,8 +1,8 @@
 using System.Net.Mail;
 using Microsoft.Extensions.Localization;
-using Cluspedia.FarmPlus.Api.Exceptions;
+using FarmPlus.Api.Exceptions;
 
-namespace Cluspedia.FarmPlus.Api.Utilities;
+namespace FarmPlus.Api.Utilities;
 
 public static class ValidationHelper
 {

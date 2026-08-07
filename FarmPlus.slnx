@@ -1,7 +1,8 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/src/admin/">
-    <Project Path="src/admin/FarmPlus.Admin.csproj" />
+    <Project Path="src/admin/Admin/FarmPlus.Admin.csproj" />
+    <Project Path="src/admin/Admin.Client/FarmPlus.Admin.Client.csproj" />
   </Folder>
   <Folder Name="/src/api/">
     <Project Path="src/api/FarmPlus.Api.csproj" />

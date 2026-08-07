@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Models;
+namespace FarmPlus.Api.Models;
 
 public sealed record MinioSettings
 {

@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Dtos;
+namespace FarmPlus.Api.Dtos;
 
 public record DtoBase
 {

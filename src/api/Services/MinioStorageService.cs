@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Minio;
 using Minio.Exceptions;
-using Cluspedia.FarmPlus.Api.Models;
-using Cluspedia.FarmPlus.Api.Data;
-using Cluspedia.FarmPlus.Api.Entities;
+using FarmPlus.Api.Models;
+using FarmPlus.Api.Data;
+using FarmPlus.Api.Entities;
 
-namespace Cluspedia.FarmPlus.Api.Services;
+namespace FarmPlus.Api.Services;
 
 public class MinioStorageService : IStorageService
 {

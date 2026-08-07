@@ -1,7 +1,7 @@
-using Cluspedia.FarmPlus.Api.Dtos.Customers;
-using Cluspedia.FarmPlus.Api.Entities;
+using FarmPlus.Api.Dtos.Customers;
+using FarmPlus.Api.Entities;
 
-namespace Cluspedia.FarmPlus.Api.Mappings;
+namespace FarmPlus.Api.Mappings;
 
 public static class CustomerMappings
 {

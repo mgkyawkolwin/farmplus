@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cluspedia.FarmPlus.Api.Entities;
+namespace FarmPlus.Api.Entities;
 
 [Table("Categories")]
 public class CategoryEntity : EntityBase<Guid>

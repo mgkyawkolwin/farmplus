@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Exceptions;
+namespace FarmPlus.Api.Exceptions;
 
 public class CustomException(string message) : Exception(message)
 {

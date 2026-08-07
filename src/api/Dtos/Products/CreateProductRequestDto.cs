@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Dtos.Products;
+namespace FarmPlus.Api.Dtos.Products;
 
 public sealed record CreateProductRequestDto
 {

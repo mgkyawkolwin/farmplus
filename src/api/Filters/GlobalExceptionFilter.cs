@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace Cluspedia.FarmPlus.Api.Filters;
+namespace FarmPlus.Api.Filters;
 
 public class GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger) : IExceptionFilter
 {

@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Dtos;
+namespace FarmPlus.Api.Dtos;
 
 public sealed record PaginatedResultDto<T>(
     IEnumerable<T> Items,

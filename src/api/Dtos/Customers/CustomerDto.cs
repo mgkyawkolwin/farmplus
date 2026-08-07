@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Dtos.Customers;
+namespace FarmPlus.Api.Dtos.Customers;
 
 public sealed record CustomerDto
 {

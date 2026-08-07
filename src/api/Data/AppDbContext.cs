@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Cluspedia.FarmPlus.Api.Entities;
+using FarmPlus.Api.Entities;
 
-namespace Cluspedia.FarmPlus.Api.Data;
+namespace FarmPlus.Api.Data;
 
 public class AppDbContext : DbContext
 {
@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<AdminUserEntity> AdminUsers => Set<AdminUserEntity>();
     public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();

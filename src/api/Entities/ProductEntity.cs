@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cluspedia.FarmPlus.Api.Entities;
+namespace FarmPlus.Api.Entities;
 
 [Table("Products")]
 public class ProductEntity : EntityBase<Guid>

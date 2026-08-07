@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Cluspedia.FarmPlus.Api.Entities;
+namespace FarmPlus.Api.Entities;
 
 public abstract class EntityBase<TKey>
     where TKey : struct

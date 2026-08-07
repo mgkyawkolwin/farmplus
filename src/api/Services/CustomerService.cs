@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
-using Cluspedia.FarmPlus.Api.Data;
-using Cluspedia.FarmPlus.Api.Dtos;
-using Cluspedia.FarmPlus.Api.Dtos.Customers;
-using Cluspedia.FarmPlus.Api.Entities;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.I18N;
-using Cluspedia.FarmPlus.Api.Mappings;
-using Cluspedia.FarmPlus.Api.Utilities;
+using FarmPlus.Api.Data;
+using FarmPlus.Api.Dtos;
+using FarmPlus.Api.Dtos.Customers;
+using FarmPlus.Api.Entities;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.I18N;
+using FarmPlus.Api.Mappings;
+using FarmPlus.Api.Utilities;
 
-namespace Cluspedia.FarmPlus.Api.Services;
+namespace FarmPlus.Api.Services;
 
 public interface ICustomerService
 {

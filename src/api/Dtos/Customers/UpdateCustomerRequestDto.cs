@@ -1,6 +1,6 @@
-using Cluspedia.FarmPlus.Api.Dtos;
+using FarmPlus.Api.Dtos;
 
-namespace Cluspedia.FarmPlus.Api.Dtos.Customers;
+namespace FarmPlus.Api.Dtos.Customers;
 
 public sealed record UpdateCustomerRequestDto : UpdateRequestBase<Guid>
 {

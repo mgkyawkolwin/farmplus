@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Utilities;
+namespace FarmPlus.Api.Utilities;
 
 public static class PaginationHelper
 {

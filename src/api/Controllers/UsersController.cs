@@ -4,13 +4,13 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Cluspedia.FarmPlus.Api.Dtos.Users;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.Services;
+using FarmPlus.Api.Dtos.Users;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.Services;
 using Microsoft.AspNetCore.OutputCaching;
-using Cluspedia.FarmPlus.Api.Caching;
+using FarmPlus.Api.Caching;
 
-namespace Cluspedia.FarmPlus.Api.Controllers;
+namespace FarmPlus.Api.Controllers;
 
 [ApiController]
 [Authorize]

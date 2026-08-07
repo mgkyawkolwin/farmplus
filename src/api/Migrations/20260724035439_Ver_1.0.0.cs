@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Cluspedia.FarmPlus.Api.Migrations
+namespace FarmPlus.Api.Migrations
 {
     /// <inheritdoc />
     public partial class Ver_100 : Migration

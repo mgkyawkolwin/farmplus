@@ -5,32 +5,34 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Cluspedia.FarmPlus.Api.Data;
-using Cluspedia.FarmPlus.Api.Dtos.Auth;
-using Cluspedia.FarmPlus.Api.Dtos.Users;
-using Cluspedia.FarmPlus.Api.Entities;
-using Cluspedia.FarmPlus.Api.Exceptions;
-using Cluspedia.FarmPlus.Api.Models;
-using Cluspedia.FarmPlus.Api.Utilities;
+using FarmPlus.Api.Data;
+using FarmPlus.Api.Dtos.Auth;
+using FarmPlus.Api.Dtos.Users;
+using FarmPlus.Api.Entities;
+using FarmPlus.Api.Exceptions;
+using FarmPlus.Api.Models;
+using FarmPlus.Api.Utilities;
 using System.Text.Json;
 using Microsoft.Extensions.Localization;
-using Cluspedia.FarmPlus.Api.I18N;
+using FarmPlus.Api.I18N;
 
-namespace Cluspedia.FarmPlus.Api.Services;
+namespace FarmPlus.Api.Services;
 
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _dbContext;
     private readonly IPasswordHasher<UserEntity> _passwordHasher;
+    private readonly IPasswordHasher<AdminUserEntity> _adminPasswordHasher;
     private readonly ILogger<AuthService> _logger;
     private readonly JwtSettings _jwtSettings;
     private readonly GoogleAuthSettings _googleAuthSettings;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
 
-    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer)
+    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IPasswordHasher<AdminUserEntity> adminPasswordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
+        _adminPasswordHasher = adminPasswordHasher;
         _logger = logger;
         _jwtSettings = jwtSettings;
         _googleAuthSettings = googleAuthSettings;
@@ -38,6 +40,16 @@ public class AuthService : IAuthService
     }
 
     private string CreateJwtToken(UserEntity user)
+    {
+        return CreateJwtToken((user.Id, user.Email, user.UserName));
+    }
+
+    private string CreateJwtToken(AdminUserEntity user)
+    {
+        return CreateJwtToken((user.Id, user.Email, user.UserName));
+    }
+
+    private string CreateJwtToken((Guid Id, string Email, string UserName) user)
     {
         var claims = new List<Claim>
         {
@@ -149,6 +161,54 @@ public class AuthService : IAuthService
             }
         );
         _logger.LogTrace("AuthResponseDto: {@Response}", response);
+        return response;
+    }
+
+    public async Task<AdminAuthResponseDto> SignInAdminAsync(LoginDto dto)
+    {
+        _logger.LogDebug("CALLED: SignInAdminAsync(dto={Dto})", JsonSerializer.Serialize(dto));
+        ValidationHelper.ValidateRequiredString(_localizer, "Username", dto.Username);
+        ValidationHelper.ValidateRequiredString(_localizer, "Password", dto.Password);
+
+        var normalizedUsername = dto.Username.Trim();
+        var normalizedEmail = normalizedUsername.Contains('@') ? normalizedUsername.ToLowerInvariant() : null;
+        var normalizedName = normalizedUsername.ToLowerInvariant();
+        var adminUser = await _dbContext.Set<AdminUserEntity>()
+            .SingleOrDefaultAsync(u => (normalizedEmail != null && u.Email == normalizedEmail) || u.UserName.ToLower() == normalizedName);
+
+        if (adminUser == null)
+        {
+            _logger.LogWarning("Admin sign-in failed for unknown username {Username}", dto.Username);
+            throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
+        }
+
+        if (!adminUser.IsActive)
+        {
+            _logger.LogWarning("Admin sign-in failed for disabled admin user {Username}", dto.Username);
+            throw new CustomException("Admin user account is disabled.");
+        }
+
+        var verificationResult = _adminPasswordHasher.VerifyHashedPassword(adminUser, adminUser.PasswordHash, dto.Password);
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            _logger.LogWarning("Admin sign-in failed for username {Username}: invalid password", dto.Username);
+            throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
+        }
+
+        _logger.LogTrace("Admin user {Username} authenticated successfully", dto.Username);
+
+        var token = CreateJwtToken(adminUser);
+        var response = new AdminAuthResponseDto(
+            token,
+            new AdminUserDto
+            {
+                Id = adminUser.Id,
+                UserName = adminUser.UserName,
+                Email = adminUser.Email,
+                Token = token
+            }
+        );
+        _logger.LogTrace("AdminAuthResponseDto: {@Response}", response);
         return response;
     }
 

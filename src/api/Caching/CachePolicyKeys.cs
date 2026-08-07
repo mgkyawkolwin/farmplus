@@ -1,4 +1,4 @@
-namespace Cluspedia.FarmPlus.Api.Caching;
+namespace FarmPlus.Api.Caching;
 
 public static class CachePolicyKeys
 {
