@@ -1,4 +1,4 @@
-namespace BikerHub.Admin.I18N;
+namespace FarmPlus.AdminClient.I18N;
 
 public class LocalizedStrings
 {

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FarmPlus.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class aaa : Migration
+    public partial class Ver_102 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -1,4 +1,4 @@
-@page "/adminusers/list"
+@page "/users/list"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @layout MainLayout
 
@@ -16,9 +16,8 @@
 
 <div class="p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">Admin Users</h2>
+        <h2 class="mb-0">Users</h2>
         <button type="button" class="btn btn-primary" @onclick="OpenNewUserDialog">New User</button>
-        <button type="button" class="btn btn-primary" @onclick="async () => await LoadPageAsync(new GridItemsProviderRequest<AdminUserDto>(){StartIndex = 0, Count = 10})">Reload</button>
     </div>
 
     <FluentCard>

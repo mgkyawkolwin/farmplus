@@ -7,7 +7,7 @@
 @using Microsoft.Extensions.Configuration
 @using System.Net.Http.Json
 @using System.Text.Json
-@using FarmPlus.Api.Dtos.Auth
+@* @using FarmPlus.Api.Dtos.Auth *@
 @using Microsoft.FluentUI.AspNetCore.Components
 
 @inject IHttpClientFactory HttpClientFactory
@@ -19,7 +19,7 @@
 
 <PageTitle>Admin Sign In</PageTitle>
 
-<div class="d-flex justify-content-center align-items-center w-100">
+<div class="flex justify-content-center align-items-center">
     <FluentCard Style="max-width: 420px; width: 100%; padding: 2rem;">
         <div class="text-center mb-4">
             <h2 class="mt-3 mb-1">Admin Portal</h2>
@@ -32,17 +32,12 @@
             <ValidationSummary />
 
             <label class="form-label">Username</label>
-            <FluentTextField Name="Input.Username"
-                             @bind="Input.Username"
-                             Placeholder="Username or email"
+            <FluentTextField Name="Input.Username" @bind="Input.Username" Placeholder="Username or email"
                              Style="width: 100%; margin-bottom: 1rem;" />
 
             <label class="form-label">Password</label>
-            <FluentTextField Name="Input.Password"
-                             @bind="Input.Password"
-                             TextFieldType="TextFieldType.Password"
-                             Placeholder="Password"
-                             Style="width: 100%; margin-bottom: 1rem;" />
+            <FluentTextField Name="Input.Password" @bind="Input.Password" TextFieldType="TextFieldType.Password"
+                             Placeholder="Password" Style="width: 100%; margin-bottom: 1rem;" />
 
             @if (!string.IsNullOrWhiteSpace(_errorMessage))
             {
@@ -134,7 +129,7 @@
                 return;
             }
 
-            Navigation.NavigateTo("/counter", forceLoad: true);
+            Navigation.NavigateTo("/adminusers/list", forceLoad: true);
         }
         catch (Exception ex)
         {
@@ -150,4 +145,29 @@
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
     }
+
+    public sealed record LoginDto(
+        string Username,
+        string Password
+    );
+
+    public sealed record AdminAuthResponseDto(
+        string Token,
+        AdminUserDto User
+    );
+
+    public sealed record AdminUserDto : DtoBase
+    {
+        public Guid Id { get; init; }
+        public string? UserName { get; init; }
+        public string? Email { get; init; }
+        public string? Role { get; init; }
+        public bool IsActive { get; init; }
+    }
+
+    public record DtoBase
+    {
+        public Guid? RowVersion { get; init; }
+    }
+
 }

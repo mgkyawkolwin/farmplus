@@ -5,6 +5,8 @@ using FarmPlus.Api.Dtos.Auth;
 using FarmPlus.Api.Services;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.Dtos;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 
 namespace FarmPlus.Api.Controllers;
 
@@ -83,6 +85,27 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Unexpected Error Occured.");
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An error occurred while signing in admin." });
+        }
+    }
+
+    [HttpGet("signoutadmin")]
+    public async Task<ActionResult> SignOutAdmin()
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: SignOutAdmin");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Ok(new { Success = true });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning(ex, "Custom Exception: {message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected Error Occured.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An error occurred while signing out admin." });
         }
     }
 

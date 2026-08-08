@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FarmPlus.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260807102709_aaa")]
-    partial class aaa
+    [Migration("20260808092142_Ver_1.0.2")]
+    partial class Ver_102
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

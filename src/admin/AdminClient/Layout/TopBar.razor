@@ -3,8 +3,7 @@
 @using System.Globalization
 @using Microsoft.FluentUI.AspNetCore.Components
 @inject NavigationManager Navigation
-@* @inject IStringLocalizer<LocalizedStrings> Localizer *@
-
+@inject IStringLocalizer<LocalizedStrings> Localizer
 
 <h3 style="margin: 0;">Admin Portal</h3>
 <FluentSpacer />
@@ -12,39 +11,31 @@
 @* Icon-Only Theme Selector with String Conversion *@
 <FluentDesignTheme @bind-Mode="@Mode" @bind-OfficeColor="@OfficeColor" StorageName="theme" />
 
-<FluentSelect TOption="string" @bind-Value="@SelectedThemeString" @bind-Value:after="OnThemeChanged"
-              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);"
-              >
-    <FluentOption Value="@DesignThemeModes.System.ToString()">
-        System
-    </FluentOption>
-    <FluentOption Value="@DesignThemeModes.Light.ToString()">
-        Light
-    </FluentOption>
-    <FluentOption Value="@DesignThemeModes.Dark.ToString()">
-        Dark
-    </FluentOption>
+<FluentSelect TOption="string" 
+              @bind-Value="@SelectedThemeString" 
+              @bind-Value:after="OnThemeChanged"
+              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);">
+    <FluentOption TOption="string" Value="@DesignThemeModes.System.ToString()" >System</FluentOption>
+    <FluentOption TOption="string" Value="@DesignThemeModes.Light.ToString()" >Light</FluentOption>
+    <FluentOption TOption="string" Value="@DesignThemeModes.Dark.ToString()" >Dark</FluentOption>
 </FluentSelect>
-&nbsp;&nbsp;
-<FluentSelect TOption="string" @bind-Value="@SelectedCulture" @bind-Value:after="OnLanguageChanged"
-              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);"
-              >
-    <FluentOption Value="en-US">
-        English
-    </FluentOption>
-    <FluentOption Value="my-MM">
-        Burmese
-    </FluentOption>
-</FluentSelect>
-&nbsp;&nbsp;
-<button class="btn btn-danger signout-button" type="button" @onclick="SignOutAsync">Sign Out</button>
 
-        
- 
+&nbsp;&nbsp;
+
+<FluentSelect TOption="string" 
+              @bind-Value="@SelectedCulture" 
+              @bind-Value:after="OnLanguageChanged"
+              Style="min-width: 50px; border-color: rgba(255,255,255,0.3);">
+    <FluentOption TOption="string" Value="@("en-US")" >English</FluentOption>
+    <FluentOption TOption="string" Value="@("my-MM")" >Burmese</FluentOption>
+</FluentSelect>
+
+&nbsp;&nbsp;
+<button class="btn btn-danger signout-button" type="button" @onclick="SignOutAsync">@Localizer["Title.SignOut"]</button>
 
 @code {
     private string SelectedCulture { get; set; } = "en-US";
-    private string SelectedThemeString { get; set; }
+    private string SelectedThemeString { get; set; } = DesignThemeModes.System.ToString();
     private DesignThemeModes Mode { get; set; }
     private OfficeColor? OfficeColor { get; set; } = Microsoft.FluentUI.AspNetCore.Components.OfficeColor.Visio;
 
@@ -61,10 +52,11 @@
             Mode = parsedMode;
         }
     }
-    bool ShowHeader = true;
-    bool ShowNavMenu = true;
-    bool ShowBodyContent = true;
-    bool ShowFooter = true;
+
+    private bool ShowHeader = true;
+    private bool ShowNavMenu = true;
+    private bool ShowBodyContent = true;
+    private bool ShowFooter = true;
     private bool isSidebarOpen = true;
 
     private void ToggleSidebar()
@@ -75,15 +67,12 @@
     private async Task SignOutAsync()
     {
         Navigation.NavigateTo("/auth/signout", forceLoad: true);
+        await Task.CompletedTask;
     }
 
     private void OnLanguageChanged()
     {
-        
-        // Get relative path without the domain (e.g., "dashboard?tab=1")
         var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
-        
-        // Ensure it starts with a leading slash '/'
         var localUrl = "/" + relativePath;
         var escapedRedirect = Uri.EscapeDataString(localUrl);
 

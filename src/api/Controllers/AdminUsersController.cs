@@ -10,7 +10,7 @@ using FarmPlus.Api.Caching;
 namespace FarmPlus.Api.Controllers;
 
 [ApiController]
-// [Authorize]
+[Authorize]
 [Route("api/[controller]")]
 public class AdminUsersController : BaseController
 {
@@ -28,6 +28,10 @@ public class AdminUsersController : BaseController
     {
         try
         {
+            foreach (var header in Request.Headers)
+            {
+                _logger.LogInformation("Incoming Header -> Key: {Key}, Value: {Value}", header.Key, header.Value);
+            }
             // Log all cookies received in the request
             foreach (var cookie in Request.Cookies)
             {

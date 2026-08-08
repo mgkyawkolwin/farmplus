@@ -4,6 +4,8 @@
 @using Microsoft.AspNetCore.Authentication.Cookies
 @inject NavigationManager Navigation
 
+@inject HttpClient HttpClient
+
 <h3>Signing out...</h3>
 
 @code {
@@ -12,13 +14,35 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (HttpContext is not null)
+        try
         {
-            // Clear the authentication cookie in the HTTP response headers
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        }
+            Console.WriteLine("Signing out admin user...");
+            var response = await HttpClient.GetAsync("auth/signoutadmin");
+            Console.WriteLine($"Sign-out response status code: {response.StatusCode}");
+            Console.WriteLine($"Sign-out response content: {response.RequestMessage?.RequestUri}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                return;
+            }
 
-        // Redirect to sign-in page
-        Navigation.NavigateTo("/auth/signin", replace: true);
+            // Forward Set-Cookie headers from the API response to the browser
+            if (response.Headers.TryGetValues("Set-Cookie", out var setCookieValues))
+            {
+                foreach (var headerValue in setCookieValues)
+                {
+                    HttpContext.Response.Headers.Append("Set-Cookie", headerValue);
+                }
+            }
+
+            // Redirect to sign-in page
+            Navigation.NavigateTo("/auth/signin", replace: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during sign-out: {ex.Message}");
+            // Optionally, you can redirect to an error page or show a message
+            Navigation.NavigateTo("/adminusers/list", replace: true);
+        }
     }
 }
