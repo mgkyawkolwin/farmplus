@@ -4,7 +4,7 @@ import { CategoryItem, CategoryListPayload } from '@/models/category';
 export interface ICategoryService {
   getCategories(page?: number, pageSize?: number): Promise<CategoryItem[]>;
   createCategory(category: string, isActive?: boolean): Promise<CategoryItem>;
-  updateCategory(id: string, category: string, isActive?: boolean): Promise<CategoryItem>;
+  updateCategory(category: CategoryItem): Promise<CategoryItem>;
   deleteCategory(id: string): Promise<void>;
 }
 
@@ -27,10 +27,10 @@ export class CategoryServiceClient implements ICategoryService {
     return mapCategory(response.data as CategoryItem | undefined);
   }
 
-  async updateCategory(id: string, category: string, isActive = true): Promise<CategoryItem> {
-    const response = await authenticatedFetchApi(`/categories/${id}`, {
+  async updateCategory(category: CategoryItem): Promise<CategoryItem> {
+    const response = await authenticatedFetchApi(`/categories/${category.id}`, {
       method: 'PUT',
-      body: JSON.stringify({ category, isActive }),
+      body: JSON.stringify(category),
     });
 
     return mapCategory(response.data as CategoryItem | undefined);

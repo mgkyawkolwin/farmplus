@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 
 export default function Index() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('./splash');
-  }, [router]);
-
-  return null;
+  return <Redirect href="/splash" />;
 }

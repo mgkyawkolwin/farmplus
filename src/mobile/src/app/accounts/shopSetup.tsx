@@ -1,6 +1,7 @@
 'use client';
 
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Check, CheckCircle, CheckCircle2, CheckCircle2Icon, Circle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -16,7 +17,7 @@ import { useEffect } from 'react';
 
 export default function ShopSetupScreen() {
     const router = useRouter();
-    const colorScheme = useColorScheme();
+    const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     useEffect(() => {
         const timer = setTimeout(() => {

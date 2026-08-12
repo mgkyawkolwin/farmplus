@@ -10,8 +10,8 @@ import {
   StyleSheet,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Package, Plus, Search } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +28,7 @@ const productService = container.resolve<IProductService>(DI_TOKENS.IProductServ
 
 export default function ProductListScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);

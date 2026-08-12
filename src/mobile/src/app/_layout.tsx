@@ -1,26 +1,34 @@
-import '@/global.css';
+import '../global.css';
 import '@/i18n/i18n';
 
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar, useColorScheme, View } from 'react-native';
+import { Stack } from 'expo-router';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { PortalHost } from '@rn-primitives/portal';
 import { AuthContextProvider } from '@/lib/authContextProvider';
 import SnackBar from '@/components/ui/snack-bar';
-
-
+import  { useColorScheme } from 'nativewind';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
-  
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+
   return (
     <AuthContextProvider>
-      <StatusBar className='bg-background' barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-        <SnackBar />
-        <View className={`flex-1 light`}>
-          <Slot />
-          <PortalHost />
-        </View>
+      <SnackBar />
+      <View className='flex-1'>
+        <Stack screenOptions={{ 
+          headerShown: false, 
+          statusBarAnimation: 'fade',
+          statusBarHidden: false,
+          statusBarStyle: colorScheme === 'dark' ? 'dark' : 'light',
+          }} >
+          {/* Main Tab flow */}
+          <Stack.Screen name="home" options={{ headerShown: false }} />
+          
+          {/* Sub-screens pushed over tabs will automatically slide in here */}
+        </Stack>
+        <PortalHost />
+      </View>
     </AuthContextProvider>
   );
 }

@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { Badge } from '@/components/ui/badge';
 import { CategoryServiceClient } from '@/services/categoryService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
 import { CategoryItem } from '@/models/category';
+import SnackBar from '@/components/ui/snack-bar';
 
 export default function CategoriesScreen() {
     const router = useRouter();
@@ -29,8 +31,6 @@ export default function CategoriesScreen() {
     const [hasMore, setHasMore] = React.useState(true);
     const [modalVisible, setModalVisible] = React.useState(false);
     const [editingCategory, setEditingCategory] = React.useState<CategoryItem | null>(null);
-    const [name, setName] = React.useState('');
-    const [isActive, setIsActive] = React.useState(true);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
     const loadCategories = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
@@ -83,17 +83,13 @@ export default function CategoriesScreen() {
     }, [handleLoadMore]);
 
     const openCreateModal = () => {
-        setEditingCategory(null);
-        setName('');
-        setIsActive(true);
+        setEditingCategory({ id: '', category: '', isActive: true, rowVersion: '', createdAtUtc: '', updatedAtUtc: '' });
         setErrorMessage(null);
         setModalVisible(true);
     };
 
     const openEditModal = (category: CategoryItem) => {
         setEditingCategory(category);
-        setName(category.category);
-        setIsActive(category.isActive ?? true);
         setErrorMessage(null);
         setModalVisible(true);
     };
@@ -101,14 +97,11 @@ export default function CategoriesScreen() {
     const closeModal = () => {
         setModalVisible(false);
         setEditingCategory(null);
-        setName('');
-        setIsActive(true);
         setErrorMessage(null);
     };
 
     const handleSubmit = async () => {
-        const trimmedName = name.trim();
-        if (!trimmedName) {
+        if (!editingCategory?.category || editingCategory.category.trim() === '') {
             setErrorMessage('Category name is required.');
             return;
         }
@@ -117,12 +110,13 @@ export default function CategoriesScreen() {
             setSaving(true);
             setErrorMessage(null);
 
-            if (editingCategory) {
-                await service.updateCategory(editingCategory.id, trimmedName, isActive);
+            if (editingCategory.id) {
+                await service.updateCategory(editingCategory);
+                SnackBar.Success(`Category "${editingCategory.category}" updated successfully.`);
             } else {
-                await service.createCategory(trimmedName, isActive);
+                await service.createCategory(editingCategory.category, editingCategory.isActive);
+                SnackBar.Success(`Category "${editingCategory.category}" created successfully.`);
             }
-
             await loadCategories(1, false, false);
             closeModal();
         } catch (error: any) {
@@ -146,9 +140,10 @@ export default function CategoriesScreen() {
     const handleDelete = async (category: CategoryItem) => {
         try {
             await service.deleteCategory(category.id);
+            SnackBar.Success(`Category "${category.category}" deleted successfully.`);
             await loadCategories(1, false, false);
         } catch (error: any) {
-            RNAlert.alert('Delete failed', error?.message || 'Unable to delete category.');
+            SnackBar.Error(error?.message || `Unable to delete category "${category.category}".`);
         }
     };
 
@@ -186,14 +181,21 @@ export default function CategoriesScreen() {
                     <View style={styles.listContainer}>
                         {categories.map((category) => (
                             <View className='bg-card border-border' key={category.id} style={styles.card}>
-                                <Text className='text-foreground' style={styles.categoryName}>{category.category}</Text>
+                                <View style={styles.categoryInfo}>
+                                    <Text className='text-foreground' style={styles.categoryName}>
+                                        {category.category}
+                                    </Text>
+                                    <Badge variant={category.isActive ? 'active' : 'muted'} >
+                                        <Text
+                                        >
+                                            {category.isActive ? 'Active' : 'Inactive'}
+                                        </Text>
+                                    </Badge>
+                                </View>
+
                                 <View style={styles.actions}>
-                                    <Pressable onPress={() => openEditModal(category)} style={styles.iconButton}>
-                                        <Pencil size={18} color="#2563eb" />
-                                    </Pressable>
-                                    <Pressable onPress={() => confirmDelete(category)} style={styles.iconButton}>
-                                        <Trash2 size={18} color="#dc2626" />
-                                    </Pressable>
+                                    <Icon as={Pencil} size={18} className='text-primary' onPress={() => openEditModal(category)} />
+                                    <Icon as={Trash2} size={18} className='text-destructive' onPress={() => confirmDelete(category)} />
                                 </View>
                             </View>
                         ))}
@@ -227,15 +229,15 @@ export default function CategoriesScreen() {
                         <Label className='text-foreground' style={styles.label}>Category name</Label>
                         <Input
                             placeholder='Enter category name'
-                            value={name}
-                            onChangeText={setName}
+                            value={editingCategory?.category}
+                            onChangeText={(text) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, category: text } as (CategoryItem | null)))}
                             autoCapitalize='words'
                             style={styles.input}
                         />
 
                         <View style={styles.switchRow}>
                             <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
-                            <Switch value={isActive} onValueChange={setIsActive} />
+                            <Switch value={editingCategory?.isActive} onValueChange={(value) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, isActive: value } as (CategoryItem | null)))} />
                         </View>
 
                         {errorMessage ? (
@@ -311,7 +313,13 @@ const styles = StyleSheet.create({
     categoryName: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    categoryInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
         flex: 1,
+        marginRight: 8,
     },
     actions: {
         flexDirection: 'row',

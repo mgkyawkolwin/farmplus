@@ -11,6 +11,7 @@ public static class CategoryMappings
         {
             Id = entity.Id,
             Category = entity.Category,
+            IsActive = entity.IsActive,
             RowVersion = entity.RowVersion,
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedById = entity.CreatedById,

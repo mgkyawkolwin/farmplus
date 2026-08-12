@@ -26,6 +26,14 @@ const badgeVariants = cva(
           'bg-destructive border-transparent',
           Platform.select({ web: '[a&]:hover:bg-destructive/90' })
         ),
+        active: cn(
+          'bg-active border-transparent',
+          Platform.select({ web: '[a&]:hover:bg-active/90' })
+        ),
+        muted: cn(
+          'bg-muted border-transparent',
+          Platform.select({ web: '[a&]:hover:bg-muted/90' })
+        ),
         outline: Platform.select({ web: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground' }),
       },
     },
@@ -41,7 +49,9 @@ const badgeTextVariants = cva('text-xs font-medium', {
       default: 'text-primary-foreground',
       secondary: 'text-secondary-foreground',
       destructive: 'text-white',
+      active: 'text-active-foreground',
       outline: 'text-foreground',
+      muted: 'text-muted-foreground',
     },
   },
   defaultVariants: {

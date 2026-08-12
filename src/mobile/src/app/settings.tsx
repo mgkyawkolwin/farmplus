@@ -8,7 +8,6 @@ import {
   Switch,
   Modal,
   FlatList,
-  Appearance,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +15,9 @@ import { useRouter } from 'expo-router';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { ChevronLeft, ChevronRight, Globe, Moon } from 'lucide-react-native';
-import { useColorScheme } from 'react-native';
+
+// 1. Import useColorScheme from nativewind, NOT react-native
+import { useColorScheme } from 'nativewind';
 
 interface LanguageOption {
   code: string;
@@ -33,7 +34,9 @@ const LANGUAGES: LanguageOption[] = [
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const colorScheme = useColorScheme();
+
+  // 2. Destructure colorScheme and setColorScheme from NativeWind
+  const { colorScheme, setColorScheme } = useColorScheme();
 
   const [isDarkMode, setIsDarkMode] = useState(colorScheme === 'dark');
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
@@ -46,15 +49,17 @@ export default function SettingsScreen() {
     setLanguageModalVisible(false);
   };
 
+  // 3. Update the theme toggle handler
   const handleDarkModeToggle = (value: boolean) => {
+    const nextTheme = value ? 'dark' : 'light';
     setIsDarkMode(value);
-    Appearance.setColorScheme(value ? 'dark' : 'light');
+    setColorScheme(nextTheme); // Switches the NativeWind CSS scope globally
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" style={[styles.container]}>
+    <SafeAreaView className="flex-1 bg-background" style={styles.container}>
       {/* Top Navigation Bar */}
-      <View className="bg-background border-b-separator" style={[styles.topBar]}>
+      <View className="bg-background border-b-separator" style={styles.topBar}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => router.back()} activeOpacity={0.7}>
           <Icon className='text-icon' as={ChevronLeft} size={24} />
         </TouchableOpacity>
@@ -70,7 +75,7 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View className='bg-card border border-cardBorder' style={[styles.card]}>
+        <View className='bg-card border border-cardBorder' style={styles.card}>
           {/* Language Row */}
           <TouchableOpacity
             style={styles.cardRow}
@@ -79,25 +84,25 @@ export default function SettingsScreen() {
           >
             <View style={styles.cardRowLeft}>
               <Icon className='text-primary' as={Globe} size={20} />
-              <Text className='text-label' style={[styles.cardRowLabel]}>
+              <Text className='text-accent' style={styles.cardRowLabel}>
                 {t('title.language')}
               </Text>
             </View>
             <View style={styles.cardRowRight}>
-              <Text className='text-value' style={[styles.cardRowValue]}>
+              <Text className='text-value' style={styles.cardRowValue}>
                 {t(currentLanguage.labelKey)}
               </Text>
               <Icon className='text-muted' as={ChevronRight} size={16} />
             </View>
           </TouchableOpacity>
 
-          <View className='bg-separator' style={[styles.separator]} />
+          <View className='bg-separator' style={styles.separator} />
 
           {/* Dark Mode Row */}
           <View style={styles.cardRow}>
             <View style={styles.cardRowLeft}>
               <Icon className='text-primary' as={Moon} size={20} />
-              <Text className='text-label' style={[styles.cardRowLabel]}>
+              <Text className='text-text' style={styles.cardRowLabel}>
                 {t('title.darkMode')}
               </Text>
             </View>
@@ -123,13 +128,13 @@ export default function SettingsScreen() {
       >
         <TouchableOpacity
           className='bg-popover'
-          style={[styles.modalOverlay]}
+          style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setLanguageModalVisible(false)}
         >
-          <View className='bg-card' style={[styles.modalContent]}>
+          <View className='bg-card' style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            <Text className='text-foreground' style={[styles.modalTitle]}>
+            <Text className='text-foreground' style={styles.modalTitle}>
               {t('title.selectLanguage')}
             </Text>
             <FlatList
@@ -137,13 +142,11 @@ export default function SettingsScreen() {
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[
-                    styles.languageItem,
-                  ]}
+                  style={styles.languageItem}
                   onPress={() => handleLanguageSelect(item.code)}
                   activeOpacity={0.7}
                 >
-                  <Text className='text-foreground' style={[styles.languageLabel]}>
+                  <Text className='text-foreground' style={styles.languageLabel}>
                     {t(item.labelKey)}
                   </Text>
                   {item.code === i18n.language && (
@@ -152,7 +155,7 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => (
-                <View className='bg-separator' style={[styles.separator]} />
+                <View className='bg-separator' style={styles.separator} />
               )}
             />
           </View>

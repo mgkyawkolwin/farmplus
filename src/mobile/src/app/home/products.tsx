@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Pressable, ScrollView, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Boxes, CircleAlert, CircleCheckBig, Package, PackageX, Plus, Search, ShoppingBag, Sparkles, Store, TriangleAlert, UserPlus } from 'lucide-react-native';
 
@@ -20,7 +21,7 @@ const SAMPLE_PRODUCTS = [
 
 export default function ProductsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
   const metrics = [
     { label: 'Total Products', value: '124' },
@@ -42,7 +43,6 @@ export default function ProductsScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <StatusBar className="bg-background" barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'} />
       <HomeTopBar />
       <KeyboardAwareScrollView className="bg-background" style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         <View style={styles.headerRow}>

@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ArrowLeft, BarChart2, Box, Bell, Building, Calendar, DamIcon, DollarSign, File, HandCoins, LayoutDashboard, Menu, MoreHorizontal, TrendingUp } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -20,15 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LoadingOverlay from '@/components/loadingOverlay';
 
 export default function DashboardScreen() {
-    const router = useRouter();
-    const colorScheme = useColorScheme();
 
     return (
         <SafeAreaView className="bg-background" style={styles.page}>
-            <StatusBar
-                className="bg-background"
-                barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
-            />
             <HomeTopBar />
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>

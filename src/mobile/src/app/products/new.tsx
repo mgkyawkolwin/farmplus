@@ -6,8 +6,8 @@ import {
   StatusBar,
   StyleSheet,
   View,
-  useColorScheme,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -27,7 +27,7 @@ const productService = container.resolve<IProductService>(DI_TOKENS.IProductServ
 
 export default function NewProductScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const [loading, setLoading] = React.useState(false);
 
   const [formData, setFormData] = React.useState({

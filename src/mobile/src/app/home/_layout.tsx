@@ -3,16 +3,13 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
-import { useColorScheme, useUnstableNativeVariable } from 'nativewind';
+import { useColorScheme } from 'nativewind';
 import { Icon } from '@/components/ui/icon';
 import { LayoutDashboard, Box, TrendingUp, BarChart2, MoreHorizontal, Group } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 
 export default function HomeTabsLayout() {
-    const colorScheme = useColorScheme();
-    const tabBackground = useUnstableNativeVariable('hsl(var(--tab))');
-    const tabBarInactiveTintColor = useUnstableNativeVariable('hsl(var(--tab-foreground))');
-    const tabBarActiveTintColor = useUnstableNativeVariable('hsl(50,50%,50%)');
+    const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
         <Tabs
@@ -22,6 +19,7 @@ export default function HomeTabsLayout() {
                 tabBarActiveTintColor: 'hsl(210,100%,50%)',
                 headerShown: false,
                 headerTitle: '',
+                tabBarLabelStyle: { fontSize: 12 },
                 headerLeft: () => (
                     <View style={{ paddingLeft: 14 }}>
                         <Text variant="muted">FarmPlus</Text>

@@ -7,11 +7,9 @@ import { Settings } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { useThemeColors } from '@/hooks/use-theme-colors';
 
 export default function AuthScreen() {
   const router = useRouter();
-  const colors = useThemeColors();
 
   return (
     <View className='bg-background' style={[ styles.container, {  }]}>

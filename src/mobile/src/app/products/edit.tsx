@@ -5,8 +5,7 @@ import {
   ActivityIndicator,
   StatusBar,
   StyleSheet,
-  View,
-  useColorScheme,
+  View
 } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,6 +21,7 @@ import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { IProductService } from '@/services/productService';
+import { useColorScheme } from 'nativewind';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -54,7 +54,7 @@ const emptyFormState: ProductFormState = {
 export default function EditProductScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = React.useState(false);

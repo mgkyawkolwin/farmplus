@@ -40,7 +40,7 @@ public class CategoryService : ICategoryService
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
         var query = _dbContext.Categories.AsNoTracking();
-        
+
         if (!string.IsNullOrWhiteSpace(category))
         {
             query = query.Where(c => c.Category.ToLower().Contains(category, StringComparison.OrdinalIgnoreCase));
@@ -98,23 +98,21 @@ public class CategoryService : ICategoryService
         try
         {
             _logger.LogDebug("CALLED: UpdateCategoryAsync(id={Id}, request={Request})", id, request);
+            ValidationHelper.ValidateRequiredString(_localizer, "Category", request.Category);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
             ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
             var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id) ?? throw new CustomException("Category not found.");
 
-            if (!string.IsNullOrWhiteSpace(request.Category))
+            var normalizedCategory = request.Category!;
+            var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Id != id && c.Category.ToLower() == normalizedCategory.ToLower());
+            if (categoryExists)
             {
-                var normalizedCategory = request.Category.Trim();
-                var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Id != id && c.Category.ToLower() == normalizedCategory.ToLower());
-                if (categoryExists)
-                {
-                    throw new CustomException("A category with this name already exists.");
-                }
-
-                category.Category = normalizedCategory;
+                throw new CustomException("A category with this name already exists.");
             }
 
+            category.Category = normalizedCategory;
+            category.IsActive = request.IsActive ?? category.IsActive;
             _dbContext.Entry(category).Property(c => c.RowVersion).OriginalValue = request.RowVersion;
             category.UpdatedAtUtc = DateTime.UtcNow;
             category.UpdatedById = currentUserId;

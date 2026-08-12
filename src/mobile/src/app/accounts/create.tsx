@@ -1,6 +1,7 @@
 'use client';
 
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -13,7 +14,7 @@ import { Icon } from '@/components/ui/icon';
 
 export default function CreateAccountScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
   return (
     <View className="flex-1 bg-background" style={styles.page}>

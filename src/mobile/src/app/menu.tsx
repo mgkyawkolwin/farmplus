@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Pressable, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -26,11 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ChevronLeft } from 'lucide-react-native';
 
-export default function MenuScreen() {
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-
-  const sections = [
+const sections = [
     {
       title: 'Users, Roles & Permissions',
       items: [
@@ -74,10 +70,40 @@ export default function MenuScreen() {
     },
   ];
 
+  const MenuItemCard = React.memo(
+  ({
+    item,
+    onPress,
+  }: {
+    item: (typeof sections)[number]['items'][number];
+    onPress: (path: string) => void;
+  }) => {
+    const IconComponent = item.icon;
+    return (
+      <Pressable style={styles.card} onPress={() => onPress(item.path)}>
+        <IconComponent size={24} className="text-foreground" />
+        <Text className="text-foreground text-xs" style={styles.cardLabel}>
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  }
+);
+
+MenuItemCard.displayName = 'MenuItemCard';
+
+export default function MenuScreen() {
+  const router = useRouter();
+
+  const handlePress = React.useCallback(
+    (path: string) => {
+      router.replace(path as Parameters<typeof router.push>[0]);
+    },
+    [router]
+  );
+
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <StatusBar className="bg-background" barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'} />
-
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -88,11 +114,11 @@ export default function MenuScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAwareScrollView
+      {/* 3. Use lightweight ScrollView instead of KeyboardAwareScrollView */}
+      <ScrollView
         className="bg-background"
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
       >
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
@@ -101,25 +127,17 @@ export default function MenuScreen() {
             </Text>
 
             <View style={styles.grid}>
-              {section.items.map((item, index) => {
-                const IconComponent = item.icon;
-                return (
-                  <Pressable
-                    key={`${section.title}-${item.label}-${index}`}
-                    style={styles.card}
-                    onPress={() => router.replace((item.path ?? '/settings') as Parameters<typeof router.push>[0])}
-                  >
-                    <IconComponent size={24} className="text-foreground" />
-                    <Text className="text-foreground text-xs" style={styles.cardLabel}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {section.items.map((item, index) => (
+                <MenuItemCard
+                  key={`${section.title}-${item.label}-${index}`}
+                  item={item}
+                  onPress={handlePress}
+                />
+              ))}
             </View>
           </View>
         ))}
-      </KeyboardAwareScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }

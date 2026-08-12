@@ -8,8 +8,8 @@ import {
   StatusBar,
   StyleSheet,
   View,
-  useColorScheme,
 } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Mail, MapPin, Pencil, Phone } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ const productService = container.resolve<IProductService>(DI_TOKENS.IProductServ
 export default function ProductViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [product, setProduct] = React.useState<ProductItem | null>(null);

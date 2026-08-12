@@ -1,7 +1,7 @@
 export interface CategoryItem {
   id: string;
   category: string;
-  isActive?: boolean;
+  isActive: boolean;
   rowVersion?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;
