@@ -46,7 +46,7 @@ export default function SignInScreen() {
         </Button>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <Text variant="h2" style={styles.header}>
           Welcome Back!
         </Text>
@@ -69,7 +69,7 @@ export default function SignInScreen() {
         <Button style={styles.continueButton} onPress={() => handleSignIn()}>
           <Text>Sign In</Text>
         </Button>
-      </ScrollView>
+      </View>
     </View>
   );
 }

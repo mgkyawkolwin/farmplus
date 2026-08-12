@@ -8,6 +8,7 @@ public abstract class EntityBase<TKey>
 {
     [Key]
     public TKey Id { get; set; } = default!;
+    public Guid? MainTenantId { get; set; }
     [Required]
     [ConcurrencyCheck]
     public Guid RowVersion { get; set; } = Guid.NewGuid();

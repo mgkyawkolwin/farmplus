@@ -39,7 +39,7 @@ const sections = [
       title: 'Configuration',
       items: [
         { label: 'Category', icon: Boxes, path: '/categories/categories' },
-        { label: 'Brand', icon: Briefcase, path: '/settings' },
+        { label: 'Brand', icon: Briefcase, path: '/brands/brands' },
         { label: 'Shop', icon: Store, path: '/settings' },
         { label: 'Account', icon: UserCog, path: '/settings' },
       ],

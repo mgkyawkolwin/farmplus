@@ -154,7 +154,7 @@ export default function CategoriesScreen() {
                     <Icon as={ChevronLeft} size={22} className='text-foreground' />
                 </Button>
                 <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
-                <Button variant='default' size='sm' onPress={openCreateModal} style={styles.addButton}>
+                <Button variant='default' size='sm' onPress={openCreateModal} >
                     <Icon as={Plus} size={14} className='text-primary-foreground' />
                     <Text className='text-primary-foreground'>Add</Text>
                 </Button>
@@ -185,7 +185,7 @@ export default function CategoriesScreen() {
                                     <Text className='text-foreground' style={styles.categoryName}>
                                         {category.category}
                                     </Text>
-                                    <Badge variant={category.isActive ? 'active' : 'muted'} >
+                                    <Badge variant={category.isActive ? 'active' : 'muted'}>
                                         <Text
                                         >
                                             {category.isActive ? 'Active' : 'Inactive'}
@@ -194,8 +194,8 @@ export default function CategoriesScreen() {
                                 </View>
 
                                 <View style={styles.actions}>
-                                    <Icon as={Pencil} size={18} className='text-primary' onPress={() => openEditModal(category)} />
-                                    <Icon as={Trash2} size={18} className='text-destructive' onPress={() => confirmDelete(category)} />
+                                    <Icon as={Pencil} size={18} className='text-primary' style={{ marginLeft: 8 }} onPress={() => openEditModal(category)} />
+                                    <Icon as={Trash2} size={18} className='text-destructive' style={{ marginLeft: 8 }} onPress={() => confirmDelete(category)} />
                                 </View>
                             </View>
                         ))}
@@ -283,7 +283,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     addButton: {
-        minWidth: 72,
         flexDirection: 'row',
         gap: 4,
     },

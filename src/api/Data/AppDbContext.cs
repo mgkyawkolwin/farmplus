@@ -13,6 +13,10 @@ public class AppDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<AdminUserEntity> AdminUsers => Set<AdminUserEntity>();
     public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
+    public DbSet<BrandEntity> Brands => Set<BrandEntity>();
+    public DbSet<UnitEntity> Units => Set<UnitEntity>();
+    public DbSet<DealerEntity> Dealers => Set<DealerEntity>();
+    public DbSet<SupplierEntity> Suppliers => Set<SupplierEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
     

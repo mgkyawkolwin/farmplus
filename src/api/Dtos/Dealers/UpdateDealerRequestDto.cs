@@ -1,0 +1,16 @@
+using FarmPlus.Api.Dtos;
+
+namespace FarmPlus.Api.Dtos.Dealers;
+
+public sealed record UpdateDealerRequestDto : UpdateRequestBase<Guid>
+{
+    public string? DealerName { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Address { get; set; }
+    public string? StateDivision { get; set; }
+    public string? City { get; set; }
+    public string? Country { get; set; }
+    public string? LogoUrl { get; set; }
+    public bool? IsRequired { get; set; }
+}
