@@ -38,6 +38,7 @@ const sections = [
     {
       title: 'Configuration',
       items: [
+        { label: 'Unit', icon: Boxes, path: '/units/units' },
         { label: 'Category', icon: Boxes, path: '/categories/categories' },
         { label: 'Brand', icon: Briefcase, path: '/brands/brands' },
         { label: 'Shop', icon: Store, path: '/settings' },
@@ -48,8 +49,8 @@ const sections = [
       title: 'Management',
       items: [
         { label: 'Customer', icon: Users, path: '/customers/list' },
-        { label: 'Dealer', icon: Briefcase, path: '/settings' },
-        { label: 'Supplier', icon: Building, path: '/settings' },
+        { label: 'Dealer', icon: Briefcase, path: '/dealers/dealers' },
+        { label: 'Supplier', icon: Building, path: '/suppliers/suppliers' },
         { label: 'Product', icon: Package, path: '/products/list' },
         { label: 'Inventory', icon: Warehouse, path: '/settings' },
         { label: 'Sale', icon: ShoppingBag, path: '/settings' },

@@ -88,7 +88,7 @@ public class CategoryService : ICategoryService
         ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
         var normalizedCategory = request.Category.Trim();
-        var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Category.ToLower() == normalizedCategory.ToLower());
+        var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Category.ToLower() == normalizedCategory.ToLower() && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (categoryExists)
         {
             throw new CustomException("A category with this name already exists.");
@@ -122,7 +122,7 @@ public class CategoryService : ICategoryService
             var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Category not found.");
 
             var normalizedCategory = request.Category!;
-            var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Id != id && c.Category.ToLower() == normalizedCategory.ToLower());
+            var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Id != id && c.Category.ToLower() == normalizedCategory.ToLower() && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
             if (categoryExists)
             {
                 throw new CustomException("A category with this name already exists.");

@@ -33,6 +33,6 @@ public class SupplierEntity : EntityBase<Guid>
     public string? LogoUrl { get; set; }
 
     [Required]
-    public bool IsRequired { get; set; }
+    public bool IsActive { get; set; }
 
 }

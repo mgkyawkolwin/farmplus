@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using FarmPlus.Api.Data;
@@ -17,6 +18,7 @@ public interface ISupplierService
     Task<SupplierDto?> GetSupplierByIdAsync(Guid id);
     Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request);
     Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request);
+    Task<SupplierDto?> UploadSupplierLogoAsync(Guid id, IFormFile file);
     Task DeleteSupplierAsync(Guid id);
 }
 
@@ -26,13 +28,15 @@ public class SupplierService : ISupplierService
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<SupplierService> _logger;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IStorageService _storageService;
 
-    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger, ICurrentUserService currentUserService)
+    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger, ICurrentUserService currentUserService, IStorageService storageService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
+        _storageService = storageService;
     }
 
     public async Task<PaginatedResultDto<SupplierDto>> GetSuppliersAsync(int page, int pageSize, string? supplierName = null)
@@ -62,8 +66,8 @@ public class SupplierService : ISupplierService
             .Take(pageSize)
             .ToListAsync();
 
-        var supplierDtos = suppliers.MapToDtoList();
-        return new PaginatedResultDto<SupplierDto>(supplierDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+        var supplierDtos = await Task.WhenAll(suppliers.Select(MapSupplierToDtoAsync));
+        return new PaginatedResultDto<SupplierDto>(supplierDtos.ToList(), page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<SupplierDto?> GetSupplierByIdAsync(Guid id)
@@ -77,17 +81,17 @@ public class SupplierService : ISupplierService
             query = query.Where(b => b.MainTenantId == tenantId);
         }
         var supplier = await query.SingleOrDefaultAsync(s => s.Id == id);
-        return supplier?.MapToDto();
+        return supplier == null ? null : await MapSupplierToDtoAsync(supplier);
     }
 
     public async Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateSupplierAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "SupplierName", request.SupplierName);
-        ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
+        ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsActive);
 
         var normalizedName = request.SupplierName!.Trim();
-        var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.SupplierName.ToLower() == normalizedName.ToLower());
+        var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.SupplierName.ToLower() == normalizedName.ToLower() && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (supplierExists)
         {
             throw new CustomException("A supplier with this name already exists.");
@@ -103,7 +107,7 @@ public class SupplierService : ISupplierService
             City = request.City,
             Country = request.Country,
             LogoUrl = request.LogoUrl,
-            IsRequired = request.IsRequired ?? false,
+            IsActive = request.IsActive ?? false,
             CreatedAtUtc = DateTime.UtcNow,
             CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
@@ -114,7 +118,7 @@ public class SupplierService : ISupplierService
         _dbContext.Suppliers.Add(supplier);
         await _dbContext.SaveChangesAsync();
 
-        return supplier.MapToDto();
+        return await MapSupplierToDtoAsync(supplier);
     }
 
     public async Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request)
@@ -124,12 +128,12 @@ public class SupplierService : ISupplierService
             _logger.LogDebug("CALLED: UpdateSupplierAsync(id={Id}, request={Request})", id, request);
             ValidationHelper.ValidateRequiredString(_localizer, "SupplierName", request.SupplierName);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
-            ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
+            ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsActive);
 
             var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Supplier not found.");
 
             var normalizedName = request.SupplierName!;
-            var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.Id != id && s.SupplierName.ToLower() == normalizedName.ToLower());
+            var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.Id != id && s.SupplierName.ToLower() == normalizedName.ToLower() && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
             if (supplierExists)
             {
                 throw new CustomException("A supplier with this name already exists.");
@@ -143,18 +147,48 @@ public class SupplierService : ISupplierService
             supplier.City = request.City;
             supplier.Country = request.Country;
             supplier.LogoUrl = request.LogoUrl;
-            supplier.IsRequired = request.IsRequired ?? supplier.IsRequired;
+            supplier.IsActive = request.IsActive ?? supplier.IsActive;
             _dbContext.Entry(supplier).Property(s => s.RowVersion).OriginalValue = request.RowVersion;
             supplier.UpdatedAtUtc = DateTime.UtcNow;
             supplier.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
-            return supplier.MapToDto();
+            return await MapSupplierToDtoAsync(supplier);
         }
         catch (DbUpdateConcurrencyException)
         {
             throw new CustomException(_localizer["Error.Concurrency"]);
         }
+    }
+
+    public async Task<SupplierDto?> UploadSupplierLogoAsync(Guid id, IFormFile file)
+    {
+        _logger.LogDebug("CALLED: UploadSupplierLogoAsync(id={Id}, file={FileName})", id, file?.FileName);
+        if (file == null || file.Length == 0)
+        {
+            throw new CustomException(_localizer[$"Template.Required", "logo file"]);
+        }
+
+        var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Supplier not found.");
+
+        var objectName = await _storageService.UploadFileAsync(file);
+        supplier.LogoUrl = objectName;
+        supplier.UpdatedAtUtc = DateTime.UtcNow;
+        supplier.UpdatedById = Guid.Parse(_currentUserService.UserId!);
+        await _dbContext.SaveChangesAsync();
+
+        return await MapSupplierToDtoAsync(supplier);
+    }
+
+    private async Task<SupplierDto> MapSupplierToDtoAsync(SupplierEntity entity)
+    {
+        var dto = entity.MapToDto();
+        if (!string.IsNullOrWhiteSpace(dto.LogoUrl) && !Uri.IsWellFormedUriString(dto.LogoUrl, UriKind.Absolute))
+        {
+            dto.LogoUrl = await _storageService.GetPresignedUrlAsync(dto.LogoUrl);
+        }
+
+        return dto;
     }
 
     public async Task DeleteSupplierAsync(Guid id)

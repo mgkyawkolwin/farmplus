@@ -5,6 +5,7 @@ export interface IDealerService {
   getDealers(page?: number, pageSize?: number): Promise<DealerItem[]>;
   createDealer(request: Partial<DealerItem>): Promise<DealerItem>;
   updateDealer(request: DealerItem): Promise<DealerItem>;
+  uploadDealerLogo(id: string, file: { uri: string; name: string; type: string }): Promise<DealerItem>;
   deleteDealer(id: string): Promise<void>;
 }
 
@@ -36,6 +37,18 @@ export class DealerServiceClient implements IDealerService {
     return mapDealer(response.data as DealerItem | undefined);
   }
 
+  async uploadDealerLogo(id: string, file: { uri: string; name: string; type: string }): Promise<DealerItem> {
+    const formData = new FormData();
+    formData.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+
+    const response = await authenticatedFetchApi(`/dealers/${id}/logo`, {
+      method: 'PATCH',
+      body: formData,
+    });
+
+    return mapDealer(response.data as DealerItem | undefined);
+  }
+
   async deleteDealer(id: string): Promise<void> {
     await authenticatedFetchApi(`/dealers/${id}`, {
       method: 'DELETE',
@@ -54,7 +67,7 @@ function mapDealer(item?: Partial<DealerItem> | null): DealerItem {
     city: item?.city,
     country: item?.country,
     logoUrl: item?.logoUrl,
-    isRequired: item?.isRequired ?? false,
+    isActive: item?.isActive ?? false,
     rowVersion: item?.rowVersion,
     createdAtUtc: item?.createdAtUtc,
     updatedAtUtc: item?.updatedAtUtc,

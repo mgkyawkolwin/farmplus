@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
-import { Plus, Pencil, Trash2, X, ChevronLeft } from 'lucide-react-native';
+import { ActivityIndicator, Alert as RNAlert, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Plus, Pencil, Trash2, X, ChevronLeft, Image as ImageIcon } from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,8 @@ export default function DealersScreen() {
   const [hasMore, setHasMore] = React.useState(true);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [editingDealer, setEditingDealer] = React.useState<DealerItem | null>(null);
+  const [logoImage, setLogoImage] = React.useState<string | null>(null);
+  const [logoFile, setLogoFile] = React.useState<{ uri: string; name: string; type: string } | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const loadDealers = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
@@ -85,7 +88,7 @@ export default function DealersScreen() {
     setEditingDealer({
       id: '',
       dealerName: '',
-      isRequired: false,
+      isActive: false,
       email: undefined,
       phoneNumber: undefined,
       address: undefined,
@@ -97,12 +100,16 @@ export default function DealersScreen() {
       createdAtUtc: '',
       updatedAtUtc: ''
     });
+    setLogoImage(null);
+    setLogoFile(null);
     setErrorMessage(null);
     setModalVisible(true);
   };
 
   const openEditModal = (dealer: DealerItem) => {
     setEditingDealer(dealer);
+    setLogoImage(dealer.logoUrl ?? null);
+    setLogoFile(null);
     setErrorMessage(null);
     setModalVisible(true);
   };
@@ -110,12 +117,50 @@ export default function DealersScreen() {
   const closeModal = () => {
     setModalVisible(false);
     setEditingDealer(null);
+    setLogoImage(null);
+    setLogoFile(null);
     setErrorMessage(null);
+  };
+
+  const pickLogo = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
+      SnackBar.Error('Permission to access photos is required.');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (pickerResult.canceled || !pickerResult.assets?.length) {
+      return;
+    }
+
+    const asset = pickerResult.assets[0];
+    if (!asset.uri) {
+      return;
+    }
+
+    const uri = asset.uri;
+    const name = asset.fileName ?? uri.split('/').pop() ?? `dealer-logo-${Date.now()}.jpg`;
+    const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
+
+    setLogoImage(uri);
+    setLogoFile({ uri, name, type });
+  };
+
+  const removeLogo = () => {
+    setLogoImage(null);
+    setLogoFile(null);
+    setEditingDealer((prev: DealerItem | null) => prev ? ({ ...prev, logoUrl: null } as DealerItem) : prev);
   };
 
   const handleSubmit = async () => {
     if (!editingDealer?.dealerName || editingDealer.dealerName.trim() === '') {
-      setErrorMessage('Dealer name is required.');
+      SnackBar.Error('Dealer name is required.');
       return;
     }
 
@@ -123,17 +168,34 @@ export default function DealersScreen() {
       setSaving(true);
       setErrorMessage(null);
 
-      if (editingDealer.id) {
-        await service.updateDealer(editingDealer);
-        SnackBar.Success(`Dealer "${editingDealer.dealerName}" updated successfully.`);
-      } else {
-        await service.createDealer(editingDealer);
-        SnackBar.Success(`Dealer "${editingDealer.dealerName}" created successfully.`);
+      let dealerId = editingDealer.id;
+      const dealerPayload = { ...editingDealer } as any;
+
+      if (dealerPayload.logoUrl === undefined) {
+        delete dealerPayload.logoUrl;
       }
+
+      if (dealerPayload.logoUrl === null) {
+        dealerPayload.clearLogoUrl = true;
+        delete dealerPayload.logoUrl;
+      }
+
+      if (dealerId) {
+        await service.updateDealer(dealerPayload as DealerItem);
+      } else {
+        const createdDealer = await service.createDealer(dealerPayload);
+        dealerId = createdDealer.id;
+      }
+
+      if (logoFile && dealerId) {
+        await service.uploadDealerLogo(dealerId, logoFile);
+      }
+
+      SnackBar.Success(`Dealer "${editingDealer.dealerName}" ${editingDealer.id ? 'updated' : 'created'} successfully.`);
       await loadDealers(1, false, false);
       closeModal();
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to save dealer.');
+      SnackBar.Error(error?.message || 'Unable to save dealer.');
     } finally {
       setSaving(false);
     }
@@ -195,10 +257,21 @@ export default function DealersScreen() {
             {dealers.map((dealer) => (
               <View className='bg-card border-border' key={dealer.id} style={styles.card}>
                 <View style={styles.categoryInfo}>
-                  <Text className='text-foreground' style={styles.categoryName}>{dealer.dealerName}</Text>
-                  <Badge variant={dealer.isRequired ? 'active' : 'muted'}>
-                    <Text>{dealer.isRequired ? 'Required' : 'Optional'}</Text>
-                  </Badge>
+                  <View style={styles.logoWrapper}>
+                    {dealer.logoUrl ? (
+                      <Image source={{ uri: dealer.logoUrl }} style={styles.dealerLogo} resizeMode='cover' />
+                    ) : (
+                      <View style={styles.logoPlaceholder}>
+                        <Icon as={ImageIcon} size={18} className='text-muted-foreground' />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.dealerInfo}>
+                    <Text className='text-foreground' style={styles.categoryName}>{dealer.dealerName}</Text>
+                    <Badge style={{ maxWidth: 70 }} variant={dealer.isActive ? 'active' : 'muted'}>
+                      <Text>{dealer.isActive ? 'Active' : 'Inactive'}</Text>
+                    </Badge>
+                  </View>
                 </View>
 
                 <View style={styles.actions}>
@@ -215,114 +288,122 @@ export default function DealersScreen() {
             <Text className='text-muted-foreground'>Loading more...</Text>
           </View>
         ) : null}
-        {errorMessage ? (
-          <Alert variant='destructive' icon={X} className='mt-3'>
-            <AlertTitle>Unable to continue</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
       </KeyboardAwareScrollView>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-        <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className='bg-card border-border' style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text variant='h4' className='text-foreground'>{editingDealer ? 'Edit dealer' : 'Add dealer'}</Text>
-              <Pressable onPress={closeModal} style={styles.closeButton}>
-                <Icon as={X} size={20} color='#4b5563' />
-              </Pressable>
-            </View>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+            className='bg-card border-border'
+            style={styles.modalSheet}
+          >
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps='handled'
+              automaticallyAdjustKeyboardInsets={true}
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.modalHeader}>
+                <Text variant='h4' className='text-foreground'>
+                  {editingDealer?.id ? 'Edit Dealer' : 'Add Dealer'}
+                </Text>
+                <Pressable onPress={closeModal} style={styles.closeButton}>
+                  <Icon as={X} size={20} color='#4b5563' />
+                </Pressable>
+              </View>
 
-            <Label className='text-foreground' style={styles.label}>Dealer Name</Label>
-            <Input
-              placeholder='Enter dealer name'
-              value={editingDealer?.dealerName}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, dealerName: text } as DealerItem))}
-              autoCapitalize='words'
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>Dealer Name</Label>
+              <Input
+                placeholder='Enter dealer name'
+                value={editingDealer?.dealerName}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, dealerName: text } as DealerItem))}
+                autoCapitalize='words'
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>Email</Label>
-            <Input
-              placeholder='Enter email'
-              value={editingDealer?.email}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, email: text } as DealerItem))}
-              keyboardType='email-address'
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>Email</Label>
+              <Input
+                placeholder='Enter email'
+                value={editingDealer?.email}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, email: text } as DealerItem))}
+                keyboardType='email-address'
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>Phone</Label>
-            <Input
-              placeholder='Enter phone number'
-              value={editingDealer?.phoneNumber}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, phoneNumber: text } as DealerItem))}
-              keyboardType='phone-pad'
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>Phone</Label>
+              <Input
+                placeholder='Enter phone number'
+                value={editingDealer?.phoneNumber}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, phoneNumber: text } as DealerItem))}
+                keyboardType='phone-pad'
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>Address</Label>
-            <Input
-              placeholder='Enter address'
-              value={editingDealer?.address}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, address: text } as DealerItem))}
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>Address</Label>
+              <Input
+                placeholder='Enter address'
+                value={editingDealer?.address}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, address: text } as DealerItem))}
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>State / Division</Label>
-            <Input
-              placeholder='Enter state or division'
-              value={editingDealer?.stateDivision}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, stateDivision: text } as DealerItem))}
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>State / Division</Label>
+              <Input
+                placeholder='Enter state or division'
+                value={editingDealer?.stateDivision}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, stateDivision: text } as DealerItem))}
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>City</Label>
-            <Input
-              placeholder='Enter city'
-              value={editingDealer?.city}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, city: text } as DealerItem))}
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>City</Label>
+              <Input
+                placeholder='Enter city'
+                value={editingDealer?.city}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, city: text } as DealerItem))}
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>Country</Label>
-            <Input
-              placeholder='Enter country'
-              value={editingDealer?.country}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, country: text } as DealerItem))}
-              style={styles.input}
-            />
+              <Label className='text-foreground' style={styles.label}>Country</Label>
+              <Input
+                placeholder='Enter country'
+                value={editingDealer?.country}
+                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, country: text } as DealerItem))}
+                style={styles.input}
+              />
 
-            <Label className='text-foreground' style={styles.label}>Logo URL</Label>
-            <Input
-              placeholder='Enter logo url'
-              value={editingDealer?.logoUrl}
-              onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, logoUrl: text } as DealerItem))}
-              style={styles.input}
-            />
-
-            <View style={styles.switchRow}>
-              <Text className='text-foreground' style={styles.switchLabel}>Is Required</Text>
-              <Switch value={editingDealer?.isRequired} onValueChange={(value) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, isRequired: value } as DealerItem))} />
-            </View>
-
-            {errorMessage ? (
-              <Alert variant='destructive' icon={X} className='mt-3'>
-                <AlertTitle>Unable to save</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <View style={styles.modalActions}>
-              <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
-                <Text className='text-foreground'>Cancel</Text>
+              <Label className='text-foreground' style={styles.label}>Dealer Logo</Label>
+              {logoImage ? (
+                <View style={styles.logoPreviewContainer}>
+                  <Image source={{ uri: logoImage }} style={styles.logoPreview} resizeMode='cover' />
+                  <Button variant='ghost' size='sm' onPress={removeLogo} style={styles.removeLogoButton}>
+                    <Text className='text-destructive'>Remove</Text>
+                  </Button>
+                </View>
+              ) : null}
+              <Button variant='outline' size='sm' onPress={pickLogo} style={styles.pickerButton}>
+                <Text className='text-foreground'>{logoImage ? 'Change logo' : 'Choose logo'}</Text>
               </Button>
-              <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={styles.modalButton}>
-                {saving ? <ActivityIndicator size='small' color='#fff' /> : <Text className='text-primary-foreground'>Save</Text>}
-              </Button>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+
+              <View style={styles.switchRow}>
+                <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+                <Switch
+                  value={editingDealer?.isActive}
+                  onValueChange={(value) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, isActive: value } as DealerItem))}
+                />
+              </View>
+
+              <View style={styles.modalActions}>
+                <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
+                  <Text className='text-foreground'>Cancel</Text>
+                </Button>
+                <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={styles.modalButton}>
+                  {saving ? <ActivityIndicator size='small' color='#fff' /> : <Text className='text-primary-foreground'>Save</Text>}
+                </Button>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -375,9 +456,34 @@ const styles = StyleSheet.create({
   categoryInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     flex: 1,
     marginRight: 8,
+  },
+  logoWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  dealerLogo: {
+    width: '100%',
+    height: '100%',
+  },
+  logoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5E7EB',
+  },
+  dealerInfo: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   actions: {
     flexDirection: 'row',
@@ -395,14 +501,21 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+    paddingTop: 60, // Preserves status bar gap
   },
   modalSheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: '95%', // Prevents sheet from expanding off-screen
+    overflow: 'hidden',
+  },
+  modalScrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 24,
+    paddingBottom: 32, // Ensures bottom buttons are fully visible above keyboard
   },
   modalHeader: {
     flexDirection: 'row',
@@ -437,11 +550,28 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
   },
+  logoPreviewContainer: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  logoPreview: {
+    width: '100%',
+    height: 140,
+  },
+  removeLogoButton: {
+    marginTop: 8,
+  },
+  pickerButton: {
+    marginBottom: 12,
+  },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 12,
+    marginTop: 16,
   },
   modalButton: {
     minWidth: 96,

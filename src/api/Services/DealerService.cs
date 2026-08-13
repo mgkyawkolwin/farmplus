@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using FarmPlus.Api.Data;
@@ -17,6 +18,7 @@ public interface IDealerService
     Task<DealerDto?> GetDealerByIdAsync(Guid id);
     Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request);
     Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request);
+    Task<DealerDto?> UploadDealerLogoAsync(Guid id, IFormFile file);
     Task DeleteDealerAsync(Guid id);
 }
 
@@ -26,13 +28,15 @@ public class DealerService : IDealerService
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<DealerService> _logger;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IStorageService _storageService;
 
-    public DealerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<DealerService> logger, ICurrentUserService currentUserService)
+    public DealerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<DealerService> logger, ICurrentUserService currentUserService, IStorageService storageService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
+        _storageService = storageService;
     }
 
     public async Task<PaginatedResultDto<DealerDto>> GetDealersAsync(int page, int pageSize, string? dealerName = null)
@@ -62,8 +66,8 @@ public class DealerService : IDealerService
             .Take(pageSize)
             .ToListAsync();
 
-        var dealerDtos = dealers.MapToDtoList();
-        return new PaginatedResultDto<DealerDto>(dealerDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+        var dealerDtos = await Task.WhenAll(dealers.Select(MapDealerToDtoAsync));
+        return new PaginatedResultDto<DealerDto>(dealerDtos.ToList(), page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<DealerDto?> GetDealerByIdAsync(Guid id)
@@ -77,17 +81,17 @@ public class DealerService : IDealerService
             query = query.Where(b => b.MainTenantId == tenantId);
         }
         var dealer = await query.SingleOrDefaultAsync(d => d.Id == id);
-        return dealer?.MapToDto();
+        return dealer == null ? null : await MapDealerToDtoAsync(dealer);
     }
 
     public async Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateDealerAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "DealerName", request.DealerName);
-        ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
+        ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsActive);
 
         var normalizedName = request.DealerName!.Trim();
-        var dealerExists = await _dbContext.Dealers.AnyAsync(d => d.DealerName.ToLower() == normalizedName.ToLower());
+        var dealerExists = await _dbContext.Dealers.AnyAsync(d => d.DealerName.ToLower() == normalizedName.ToLower() && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (dealerExists)
         {
             throw new CustomException("A dealer with this name already exists.");
@@ -103,7 +107,7 @@ public class DealerService : IDealerService
             City = request.City,
             Country = request.Country,
             LogoUrl = request.LogoUrl,
-            IsRequired = request.IsRequired ?? false,
+            IsActive = request.IsActive ?? false,
             CreatedAtUtc = DateTime.UtcNow,
             CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
@@ -114,7 +118,7 @@ public class DealerService : IDealerService
         _dbContext.Dealers.Add(dealer);
         await _dbContext.SaveChangesAsync();
 
-        return dealer.MapToDto();
+        return await MapDealerToDtoAsync(dealer);
     }
 
     public async Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request)
@@ -124,12 +128,12 @@ public class DealerService : IDealerService
             _logger.LogDebug("CALLED: UpdateDealerAsync(id={Id}, request={Request})", id, request);
             ValidationHelper.ValidateRequiredString(_localizer, "DealerName", request.DealerName);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
-            ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
+            ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsActive);
 
             var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Dealer not found.");
 
             var normalizedName = request.DealerName!;
-            var dealerExists = await _dbContext.Dealers.AnyAsync(d => d.Id != id && d.DealerName.ToLower() == normalizedName.ToLower());
+            var dealerExists = await _dbContext.Dealers.AnyAsync(d => d.Id != id && d.DealerName.ToLower() == normalizedName.ToLower() && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
             if (dealerExists)
             {
                 throw new CustomException("A dealer with this name already exists.");
@@ -142,8 +146,15 @@ public class DealerService : IDealerService
             dealer.StateDivision = request.StateDivision;
             dealer.City = request.City;
             dealer.Country = request.Country;
-            dealer.LogoUrl = request.LogoUrl;
-            dealer.IsRequired = request.IsRequired ?? dealer.IsRequired;
+            if (request.ClearLogoUrl == true)
+            {
+                dealer.LogoUrl = null;
+            }
+            else if (request.LogoUrl != null && !Uri.IsWellFormedUriString(request.LogoUrl, UriKind.Absolute))
+            {
+                dealer.LogoUrl = request.LogoUrl;
+            }
+            dealer.IsActive = request.IsActive ?? dealer.IsActive;
             _dbContext.Entry(dealer).Property(d => d.RowVersion).OriginalValue = request.RowVersion;
             dealer.UpdatedAtUtc = DateTime.UtcNow;
             dealer.UpdatedById = Guid.Parse(_currentUserService.UserId!);
@@ -155,6 +166,36 @@ public class DealerService : IDealerService
         {
             throw new CustomException(_localizer["Error.Concurrency"]);
         }
+    }
+
+    private async Task<DealerDto> MapDealerToDtoAsync(DealerEntity entity)
+    {
+        var dto = entity.MapToDto();
+        if (!string.IsNullOrWhiteSpace(dto.LogoUrl) && !Uri.IsWellFormedUriString(dto.LogoUrl, UriKind.Absolute))
+        {
+            dto.LogoUrl = await _storageService.GetPresignedUrlAsync(dto.LogoUrl);
+        }
+
+        return dto;
+    }
+
+    public async Task<DealerDto?> UploadDealerLogoAsync(Guid id, IFormFile file)
+    {
+        _logger.LogDebug("CALLED: UploadDealerLogoAsync(id={Id}, file={FileName})", id, file?.FileName);
+        if (file == null || file.Length == 0)
+        {
+            throw new CustomException(_localizer[$"Template.Required", "logo file"]);
+        }
+
+        var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Dealer not found.");
+
+        var objectName = await _storageService.UploadFileAsync(file);
+        dealer.LogoUrl = objectName;
+        dealer.UpdatedAtUtc = DateTime.UtcNow;
+        dealer.UpdatedById = Guid.Parse(_currentUserService.UserId!);
+        await _dbContext.SaveChangesAsync();
+
+        return await MapDealerToDtoAsync(dealer);
     }
 
     public async Task DeleteDealerAsync(Guid id)

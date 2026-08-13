@@ -127,6 +127,29 @@ public class DealersController : BaseController
         }
     }
 
+    [HttpPatch("{id:guid}/logo")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadDealerLogo(Guid id, IFormFile file)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UploadDealerLogo(id={Id})", id);
+            var dealer = await _dealerService.UploadDealerLogoAsync(id, file);
+            _logger.LogTrace("Updated Dealer Logo: {Dealer}", dealer);
+            return Ok(new { Success = true, Data = dealer });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteDealer(Guid id)
     {

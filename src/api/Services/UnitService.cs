@@ -87,7 +87,7 @@ public class UnitService : IUnitService
         ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
         var normalizedUnit = request.Unit!.Trim();
-        var unitExists = await _dbContext.Units.AnyAsync(u => u.Unit.ToLower() == normalizedUnit.ToLower());
+        var unitExists = await _dbContext.Units.AnyAsync(u => u.Unit.ToLower() == normalizedUnit.ToLower() && u.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (unitExists)
         {
             throw new CustomException("A unit with this name already exists.");
@@ -121,7 +121,7 @@ public class UnitService : IUnitService
             var unit = await _dbContext.Units.SingleOrDefaultAsync(u => u.Id == id && u.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Unit not found.");
 
             var normalizedUnit = request.Unit!;
-            var unitExists = await _dbContext.Units.AnyAsync(u => u.Id != id && u.Unit.ToLower() == normalizedUnit.ToLower());
+            var unitExists = await _dbContext.Units.AnyAsync(u => u.Id != id && u.Unit.ToLower() == normalizedUnit.ToLower() && u.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
             if (unitExists)
             {
                 throw new CustomException("A unit with this name already exists.");

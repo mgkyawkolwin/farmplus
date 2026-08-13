@@ -1,3 +1,11 @@
+export interface ProductMediaItem {
+  id?: string;
+  objectName: string;
+  mediaType: string;
+  size: number;
+  url?: string;
+}
+
 export interface ProductItem {
   id: string;
   name: string;
@@ -9,6 +17,8 @@ export interface ProductItem {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  coverImageUrl?: string;
+  medias?: ProductMediaItem[];
   rowVersion?: string;
   createdAtUtc?: string;
   createdById?: string;
@@ -34,6 +44,8 @@ export interface CreateProductRequest {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  coverImageUrl?: string;
+  medias?: ProductMediaItem[];
 }
 
 export interface UpdateProductRequest {
@@ -47,5 +59,7 @@ export interface UpdateProductRequest {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  coverImageUrl?: string;
+  medias?: ProductMediaItem[];
   rowVersion?: string;
 }

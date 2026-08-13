@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -177,7 +178,19 @@ export default function ProductListScreen() {
               style={styles.card}
               onPress={() => router.push({ pathname: '/products/view', params: { id: product.id } })}
             >
-              <View style={styles.leftSection}>
+              <View style={styles.imageContainer}>
+                {product.coverImageUrl ? (
+                  <Image source={{ uri: product.coverImageUrl }} style={styles.productImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Text className="text-muted-foreground" style={styles.imagePlaceholderText}>
+                      No Image
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.middleSection}>
                 <Text className="text-foreground" style={styles.productName}>
                   {product.name}
                 </Text>
@@ -258,65 +271,72 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: '#FFFFFF',
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#111827',
-  },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
+    padding: 16,
     gap: 12,
-  },
-  centeredState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  stateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  stateText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 4,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderRadius: 14,
+    padding: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  leftSection: {
+  imageContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  middleSection: {
     flex: 1,
-    gap: 4,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '700',
+    minWidth: 0,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 6,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   productDetail: {
-    fontSize: 12,
+    fontSize: 13,
   },
   rightSection: {
     alignItems: 'flex-end',
+    minWidth: 86,
   },
   priceLabel: {
     fontSize: 12,
+    marginBottom: 4,
   },
   priceValue: {
     fontSize: 14,
@@ -326,10 +346,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     gap: 8,
+    paddingVertical: 12,
   },
   loadMoreText: {
-    fontSize: 13,
+    fontSize: 14,
+  },
+  centeredState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  stateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  stateText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
   },
 });

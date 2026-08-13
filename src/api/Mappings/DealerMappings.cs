@@ -18,7 +18,7 @@ public static class DealerMappings
             City = entity.City,
             Country = entity.Country,
             LogoUrl = entity.LogoUrl,
-            IsRequired = entity.IsRequired,
+            IsActive = entity.IsActive,
             RowVersion = entity.RowVersion,
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedById = entity.CreatedById,

@@ -19,6 +19,7 @@ public static class ProductMappings
             SalePrice = entity.SalePrice,
             CurrentStock = entity.CurrentStock,
             MinimumStock = entity.MinimumStock,
+            CoverImageUrl = entity.CoverImageUrl,
             RowVersion = entity.RowVersion,
             CreatedAtUtc = entity.CreatedAtUtc,
             CreatedById = entity.CreatedById,

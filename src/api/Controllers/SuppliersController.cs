@@ -127,6 +127,29 @@ public class SuppliersController : BaseController
         }
     }
 
+    [HttpPatch("{id:guid}/logo")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadSupplierLogo(Guid id, IFormFile file)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UploadSupplierLogo(id={Id})", id);
+            var supplier = await _supplierService.UploadSupplierLogoAsync(id, file);
+            _logger.LogTrace("Updated Supplier Logo: {Supplier}", supplier);
+            return Ok(new { Success = true, Data = supplier });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteSupplier(Guid id)
     {

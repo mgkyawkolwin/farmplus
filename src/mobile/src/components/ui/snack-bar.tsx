@@ -75,7 +75,7 @@ const SnackBar: SnackBarComponentType = () => {
 
       snackbarTimer.current = setTimeout(() => {
         hideSnackbar();
-      }, 2800);
+      }, 2000);
     },
     [hideSnackbar, snackbarOpacity, snackbarTranslateY],
   );

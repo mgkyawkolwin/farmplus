@@ -102,7 +102,7 @@ export default function BrandsScreen() {
 
   const handleSubmit = async () => {
     if (!editingBrand?.brand || editingBrand.brand.trim() === '') {
-      setErrorMessage('Brand name is required.');
+      SnackBar.Error('Brand name is required.');
       return;
     }
 
@@ -120,7 +120,7 @@ export default function BrandsScreen() {
       await loadBrands(1, false, false);
       closeModal();
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to save brand.');
+      SnackBar.Error(error?.message || 'Unable to save brand.');
     } finally {
       setSaving(false);
     }
@@ -204,12 +204,6 @@ export default function BrandsScreen() {
             <Text className='text-muted-foreground'>Loading more...</Text>
           </View>
         ) : null}
-        {errorMessage ? (
-          <Alert variant='destructive' icon={X} className='mt-3'>
-            <AlertTitle>Unable to continue</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
       </KeyboardAwareScrollView>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
@@ -236,13 +230,6 @@ export default function BrandsScreen() {
               <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
               <Switch value={editingBrand?.isActive} onValueChange={(value) => setEditingBrand((prev: BrandItem | null) => ({ ...prev, isActive: value } as (BrandItem | null)))} />
             </View>
-
-            {errorMessage ? (
-              <Alert variant='destructive' icon={X} className='mt-3'>
-                <AlertTitle>Unable to save</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
-              </Alert>
-            ) : null}
 
             <View style={styles.modalActions}>
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>

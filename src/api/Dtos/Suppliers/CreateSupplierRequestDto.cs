@@ -10,5 +10,5 @@ public sealed record CreateSupplierRequestDto
     public string? City { get; set; }
     public string? Country { get; set; }
     public string? LogoUrl { get; set; }
-    public bool? IsRequired { get; set; }
+    public bool? IsActive { get; set; }
 }

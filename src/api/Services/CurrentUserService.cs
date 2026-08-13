@@ -3,13 +3,6 @@ using FarmPlus.Api.Constants;
 
 namespace FarmPlus.Api.Services;
 
-public interface ICurrentUserService
-{
-    string? UserId { get; }
-    string? TenantId { get; }
-    bool IsAdmin { get; }
-}
-
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -24,7 +17,7 @@ public class CurrentUserService : ICurrentUserService
     public string? UserId => User?.FindFirstValue(ClaimTypes.NameIdentifier) 
                              ?? User?.FindFirstValue("sub");
 
-    public string? TenantId => User?.FindFirst(AuthKey.TenantId)?.Value;
+    public string? TenantId => User?.FindFirst(CustomClaimTypes.TenantId)?.Value;
 
-    public bool IsAdmin => User?.IsInRole("Admin") ?? false;
+    public bool IsAdmin => bool.TryParse(User?.FindFirst(CustomClaimTypes.IsAdmin)?.Value, out var isAdmin) && isAdmin;
 }

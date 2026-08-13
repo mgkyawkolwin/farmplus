@@ -95,7 +95,7 @@ public class BrandService : IBrandService
         ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
         var normalizedBrand = request.Brand!.Trim();
-        var brandExists = await _dbContext.Brands.AnyAsync(b => b.Brand.ToLower() == normalizedBrand.ToLower());
+        var brandExists = await _dbContext.Brands.AnyAsync(b => b.Brand.ToLower() == normalizedBrand.ToLower() && b.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (brandExists)
         {
             throw new CustomException("A brand with this name already exists.");
@@ -130,7 +130,7 @@ public class BrandService : IBrandService
             .SingleOrDefaultAsync(b => b.Id == id && b.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Brand not found.");
 
             var normalizedBrand = request.Brand!;
-            var brandExists = await _dbContext.Brands.AnyAsync(b => b.Id != id && b.Brand.ToLower() == normalizedBrand.ToLower());
+            var brandExists = await _dbContext.Brands.AnyAsync(b => b.Id != id && b.Brand.ToLower() == normalizedBrand.ToLower() && b.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
             if (brandExists)
             {
                 throw new CustomException("A brand with this name already exists.");

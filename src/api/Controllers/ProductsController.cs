@@ -124,6 +124,74 @@ public class ProductsController : BaseController
         }
     }
 
+    [HttpPatch("{id:guid}/cover-image")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadCoverImage(Guid id, [FromForm] IFormFile file)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UploadCoverImage(id={Id})", id);
+            var product = await _productService.UploadProductCoverImageAsync(id, file);
+            _logger.LogTrace("Updated Product CoverImage: {Product}", JsonSerializer.Serialize(product));
+            return Ok(new { Success = true, Data = product });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
+    [HttpPatch("{id:guid}/medias")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadProductMedia(Guid id, [FromForm] IFormFile file)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UploadProductMedia(id={Id})", id);
+            var product = await _productService.UploadProductMediaAsync(id, file);
+            _logger.LogTrace("Added Product Media: {Product}", JsonSerializer.Serialize(product));
+            return Ok(new { Success = true, Data = product });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
+    [HttpDelete("{id:guid}/medias/{mediaId:guid}")]
+    public async Task<IActionResult> DeleteProductMedia(Guid id, Guid mediaId)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: DeleteProductMedia(id={Id}, mediaId={MediaId})", id, mediaId);
+            var product = await _productService.DeleteProductMediaAsync(id, mediaId);
+            _logger.LogTrace("Deleted Product Media: {Product}", JsonSerializer.Serialize(product));
+            return Ok(new { Success = true, Data = product });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteProduct(Guid id)
     {

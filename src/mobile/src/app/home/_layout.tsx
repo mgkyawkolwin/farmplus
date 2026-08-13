@@ -1,11 +1,11 @@
 "use client";
 
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { Icon } from '@/components/ui/icon';
-import { LayoutDashboard, Box, TrendingUp, BarChart2, MoreHorizontal, Group } from 'lucide-react-native';
+import { LayoutDashboard, Box, TrendingUp, BarChart2, MoreHorizontal, Group, MessageCirclePlus, Bot } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 
 export default function HomeTabsLayout() {
@@ -53,6 +53,21 @@ export default function HomeTabsLayout() {
                 options={{
                     title: 'Customer',
                     tabBarIcon: ({ color }) => <Icon as={Group} color={color} size={20} />,
+                }}
+            />
+            <Tabs.Screen
+                name="aichatplaceholder"
+                listeners={{
+                    tabPress: (e) => {
+                        // Prevent default tab switching behavior
+                        e.preventDefault();
+                        // Push to your actual standalone screen route outside/above the tabs
+                        router.push('/chat/chat'); 
+                    },
+                }}
+                options={{
+                    title: 'AI Chat',
+                    tabBarIcon: ({ color }) => <Icon as={Bot} color={color} size={20} />,
                 }}
             />
         </Tabs>

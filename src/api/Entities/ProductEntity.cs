@@ -54,4 +54,9 @@ public class ProductEntity : EntityBase<Guid>
     [Required]
     public bool IsActive { get; set; } = true;
 
+    public string? CoverImageUrl { get; set; }
+
+    [NotMapped]
+    public MediaEntity[] Medias { get; set; } = [];
+
 }

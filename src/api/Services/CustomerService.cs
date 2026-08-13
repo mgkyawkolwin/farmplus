@@ -92,7 +92,7 @@ public class CustomerService : ICustomerService
         ValidationHelper.ValidateRequiredString(_localizer, "Name", request.Name);
 
         var normalizedName = request.Name.Trim();
-        var customerExists = await _dbContext.Customers.AnyAsync(c => c.Name.ToLower() == normalizedName.ToLower());
+        var customerExists = await _dbContext.Customers.AnyAsync(c => c.Name.ToLower() == normalizedName.ToLower() && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (customerExists)
         {
             throw new CustomException("A customer with this name already exists.");

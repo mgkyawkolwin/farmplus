@@ -102,7 +102,7 @@ export default function CategoriesScreen() {
 
     const handleSubmit = async () => {
         if (!editingCategory?.category || editingCategory.category.trim() === '') {
-            setErrorMessage('Category name is required.');
+            SnackBar.Error('Category name is required.');
             return;
         }
 
@@ -120,7 +120,7 @@ export default function CategoriesScreen() {
             await loadCategories(1, false, false);
             closeModal();
         } catch (error: any) {
-            setErrorMessage(error?.message || 'Unable to save category.');
+            SnackBar.Error(error?.message || 'Unable to save category.');
         } finally {
             setSaving(false);
         }
@@ -239,13 +239,6 @@ export default function CategoriesScreen() {
                             <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
                             <Switch value={editingCategory?.isActive} onValueChange={(value) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, isActive: value } as (CategoryItem | null)))} />
                         </View>
-
-                        {errorMessage ? (
-                            <Alert variant='destructive' icon={X} className='mt-3'>
-                                <AlertTitle>Unable to save</AlertTitle>
-                                <AlertDescription>{errorMessage}</AlertDescription>
-                            </Alert>
-                        ) : null}
 
                         <View style={styles.modalActions}>
                             <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>

@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
-import { Plus, Pencil, Trash2, X, ChevronLeft } from 'lucide-react-native';
+import { ActivityIndicator, Alert as RNAlert, Image, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { Plus, Pencil, Trash2, X, ChevronLeft, Image as ImageIcon } from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -195,10 +195,21 @@ export default function SuppliersScreen() {
             {suppliers.map((supplier) => (
               <View className='bg-card border-border' key={supplier.id} style={styles.card}>
                 <View style={styles.categoryInfo}>
-                  <Text className='text-foreground' style={styles.categoryName}>{supplier.supplierName}</Text>
-                  <Badge variant={supplier.isRequired ? 'active' : 'muted'}>
-                    <Text>{supplier.isRequired ? 'Required' : 'Optional'}</Text>
-                  </Badge>
+                  <View style={styles.logoWrapper}>
+                    {supplier.logoUrl ? (
+                      <Image source={{ uri: supplier.logoUrl }} style={styles.supplierLogo} resizeMode='cover' />
+                    ) : (
+                      <View style={styles.logoPlaceholder}>
+                        <Icon as={ImageIcon} size={18} className='text-muted-foreground' />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.supplierInfo}>
+                    <Text className='text-foreground' style={styles.categoryName}>{supplier.supplierName}</Text>
+                    <Badge variant={supplier.isRequired ? 'active' : 'muted'}>
+                      <Text>{supplier.isRequired ? 'Required' : 'Optional'}</Text>
+                    </Badge>
+                  </View>
                 </View>
                 <View style={styles.actions}>
                   <Icon as={Pencil} size={18} className='text-primary' style={{ marginLeft: 8 }} onPress={() => openEditModal(supplier)} />
@@ -351,7 +362,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   categoryName: { fontSize: 16, fontWeight: '600' },
-  categoryInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 },
+  categoryInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, marginRight: 8 },
+  logoWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  supplierLogo: {
+    width: '100%',
+    height: '100%',
+  },
+  logoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5E7EB',
+  },
+  supplierInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   emptyState: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { marginTop: 8, textAlign: 'center' },

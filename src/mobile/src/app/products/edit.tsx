@@ -3,10 +3,12 @@
 import * as React from 'react';
 import {
   ActivityIndicator,
+  Image,
   StatusBar,
   StyleSheet,
   View
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { ChevronLeft } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -21,6 +23,7 @@ import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { IProductService } from '@/services/productService';
+import { ProductMediaItem } from '@/models/product';
 import { useColorScheme } from 'nativewind';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
@@ -60,6 +63,10 @@ export default function EditProductScreen() {
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(true);
   const [formData, setFormData] = React.useState<ProductFormState>(emptyFormState);
+  const [coverImageUri, setCoverImageUri] = React.useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = React.useState<{ uri: string; name: string; type: string } | null>(null);
+  const [existingMedia, setExistingMedia] = React.useState<ProductMediaItem[]>([]);
+  const [newMediaFiles, setNewMediaFiles] = React.useState<{ uri: string; name: string; type: string }[]>([]);
 
   React.useEffect(() => {
     if (!productId) {
@@ -86,6 +93,9 @@ export default function EditProductScreen() {
           minimumStock: product.minimumStock != null ? String(product.minimumStock) : '',
           rowVersion: product.rowVersion ?? '',
         });
+        setCoverImageUri(product.coverImageUrl ?? null);
+        setExistingMedia(product.medias ?? []);
+        setNewMediaFiles([]);
       } catch (error) {
         if (isActive) {
           SnackBar.Error('Failed to load product details');
@@ -107,6 +117,91 @@ export default function EditProductScreen() {
 
   const handleInputChange = (field: keyof ProductFormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const pickCoverImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
+      SnackBar.Error('Permission to access photos is required.');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (pickerResult.canceled || !pickerResult.assets?.length) {
+      return;
+    }
+
+    const asset = pickerResult.assets[0];
+    if (!asset.uri) {
+      return;
+    }
+
+    const uri = asset.uri;
+    const name = asset.fileName ?? uri.split('/').pop() ?? `product-cover-${Date.now()}.jpg`;
+    const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
+
+    setCoverImageUri(uri);
+    setCoverImageFile({ uri, name, type });
+  };
+
+  const removeCoverImage = () => {
+    setCoverImageUri(null);
+    setCoverImageFile(null);
+  };
+
+  const pickProductMedia = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
+      SnackBar.Error('Permission to access photos is required.');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (pickerResult.canceled || !pickerResult.assets?.length) {
+      return;
+    }
+
+    const newFiles = pickerResult.assets.map((asset) => {
+      const uri = asset.uri;
+      const name = asset.fileName ?? uri.split('/').pop() ?? `product-media-${Date.now()}.jpg`;
+      const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
+      return { uri, name, type };
+    });
+
+    setNewMediaFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeExistingMedia = async (mediaId: string) => {
+    if (!productId) return;
+
+    try {
+      setLoading(true);
+      const updatedProduct = await productService.deleteProductMedia(productId, mediaId);
+      setExistingMedia(updatedProduct.medias ?? []);
+      SnackBar.Success('Media removed successfully');
+    } catch (error) {
+      if (error instanceof Error) {
+        SnackBar.Error(`Failed to delete media: ${error.message}`);
+      } else {
+        SnackBar.Error('Failed to delete media. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeNewMediaFile = (index: number) => {
+    setNewMediaFiles((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSubmit = async () => {
@@ -131,6 +226,17 @@ export default function EditProductScreen() {
         minimumStock: formData.minimumStock ? Number(formData.minimumStock) : undefined,
         rowVersion: formData.rowVersion,
       });
+
+      if (coverImageFile) {
+        await productService.uploadProductCoverImage(productId, coverImageFile);
+      }
+
+      if (newMediaFiles.length > 0) {
+        for (const mediaFile of newMediaFiles) {
+          await productService.uploadProductMedia(productId, mediaFile);
+        }
+      }
+
       SnackBar.Success('Product updated successfully');
       router.back();
     } catch (error) {
@@ -192,6 +298,55 @@ export default function EditProductScreen() {
           </View>
 
           <View style={styles.field}>
+            <Label className="text-foreground">Cover Image</Label>
+            {coverImageUri ? (
+              <View style={styles.coverImagePreviewContainer}>
+                <Image source={{ uri: coverImageUri }} style={styles.coverImagePreview} />
+                <Button variant="outline" onPress={removeCoverImage} disabled={loading}>
+                  <Text className="text-foreground">Remove image</Text>
+                </Button>
+              </View>
+            ) : (
+              <Button variant="outline" onPress={pickCoverImage} disabled={loading}>
+                <Text className="text-foreground">Select cover image</Text>
+              </Button>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Label className="text-foreground">Additional Images</Label>
+            {existingMedia.length > 0 && (
+              <View style={styles.imageList}>
+                {existingMedia.map((media) => (
+                  <View key={media.objectName} style={styles.coverImagePreviewContainer}>
+                    <Image source={{ uri: media.url ?? undefined }} style={styles.coverImagePreview} />
+                    {media.id && (
+                      <Button variant="outline" onPress={() => removeExistingMedia(media.id!)} disabled={loading}>
+                        <Text className="text-foreground">Remove</Text>
+                      </Button>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+            {newMediaFiles.length > 0 && (
+              <View style={styles.imageList}>
+                {newMediaFiles.map((file, index) => (
+                  <View key={`${file.uri}-${index}`} style={styles.coverImagePreviewContainer}>
+                    <Image source={{ uri: file.uri }} style={styles.coverImagePreview} />
+                    <Button variant="outline" onPress={() => removeNewMediaFile(index)} disabled={loading}>
+                      <Text className="text-foreground">Remove</Text>
+                    </Button>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Button variant="outline" onPress={pickProductMedia} disabled={loading}>
+              <Text className="text-foreground">Select additional images</Text>
+            </Button>
+          </View>
+
+          <View style={styles.field}>
             <Label className="text-foreground">Purchase Price</Label>
             <Input placeholder="0" value={formData.purchasePrice} onChangeText={(value) => handleInputChange('purchasePrice', value)} className="mt-2" keyboardType="numeric" editable={!loading} />
           </View>
@@ -238,4 +393,8 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   cancelButton: { minWidth: 100 },
   submitButton: { minWidth: 140 },
+  coverImagePreviewContainer: { gap: 8, marginTop: 10 },
+  coverImagePreview: { width: '100%', height: 180, borderRadius: 8 },
+  imageList: { marginTop: 8 },
+  mediaPreview: { width: '100%', height: 180, borderRadius: 8, backgroundColor: '#F3F4F6' },
 });

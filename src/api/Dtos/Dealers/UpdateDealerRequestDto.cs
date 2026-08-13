@@ -12,5 +12,6 @@ public sealed record UpdateDealerRequestDto : UpdateRequestBase<Guid>
     public string? City { get; set; }
     public string? Country { get; set; }
     public string? LogoUrl { get; set; }
-    public bool? IsRequired { get; set; }
+    public bool? ClearLogoUrl { get; set; }
+    public bool? IsActive { get; set; }
 }

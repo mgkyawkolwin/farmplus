@@ -19,6 +19,7 @@ using FarmPlus.Api.Utilities;
 using System.Text.Json;
 using Microsoft.Extensions.Localization;
 using FarmPlus.Api.I18N;
+using FarmPlus.Api.Constants;
 
 namespace FarmPlus.Api.Services;
 
@@ -55,22 +56,23 @@ public class AuthService : IAuthService
 
     private async Task<string> SignInAndCreateTokenAsync(UserEntity user)
     {
-        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName));
+        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName, false, user.MainTenantId.ToString()));
     }
 
     private async Task<string> SignInAndCreateTokenAsync(AdminUserEntity user)
     {
-        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName));
+        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName, true, string.Empty));
     }
 
-    private async Task<string> SignInAndCreateTokenAsync((Guid Id, string Email, string UserName) user)
+    private async Task<string> SignInAndCreateTokenAsync((Guid Id, string Email, string UserName, bool isAdmin, string TenantId) user)
     {
-        // 1. Build JWT Claims
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Name, user.UserName),
+            new(CustomClaimTypes.IsAdmin, user.isAdmin.ToString()),
+            new(CustomClaimTypes.TenantId, user.TenantId),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 
@@ -86,26 +88,27 @@ public class AuthService : IAuthService
             signingCredentials: credentials
         );
 
-        // 2. Issue Cookie if HttpContext is available
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext != null)
         {
             var cookieClaims = new[]
             {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Email)
+            new Claim(ClaimTypes.Name, user.Email),
+            new Claim(CustomClaimTypes.IsAdmin, user.isAdmin.ToString()),
+            new Claim(CustomClaimTypes.TenantId, user.TenantId)
         };
 
-            var identity = new ClaimsIdentity(cookieClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var identity = new ClaimsIdentity(cookieClaims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-            await httpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(identity),
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
-                });
+        await httpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity),
+            new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+            });
         }
 
         return new JwtSecurityTokenHandler().WriteToken(token);

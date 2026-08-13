@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<SupplierEntity> Suppliers => Set<SupplierEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
+    public DbSet<MediaEntity> Medias => Set<MediaEntity>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
