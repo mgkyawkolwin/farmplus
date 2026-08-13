@@ -15,9 +15,9 @@ public interface IDealerService
 {
     Task<PaginatedResultDto<DealerDto>> GetDealersAsync(int page, int pageSize, string? dealerName = null);
     Task<DealerDto?> GetDealerByIdAsync(Guid id);
-    Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request, Guid currentUserId);
-    Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request, Guid currentUserId);
-    Task<bool> DeleteDealerAsync(Guid id);
+    Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request);
+    Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request);
+    Task DeleteDealerAsync(Guid id);
 }
 
 public class DealerService : IDealerService
@@ -25,12 +25,14 @@ public class DealerService : IDealerService
     private readonly AppDbContext _dbContext;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<DealerService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
-    public DealerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<DealerService> logger)
+    public DealerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<DealerService> logger, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<DealerDto>> GetDealersAsync(int page, int pageSize, string? dealerName = null)
@@ -40,6 +42,12 @@ public class DealerService : IDealerService
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
         var query = _dbContext.Dealers.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
 
         if (!string.IsNullOrWhiteSpace(dealerName))
         {
@@ -61,11 +69,18 @@ public class DealerService : IDealerService
     public async Task<DealerDto?> GetDealerByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetDealerByIdAsync(id={Id})", id);
-        var dealer = await _dbContext.Dealers.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id);
+        var query = _dbContext.Dealers.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
+        var dealer = await query.SingleOrDefaultAsync(d => d.Id == id);
         return dealer?.MapToDto();
     }
 
-    public async Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request, Guid currentUserId)
+    public async Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateDealerAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "DealerName", request.DealerName);
@@ -90,9 +105,10 @@ public class DealerService : IDealerService
             LogoUrl = request.LogoUrl,
             IsRequired = request.IsRequired ?? false,
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!),
+            MainTenantId = Guid.Parse(_currentUserService.TenantId!),
         };
 
         _dbContext.Dealers.Add(dealer);
@@ -101,7 +117,7 @@ public class DealerService : IDealerService
         return dealer.MapToDto();
     }
 
-    public async Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request, Guid currentUserId)
+    public async Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request)
     {
         try
         {
@@ -110,7 +126,7 @@ public class DealerService : IDealerService
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
             ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
 
-            var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id) ?? throw new CustomException("Dealer not found.");
+            var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Dealer not found.");
 
             var normalizedName = request.DealerName!;
             var dealerExists = await _dbContext.Dealers.AnyAsync(d => d.Id != id && d.DealerName.ToLower() == normalizedName.ToLower());
@@ -130,7 +146,7 @@ public class DealerService : IDealerService
             dealer.IsRequired = request.IsRequired ?? dealer.IsRequired;
             _dbContext.Entry(dealer).Property(d => d.RowVersion).OriginalValue = request.RowVersion;
             dealer.UpdatedAtUtc = DateTime.UtcNow;
-            dealer.UpdatedById = currentUserId;
+            dealer.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
             return dealer.MapToDto();
@@ -141,12 +157,11 @@ public class DealerService : IDealerService
         }
     }
 
-    public async Task<bool> DeleteDealerAsync(Guid id)
+    public async Task DeleteDealerAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteDealerAsync(id={Id})", id);
-        var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id) ?? throw new CustomException("Dealer not found.");
+        var dealer = await _dbContext.Dealers.SingleOrDefaultAsync(d => d.Id == id && d.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Dealer not found.");
         _dbContext.Dealers.Remove(dealer);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 }

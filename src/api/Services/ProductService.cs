@@ -15,9 +15,9 @@ public interface IProductService
 {
     Task<PaginatedResultDto<ProductDto>> GetProductsAsync(int page, int pageSize);
     Task<ProductDto?> GetProductByIdAsync(Guid id);
-    Task<ProductDto> CreateProductAsync(CreateProductRequestDto request, Guid currentUserId);
-    Task<ProductDto?> UpdateProductAsync(Guid id, UpdateProductRequestDto request, Guid currentUserId);
-    Task<bool> DeleteProductAsync(Guid id);
+    Task<ProductDto> CreateProductAsync(CreateProductRequestDto request);
+    Task<ProductDto?> UpdateProductAsync(Guid id, UpdateProductRequestDto request);
+    Task DeleteProductAsync(Guid id);
 }
 
 public class ProductService : IProductService
@@ -25,12 +25,14 @@ public class ProductService : IProductService
     private readonly AppDbContext _dbContext;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<ProductService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger)
+    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<ProductDto>> GetProductsAsync(int page, int pageSize)
@@ -39,10 +41,17 @@ public class ProductService : IProductService
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
-        var query = _dbContext.Products.AsNoTracking().OrderBy(p => p.Name);
+        var query = _dbContext.Products.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
         var total = await query.CountAsync();
 
         var products = await query
+            .OrderBy(p => p.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -54,11 +63,18 @@ public class ProductService : IProductService
     public async Task<ProductDto?> GetProductByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetProductByIdAsync(id={Id})", id);
-        var product = await _dbContext.Products.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id);
+        var query = _dbContext.Products.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
+        var product = await query.SingleOrDefaultAsync(p => p.Id == id);
         return product?.MapToDto();
     }
 
-    public async Task<ProductDto> CreateProductAsync(CreateProductRequestDto request, Guid currentUserId)
+    public async Task<ProductDto> CreateProductAsync(CreateProductRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateProductAsync(request={Request})", request);
         
@@ -91,9 +107,10 @@ public class ProductService : IProductService
             CurrentStock = request.CurrentStock ?? throw new CustomException("CurrentStock is required."),
             MinimumStock = request.MinimumStock ?? throw new CustomException("MinimumStock is required."),
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!),
+            MainTenantId = Guid.Parse(_currentUserService.TenantId!),
         };
 
         _dbContext.Products.Add(product);
@@ -102,14 +119,14 @@ public class ProductService : IProductService
         return product.MapToDto();
     }
 
-    public async Task<ProductDto?> UpdateProductAsync(Guid id, UpdateProductRequestDto request, Guid currentUserId)
+    public async Task<ProductDto?> UpdateProductAsync(Guid id, UpdateProductRequestDto request)
     {
         try
         {
             _logger.LogDebug("CALLED: UpdateProductAsync(id={Id}, request={Request})", id, request);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
 
-            var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id) ?? throw new CustomException("Product not found.");
+            var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id && p.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Product not found.");
 
             if (!string.IsNullOrWhiteSpace(request.Name))
             {
@@ -123,49 +140,18 @@ public class ProductService : IProductService
                 product.Name = normalizedName;
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Description))
-            {
-                product.Description = request.Description.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Brand))
-            {
-                product.Brand = request.Brand.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Category))
-            {
-                product.Category = request.Category.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Unit))
-            {
-                product.Unit = request.Unit.Trim();
-            }
-
-            if (request.PurchasePrice.HasValue)
-            {
-                product.PurchasePrice = request.PurchasePrice.Value;
-            }
-
-            if (request.SalePrice.HasValue)
-            {
-                product.SalePrice = request.SalePrice.Value;
-            }
-
-            if (request.CurrentStock.HasValue)
-            {
-                product.CurrentStock = request.CurrentStock.Value;
-            }
-
-            if (request.MinimumStock.HasValue)
-            {
-                product.MinimumStock = request.MinimumStock.Value;
-            }
+            product.Description = request.Description!.Trim();
+            product.Brand = request.Brand!.Trim();
+            product.Category = request.Category!.Trim();
+            product.Unit = request.Unit!.Trim();
+            product.PurchasePrice = request.PurchasePrice!.Value;
+            product.SalePrice = request.SalePrice!.Value;
+            product.CurrentStock = request.CurrentStock!.Value;
+            product.MinimumStock = request.MinimumStock!.Value;
 
             _dbContext.Entry(product).Property(p => p.RowVersion).OriginalValue = request.RowVersion;
             product.UpdatedAtUtc = DateTime.UtcNow;
-            product.UpdatedById = currentUserId;
+            product.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
             return product.MapToDto();
@@ -176,12 +162,11 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<bool> DeleteProductAsync(Guid id)
+    public async Task DeleteProductAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteProductAsync(id={Id})", id);
-        var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id) ?? throw new CustomException("Product not found.");
+        var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id && p.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Product not found.");
         _dbContext.Products.Remove(product);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 }

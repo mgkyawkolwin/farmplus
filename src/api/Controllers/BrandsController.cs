@@ -88,7 +88,7 @@ public class BrandsController : BaseController
         {
             _logger.LogDebug("CALLED: CreateBrand(request={Request})", request);
 
-            var brandDto = await _brandService.CreateBrandAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var brandDto = await _brandService.CreateBrandAsync(request);
             _logger.LogTrace("Created Brand: {Brand}", brandDto);
             return Ok(new { Success = true, Data = brandDto });
         }
@@ -111,7 +111,7 @@ public class BrandsController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateBrand(id={Id}, request={Request})", id, request);
 
-            var brand = await _brandService.UpdateBrandAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var brand = await _brandService.UpdateBrandAsync(id, request);
             _logger.LogTrace("Updated Brand: {Brand}", brand);
             return Ok(new { Success = true, Data = brand });
         }

@@ -22,6 +22,14 @@ using FarmPlus.Api.I18N;
 
 namespace FarmPlus.Api.Services;
 
+public interface IAuthService
+{
+    Task<AuthResponseDto> RegisterAsync(RegisterDto dto);
+    Task<AuthResponseDto> SignInAsync(LoginDto dto);
+    Task<AdminAuthResponseDto> SignInAdminAsync(LoginDto dto);
+    Task<AuthResponseDto> SignInWithGoogleAsync(GoogleLoginDto dto);
+}
+
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _dbContext;

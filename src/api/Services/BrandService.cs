@@ -13,11 +13,11 @@ namespace FarmPlus.Api.Services;
 
 public interface IBrandService
 {
-    Task<PaginatedResultDto<BrandDto>> GetBrandsAsync(GetBrandsRequestDto request, Guid currentUserId);
-    Task<BrandDto?> GetBrandByIdAsync(Guid id, Guid currentUserId);
-    Task<BrandDto> CreateBrandAsync(CreateBrandRequestDto request, Guid currentUserId);
-    Task<BrandDto?> UpdateBrandAsync(Guid id, UpdateBrandRequestDto request, Guid currentUserId);
-    Task<bool> DeleteBrandAsync(Guid id, Guid currentUserId);
+    Task<PaginatedResultDto<BrandDto>> GetBrandsAsync(GetBrandsRequestDto request);
+    Task<BrandDto?> GetBrandByIdAsync(Guid id);
+    Task<BrandDto> CreateBrandAsync(CreateBrandRequestDto request);
+    Task<BrandDto?> UpdateBrandAsync(Guid id, UpdateBrandRequestDto request);
+    Task DeleteBrandAsync(Guid id);
 }
 
 public class BrandService : IBrandService
@@ -44,15 +44,15 @@ public class BrandService : IBrandService
         var query = _dbContext.Brands.AsNoTracking();
 
         if(_currentUserService.IsAdmin == false) {
-            if (string.IsNullOrEmpty(_currentUserService.TenantId)) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
                 throw new CustomException("Tenant ID is missing for the current user.");
             }
-            query = query.Where(b => b.MainTenantId == Guid.Parse(_currentUserService.TenantId));
+            query = query.Where(b => b.MainTenantId == tenantId);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Brand))
         {
-            query = query.Where(b => b.Brand.ToLower().Contains(request.Brand));
+            query = query.Where(b => b.Brand.ToLower().Contains(request.Brand.ToLower()));
         }
 
         query = query.OrderBy(b => b.Brand);
@@ -65,27 +65,30 @@ public class BrandService : IBrandService
         return new PaginatedResultDto<BrandDto>(brandDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
-    public async Task<BrandDto?> GetBrandByIdAsync(Guid id, Guid currentUserId)
+    public async Task<BrandDto?> GetBrandByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetBrandByIdAsync(id={Id})", id);
 
-        // retrieve main tenant id
-        var mainTenantId = _dbContext.Users.AsNoTracking()
-            .Where(u => u.Id == currentUserId)
-            .Select(u => u.MainTenantId)
-            .FirstOrDefault();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+        }
 
         var query = _dbContext.Brands.AsNoTracking().Where(b => b.Id == id);
 
-        if (mainTenantId != null) {
-            query = query.Where(b => b.MainTenantId == mainTenantId);
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
         }
 
         var brand = await query.SingleOrDefaultAsync();
         return brand?.MapToDto();
     }
 
-    public async Task<BrandDto> CreateBrandAsync(CreateBrandRequestDto request, Guid currentUserId)
+    public async Task<BrandDto> CreateBrandAsync(CreateBrandRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateBrandAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "Brand", request.Brand);
@@ -102,9 +105,10 @@ public class BrandService : IBrandService
         {
             Brand = normalizedBrand,
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!),
+            MainTenantId = Guid.Parse(_currentUserService.TenantId!)
         };
 
         _dbContext.Brands.Add(brand);
@@ -113,7 +117,7 @@ public class BrandService : IBrandService
         return brand.MapToDto();
     }
 
-    public async Task<BrandDto?> UpdateBrandAsync(Guid id, UpdateBrandRequestDto request, Guid currentUserId)
+    public async Task<BrandDto?> UpdateBrandAsync(Guid id, UpdateBrandRequestDto request)
     {
         try
         {
@@ -122,7 +126,8 @@ public class BrandService : IBrandService
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
             ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
-            var brand = await _dbContext.Brands.SingleOrDefaultAsync(b => b.Id == id) ?? throw new CustomException("Brand not found.");
+            var brand = await _dbContext.Brands
+            .SingleOrDefaultAsync(b => b.Id == id && b.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Brand not found.");
 
             var normalizedBrand = request.Brand!;
             var brandExists = await _dbContext.Brands.AnyAsync(b => b.Id != id && b.Brand.ToLower() == normalizedBrand.ToLower());
@@ -135,7 +140,7 @@ public class BrandService : IBrandService
             brand.IsActive = request.IsActive ?? brand.IsActive;
             _dbContext.Entry(brand).Property(b => b.RowVersion).OriginalValue = request.RowVersion;
             brand.UpdatedAtUtc = DateTime.UtcNow;
-            brand.UpdatedById = currentUserId;
+            brand.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
             return brand.MapToDto();
@@ -146,12 +151,11 @@ public class BrandService : IBrandService
         }
     }
 
-    public async Task<bool> DeleteBrandAsync(Guid id, Guid currentUserId)
+    public async Task DeleteBrandAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteBrandAsync(id={Id})", id);
-        var brand = await _dbContext.Brands.SingleOrDefaultAsync(b => b.Id == id) ?? throw new CustomException("Brand not found.");
+        var brand = await _dbContext.Brands.SingleOrDefaultAsync(b => b.Id == id && b.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Brand not found.");
         _dbContext.Brands.Remove(brand);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 }

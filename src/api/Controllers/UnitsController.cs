@@ -88,7 +88,7 @@ public class UnitsController : BaseController
         {
             _logger.LogDebug("CALLED: CreateUnit(request={Request})", request);
 
-            var unitDto = await _unitService.CreateUnitAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var unitDto = await _unitService.CreateUnitAsync(request);
             _logger.LogTrace("Created Unit: {Unit}", unitDto);
             return Ok(new { Success = true, Data = unitDto });
         }
@@ -111,7 +111,7 @@ public class UnitsController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateUnit(id={Id}, request={Request})", id, request);
 
-            var unit = await _unitService.UpdateUnitAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var unit = await _unitService.UpdateUnitAsync(id, request);
             _logger.LogTrace("Updated Unit: {Unit}", unit);
             return Ok(new { Success = true, Data = unit });
         }

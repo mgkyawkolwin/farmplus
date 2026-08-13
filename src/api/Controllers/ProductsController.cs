@@ -86,7 +86,7 @@ public class ProductsController : BaseController
         try
         {
             _logger.LogDebug("CALLED: CreateProduct(request={Request})", request);
-            var productEntity = await _productService.CreateProductAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var productEntity = await _productService.CreateProductAsync(request);
             _logger.LogTrace("Created Product: {Product}", JsonSerializer.Serialize(productEntity));
             return Ok(new { Success = true, Data = productEntity });
         }
@@ -108,7 +108,7 @@ public class ProductsController : BaseController
         try
         {
             _logger.LogDebug("CALLED: UpdateProduct(id={Id}, request={Request})", id, request);
-            var product = await _productService.UpdateProductAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var product = await _productService.UpdateProductAsync(id, request);
             _logger.LogTrace("Updated Product: {Product}", JsonSerializer.Serialize(product));
             return Ok(new { Success = true, Data = product });
         }
@@ -130,8 +130,7 @@ public class ProductsController : BaseController
         try
         {
             _logger.LogDebug("CALLED: DeleteProduct(id={Id})", id);
-            var deleted = await _productService.DeleteProductAsync(id);
-            _logger.LogTrace("Deleted Product: {Product}", JsonSerializer.Serialize(deleted));
+            await _productService.DeleteProductAsync(id);
             return Ok(new { Success = true, Message = "Product deleted successfully." });
         }
         catch (CustomException ex)

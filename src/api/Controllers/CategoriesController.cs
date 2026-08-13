@@ -88,7 +88,7 @@ public class CategoriesController : BaseController
         {
             _logger.LogDebug("CALLED: CreateCategory(request={Request})", request);
 
-            var categoryDto = await _categoryService.CreateCategoryAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var categoryDto = await _categoryService.CreateCategoryAsync(request);
             _logger.LogTrace("Created Category: {Category}", categoryDto);
             return Ok(new { Success = true, Data = categoryDto });
         }
@@ -111,7 +111,7 @@ public class CategoriesController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateCategory(id={Id}, request={Request})", id, request);
 
-            var category = await _categoryService.UpdateCategoryAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var category = await _categoryService.UpdateCategoryAsync(id, request);
             _logger.LogTrace("Updated Category: {Category}", category);
             return Ok(new { Success = true, Data = category });
         }
@@ -133,7 +133,7 @@ public class CategoriesController : BaseController
         try
         {
             _logger.LogDebug("CALLED: DeleteCategory(id={Id})", id);
-            var deleted = await _categoryService.DeleteCategoryAsync(id);
+            await _categoryService.DeleteCategoryAsync(id);
             return Ok(new { Success = true, Message = "Category deleted successfully." });
         }
         catch (CustomException ex)

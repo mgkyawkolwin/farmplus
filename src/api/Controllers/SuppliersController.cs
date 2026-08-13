@@ -88,7 +88,7 @@ public class SuppliersController : BaseController
         {
             _logger.LogDebug("CALLED: CreateSupplier(request={Request})", request);
 
-            var supplierDto = await _supplierService.CreateSupplierAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var supplierDto = await _supplierService.CreateSupplierAsync(request);
             _logger.LogTrace("Created Supplier: {Supplier}", supplierDto);
             return Ok(new { Success = true, Data = supplierDto });
         }
@@ -111,7 +111,7 @@ public class SuppliersController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateSupplier(id={Id}, request={Request})", id, request);
 
-            var supplier = await _supplierService.UpdateSupplierAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var supplier = await _supplierService.UpdateSupplierAsync(id, request);
             _logger.LogTrace("Updated Supplier: {Supplier}", supplier);
             return Ok(new { Success = true, Data = supplier });
         }

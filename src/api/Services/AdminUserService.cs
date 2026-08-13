@@ -11,23 +11,35 @@ using FarmPlus.Api.Utilities;
 
 namespace FarmPlus.Api.Services;
 
+public interface IAdminUserService
+{
+    Task<PaginatedResultDto<AdminUserDto>> GetAdminUsersAsync(int page, int pageSize);
+    Task<AdminUserDto?> GetAdminUserByIdAsync(Guid id);
+    Task<AdminUserDto> CreateAdminUserAsync(CreateAdminUserDto request);
+    Task<AdminUserDto?> UpdateAdminUserAsync(Guid id, UpdateAdminUserDto request);
+    Task DeleteAdminUserAsync(Guid id);
+}
+
 public class AdminUserService : IAdminUserService
 {
     private readonly AppDbContext _dbContext;
     private readonly IPasswordHasher<AdminUserEntity> _passwordHasher;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<AdminUserService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
     public AdminUserService(
         AppDbContext dbContext,
         IPasswordHasher<AdminUserEntity> passwordHasher,
         IStringLocalizer<LocalizedStrings> localizer,
-        ILogger<AdminUserService> logger)
+        ILogger<AdminUserService> logger,
+        ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<AdminUserDto>> GetAdminUsersAsync(int page, int pageSize)
@@ -63,7 +75,7 @@ public class AdminUserService : IAdminUserService
         return user == null ? null : MapToDto(user);
     }
 
-    public async Task<AdminUserDto> CreateAdminUserAsync(CreateAdminUserDto request, Guid currentUserId)
+    public async Task<AdminUserDto> CreateAdminUserAsync(CreateAdminUserDto request)
     {
         _logger.LogDebug("CALLED: CreateAdminUserAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "UserName", request.UserName);
@@ -86,9 +98,9 @@ public class AdminUserService : IAdminUserService
             Role = request.Role!.Trim(),
             IsActive = request.IsActive ?? true,
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!)
         };
         adminUser.PasswordHash = _passwordHasher.HashPassword(adminUser, request.Password!);
 
@@ -98,7 +110,7 @@ public class AdminUserService : IAdminUserService
         return MapToDto(adminUser);
     }
 
-    public async Task<AdminUserDto?> UpdateAdminUserAsync(Guid id, UpdateAdminUserDto request, Guid currentUserId)
+    public async Task<AdminUserDto?> UpdateAdminUserAsync(Guid id, UpdateAdminUserDto request)
     {
         try
         {
@@ -127,7 +139,7 @@ public class AdminUserService : IAdminUserService
             }
             _dbContext.Entry(user).Property(u => u.RowVersion).OriginalValue = request.RowVersion;
             user.UpdatedAtUtc = DateTime.UtcNow;
-            user.UpdatedById = currentUserId;
+            user.UpdatedById = Guid.Parse(_currentUserService.UserId!);
 
             await _dbContext.SaveChangesAsync();
             return MapToDto(user);
@@ -138,7 +150,7 @@ public class AdminUserService : IAdminUserService
         }
     }
 
-    public async Task<bool> DeleteAdminUserAsync(Guid id)
+    public async Task DeleteAdminUserAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteAdminUserAsync(id={Id})", id);
         var user = await _dbContext.Set<AdminUserEntity>().SingleOrDefaultAsync(u => u.Id == id)
@@ -146,7 +158,6 @@ public class AdminUserService : IAdminUserService
 
         _dbContext.Set<AdminUserEntity>().Remove(user);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 
     private static AdminUserDto MapToDto(AdminUserEntity user)

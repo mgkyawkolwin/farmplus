@@ -88,7 +88,7 @@ public class CustomersController : BaseController
         {
             _logger.LogDebug("CALLED: CreateCustomer(request={Request})", request);
 
-            var customerEntity = await _customerService.CreateCustomerAsync(request, GetCurrentUserId() ?? Guid.Empty);
+            var customerEntity = await _customerService.CreateCustomerAsync(request);
             return Ok(new { Success = true, Data = customerEntity });
         }
         catch (CustomException ex)
@@ -110,7 +110,7 @@ public class CustomersController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateCustomer(id={Id}, request={Request})", id, request);
 
-            var customer = await _customerService.UpdateCustomerAsync(id, request, GetCurrentUserId() ?? Guid.Empty);
+            var customer = await _customerService.UpdateCustomerAsync(id, request);
             if (customer == null)
             {
                 return NotFound(new { Success = false, Message = "Customer not found." });
@@ -136,7 +136,7 @@ public class CustomersController : BaseController
         try
         {
             _logger.LogDebug("CALLED: DeleteCustomer(id={Id})", id);
-            var deleted = await _customerService.DeleteCustomerAsync(id);
+            await _customerService.DeleteCustomerAsync(id);
             return Ok(new { Success = true, Message = "Customer deleted successfully." });
         }
         catch (CustomException ex)

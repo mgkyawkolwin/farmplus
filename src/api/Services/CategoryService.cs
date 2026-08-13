@@ -15,9 +15,9 @@ public interface ICategoryService
 {
     Task<PaginatedResultDto<CategoryDto>> GetCategoriesAsync(int page, int pageSize, string? category = null);
     Task<CategoryDto?> GetCategoryByIdAsync(Guid id);
-    Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId);
-    Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId);
-    Task<bool> DeleteCategoryAsync(Guid id);
+    Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request);
+    Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request);
+    Task DeleteCategoryAsync(Guid id);
 }
 
 public class CategoryService : ICategoryService
@@ -25,12 +25,14 @@ public class CategoryService : ICategoryService
     private readonly AppDbContext _dbContext;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<CategoryService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CategoryService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<CategoryService> logger)
+    public CategoryService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<CategoryService> logger, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<CategoryDto>> GetCategoriesAsync(int page, int pageSize, string? category = null)
@@ -38,8 +40,14 @@ public class CategoryService : ICategoryService
         _logger.LogDebug("CALLED: GetCategoriesAsync(page={Page}, pageSize={PageSize}, category={Category})", page, pageSize, category ?? "null");
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
-
+        
         var query = _dbContext.Categories.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
 
         if (!string.IsNullOrWhiteSpace(category))
         {
@@ -61,11 +69,19 @@ public class CategoryService : ICategoryService
     public async Task<CategoryDto?> GetCategoryByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetCategoryByIdAsync(id={Id})", id);
-        var category = await _dbContext.Categories.AsNoTracking().SingleOrDefaultAsync(c => c.Id == id);
+        var query = _dbContext.Categories.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
+
+        var category = await query.SingleOrDefaultAsync(c => c.Id == id);
         return category?.MapToDto();
     }
 
-    public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request, Guid currentUserId)
+    public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateCategoryAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "Category", request.Category);
@@ -82,9 +98,10 @@ public class CategoryService : ICategoryService
         {
             Category = normalizedCategory,
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!),
+            MainTenantId = Guid.Parse(_currentUserService.TenantId!),
         };
 
         _dbContext.Categories.Add(category);
@@ -93,7 +110,7 @@ public class CategoryService : ICategoryService
         return category.MapToDto();
     }
 
-    public async Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request, Guid currentUserId)
+    public async Task<CategoryDto?> UpdateCategoryAsync(Guid id, UpdateCategoryRequestDto request)
     {
         try
         {
@@ -102,7 +119,7 @@ public class CategoryService : ICategoryService
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
             ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
-            var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id) ?? throw new CustomException("Category not found.");
+            var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Category not found.");
 
             var normalizedCategory = request.Category!;
             var categoryExists = await _dbContext.Categories.AnyAsync(c => c.Id != id && c.Category.ToLower() == normalizedCategory.ToLower());
@@ -115,7 +132,7 @@ public class CategoryService : ICategoryService
             category.IsActive = request.IsActive ?? category.IsActive;
             _dbContext.Entry(category).Property(c => c.RowVersion).OriginalValue = request.RowVersion;
             category.UpdatedAtUtc = DateTime.UtcNow;
-            category.UpdatedById = currentUserId;
+            category.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
             return category.MapToDto();
@@ -126,12 +143,11 @@ public class CategoryService : ICategoryService
         }
     }
 
-    public async Task<bool> DeleteCategoryAsync(Guid id)
+    public async Task DeleteCategoryAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteCategoryAsync(id={Id})", id);
-        var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id) ?? throw new CustomException("Category not found.");
+        var category = await _dbContext.Categories.SingleOrDefaultAsync(c => c.Id == id && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Category not found.");
         _dbContext.Categories.Remove(category);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 }

@@ -15,9 +15,9 @@ public interface ISupplierService
 {
     Task<PaginatedResultDto<SupplierDto>> GetSuppliersAsync(int page, int pageSize, string? supplierName = null);
     Task<SupplierDto?> GetSupplierByIdAsync(Guid id);
-    Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request, Guid currentUserId);
-    Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request, Guid currentUserId);
-    Task<bool> DeleteSupplierAsync(Guid id);
+    Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request);
+    Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request);
+    Task DeleteSupplierAsync(Guid id);
 }
 
 public class SupplierService : ISupplierService
@@ -25,12 +25,14 @@ public class SupplierService : ISupplierService
     private readonly AppDbContext _dbContext;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<SupplierService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
-    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger)
+    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<SupplierDto>> GetSuppliersAsync(int page, int pageSize, string? supplierName = null)
@@ -40,6 +42,12 @@ public class SupplierService : ISupplierService
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
         var query = _dbContext.Suppliers.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
 
         if (!string.IsNullOrWhiteSpace(supplierName))
         {
@@ -61,11 +69,18 @@ public class SupplierService : ISupplierService
     public async Task<SupplierDto?> GetSupplierByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetSupplierByIdAsync(id={Id})", id);
-        var supplier = await _dbContext.Suppliers.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id);
+        var query = _dbContext.Suppliers.AsNoTracking();
+        if(_currentUserService.IsAdmin == false) {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(b => b.MainTenantId == tenantId);
+        }
+        var supplier = await query.SingleOrDefaultAsync(s => s.Id == id);
         return supplier?.MapToDto();
     }
 
-    public async Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request, Guid currentUserId)
+    public async Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateSupplierAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "SupplierName", request.SupplierName);
@@ -90,9 +105,10 @@ public class SupplierService : ISupplierService
             LogoUrl = request.LogoUrl,
             IsRequired = request.IsRequired ?? false,
             CreatedAtUtc = DateTime.UtcNow,
-            CreatedById = currentUserId,
+            CreatedById = Guid.Parse(_currentUserService.UserId!),
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = Guid.Parse(_currentUserService.UserId!),
+            MainTenantId = Guid.Parse(_currentUserService.TenantId!)
         };
 
         _dbContext.Suppliers.Add(supplier);
@@ -101,7 +117,7 @@ public class SupplierService : ISupplierService
         return supplier.MapToDto();
     }
 
-    public async Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request, Guid currentUserId)
+    public async Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request)
     {
         try
         {
@@ -110,7 +126,7 @@ public class SupplierService : ISupplierService
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
             ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsRequired);
 
-            var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id) ?? throw new CustomException("Supplier not found.");
+            var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Supplier not found.");
 
             var normalizedName = request.SupplierName!;
             var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.Id != id && s.SupplierName.ToLower() == normalizedName.ToLower());
@@ -130,7 +146,7 @@ public class SupplierService : ISupplierService
             supplier.IsRequired = request.IsRequired ?? supplier.IsRequired;
             _dbContext.Entry(supplier).Property(s => s.RowVersion).OriginalValue = request.RowVersion;
             supplier.UpdatedAtUtc = DateTime.UtcNow;
-            supplier.UpdatedById = currentUserId;
+            supplier.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();
 
             return supplier.MapToDto();
@@ -141,12 +157,11 @@ public class SupplierService : ISupplierService
         }
     }
 
-    public async Task<bool> DeleteSupplierAsync(Guid id)
+    public async Task DeleteSupplierAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteSupplierAsync(id={Id})", id);
-        var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id) ?? throw new CustomException("Supplier not found.");
+        var supplier = await _dbContext.Suppliers.SingleOrDefaultAsync(s => s.Id == id && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Supplier not found.");
         _dbContext.Suppliers.Remove(supplier);
         await _dbContext.SaveChangesAsync();
-        return true;
     }
 }

@@ -85,7 +85,7 @@ public class AdminUsersController : BaseController
         {
             _logger.LogDebug("CALLED: CreateAdminUser(request={Request})", request);
             var currentUserId = GetCurrentUserId() ?? throw new CustomException("Invalid session user.");
-            var user = await _adminUserService.CreateAdminUserAsync(request, currentUserId);
+            var user = await _adminUserService.CreateAdminUserAsync(request);
             return Ok(new { Success = true, Data = user });
         }
         catch (CustomException ex)
@@ -107,7 +107,7 @@ public class AdminUsersController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateAdminUser(id={Id}, request={Request})", id, request);
             var currentUserId = GetCurrentUserId() ?? throw new CustomException("Invalid session user.");
-            var user = await _adminUserService.UpdateAdminUserAsync(id, request, currentUserId);
+            var user = await _adminUserService.UpdateAdminUserAsync(id, request);
             return Ok(new { Success = true, Data = user });
         }
         catch (CustomException ex)

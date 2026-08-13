@@ -88,7 +88,7 @@ public class DealersController : BaseController
         {
             _logger.LogDebug("CALLED: CreateDealer(request={Request})", request);
 
-            var dealerDto = await _dealerService.CreateDealerAsync(request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var dealerDto = await _dealerService.CreateDealerAsync(request);
             _logger.LogTrace("Created Dealer: {Dealer}", dealerDto);
             return Ok(new { Success = true, Data = dealerDto });
         }
@@ -111,7 +111,7 @@ public class DealersController : BaseController
         {
             _logger.LogDebug("CALLED: UpdateDealer(id={Id}, request={Request})", id, request);
 
-            var dealer = await _dealerService.UpdateDealerAsync(id, request, GetCurrentUserId() ?? throw new UnauthorizedAccessException("User is not authenticated."));
+            var dealer = await _dealerService.UpdateDealerAsync(id, request);
             _logger.LogTrace("Updated Dealer: {Dealer}", dealer);
             return Ok(new { Success = true, Data = dealer });
         }
