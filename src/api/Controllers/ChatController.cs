@@ -14,10 +14,12 @@ namespace FarmPlus.Api.Controllers;
 public class ChatController : BaseController
 {
     private readonly ILogger<ChatController> _logger;
+    private readonly IAiApiClient _aiApiClient;
 
-    public ChatController(ILogger<ChatController> logger) : base(logger)
+    public ChatController(ILogger<ChatController> logger, IAiApiClient aiApiClient) : base(logger)
     {
         _logger = logger;
+        _aiApiClient = aiApiClient;
     }
 
     [HttpPost]
@@ -26,7 +28,8 @@ public class ChatController : BaseController
         try
         {
             _logger.LogDebug("CALLED: Chat(message={Message})", message);
-            return Ok(new { Success = true, Data = $"You said: {message}" });
+            var responseText = await _aiApiClient.SendRequestAsync(message, CancellationToken.None);
+            return Ok(new { Success = true, Data = responseText });
         }
         catch (CustomException ex)
         {

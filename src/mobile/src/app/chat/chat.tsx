@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send } from 'lucide-react-native';
+import { ArrowLeft, Bot, Send } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ type ChatMessage = {
 };
 
 export default function ChatScreen() {
+  const router = useRouter();
   const [messageText, setMessageText] = React.useState('');
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
@@ -27,6 +29,7 @@ export default function ChatScreen() {
     },
   ]);
   const [sending, setSending] = React.useState(false);
+  const [typing, setTyping] = React.useState(false);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   const scrollToBottom = React.useCallback(() => {
@@ -52,6 +55,7 @@ export default function ChatScreen() {
     setMessages((current) => [...current, userMessage]);
     setMessageText('');
     setSending(true);
+    setTyping(true);
 
     try {
       const response = await fetchApi('/chat', {
@@ -80,24 +84,30 @@ export default function ChatScreen() {
       ]);
     } finally {
       setSending(false);
+      setTyping(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.page}>
-      <View style={styles.header}>
-        <Text variant="h2" style={styles.title}>
-          FarmPlus Chat
-        </Text>
-        <Text className="text-muted-foreground" style={styles.subtitle}>
-          Send a message and receive an answer from the backend chat endpoint.
-        </Text>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft size={20} color="#0F172A" />
+        </Pressable>
+        <View style={styles.topBarTitleContainer}>
+          <View style={styles.botIconContainer}>
+            <Bot size={24} color="#2563EB" />
+          </View>
+          <Text style={styles.topBarTitle}>
+            AI Chat
+          </Text>
+        </View>
       </View>
 
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.select({ ios: 80, android: 60, default: 0 })}
+        keyboardVerticalOffset={Platform.select({ ios: 80, android: 0, default: 0 })}
       >
         <ScrollView
           ref={scrollViewRef}
@@ -133,6 +143,18 @@ export default function ChatScreen() {
               </View>
             );
           })}
+          {typing && (
+            <View style={[styles.messageRow, styles.messageRowBot]}>
+              <Avatar alt="Bot" style={styles.avatar}>
+                <AvatarFallback>
+                  <Text className="text-foreground">B</Text>
+                </AvatarFallback>
+              </Avatar>
+              <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
+                <Text style={[styles.messageText, styles.botText]}>AI is typing...</Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.inputBar}>
@@ -159,13 +181,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 8,
+  },
+  topBarTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  botIconContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 14,
     paddingBottom: 12,
-  },
-  title: {
-    marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
@@ -213,6 +262,9 @@ const styles = StyleSheet.create({
   botBubble: {
     backgroundColor: '#E2E8F0',
     borderBottomLeftRadius: 4,
+  },
+  typingBubble: {
+    opacity: 0.85,
   },
   messageText: {
     fontSize: 15,

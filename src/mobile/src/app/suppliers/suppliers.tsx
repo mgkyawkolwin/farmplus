@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Image, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { ActivityIndicator, Alert as RNAlert, Image, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch, ScrollView } from 'react-native';
 import { Plus, Pencil, Trash2, X, ChevronLeft, Image as ImageIcon } from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -15,14 +15,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
-import { SupplierItem } from '@/models/supplier';
+import { Supplier } from '@/models/supplier';
 import SnackBar from '@/components/ui/snack-bar';
 
 export default function SuppliersScreen() {
   const router = useRouter();
   const service = React.useMemo(() => new SupplierServiceClient(), []);
 
-  const [suppliers, setSuppliers] = React.useState<SupplierItem[]>([]);
+  const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -30,7 +30,7 @@ export default function SuppliersScreen() {
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const [modalVisible, setModalVisible] = React.useState(false);
-  const [editingSupplier, setEditingSupplier] = React.useState<SupplierItem | null>(null);
+  const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const loadSuppliers = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
@@ -51,7 +51,7 @@ export default function SuppliersScreen() {
       setPage(requestedPage);
       setHasMore(data.length >= 20);
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to load suppliers.');
+      SnackBar.Error(error?.message || 'Unable to load suppliers.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -85,7 +85,7 @@ export default function SuppliersScreen() {
     setEditingSupplier({
       id: '',
       supplierName: '',
-      isRequired: false,
+      isActive: true,
       email: undefined,
       phoneNumber: undefined,
       address: undefined,
@@ -101,7 +101,7 @@ export default function SuppliersScreen() {
     setModalVisible(true);
   };
 
-  const openEditModal = (supplier: SupplierItem) => {
+  const openEditModal = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setErrorMessage(null);
     setModalVisible(true);
@@ -115,13 +115,12 @@ export default function SuppliersScreen() {
 
   const handleSubmit = async () => {
     if (!editingSupplier?.supplierName || editingSupplier.supplierName.trim() === '') {
-      setErrorMessage('Supplier name is required.');
+      SnackBar.Error('Supplier name is required.');
       return;
     }
 
     try {
       setSaving(true);
-      setErrorMessage(null);
 
       if (editingSupplier.id) {
         await service.updateSupplier(editingSupplier);
@@ -133,13 +132,13 @@ export default function SuppliersScreen() {
       await loadSuppliers(1, false, false);
       closeModal();
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to save supplier.');
+      SnackBar.Error(error?.message || `Unable to ${editingSupplier?.id ? 'update' : 'create'} supplier "${editingSupplier?.supplierName}".`);
     } finally {
       setSaving(false);
     }
   };
 
-  const confirmDelete = (supplier: SupplierItem) => {
+  const confirmDelete = (supplier: Supplier) => {
     RNAlert.alert(
       'Delete supplier',
       `Are you sure you want to delete "${supplier.supplierName}"?`,
@@ -150,7 +149,7 @@ export default function SuppliersScreen() {
     );
   };
 
-  const handleDelete = async (supplier: SupplierItem) => {
+  const handleDelete = async (supplier: Supplier) => {
     try {
       await service.deleteSupplier(supplier.id);
       SnackBar.Success(`Supplier "${supplier.supplierName}" deleted successfully.`);
@@ -206,8 +205,8 @@ export default function SuppliersScreen() {
                   </View>
                   <View style={styles.supplierInfo}>
                     <Text className='text-foreground' style={styles.categoryName}>{supplier.supplierName}</Text>
-                    <Badge variant={supplier.isRequired ? 'active' : 'muted'}>
-                      <Text>{supplier.isRequired ? 'Required' : 'Optional'}</Text>
+                    <Badge style={{ maxWidth: 70 }} variant={supplier.isActive ? 'active' : 'muted'}>
+                      <Text>{supplier.isActive ? 'Active' : 'Inactive'}</Text>
                     </Badge>
                   </View>
                 </View>
@@ -225,18 +224,19 @@ export default function SuppliersScreen() {
             <Text className='text-muted-foreground'>Loading more...</Text>
           </View>
         ) : null}
-        {errorMessage ? (
-          <Alert variant='destructive' icon={X} className='mt-3'>
-            <AlertTitle>Unable to continue</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
       </KeyboardAwareScrollView>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-        <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className='bg-card border-border' style={styles.modalSheet}>
+        <View className='bg-card border-border' style={styles.modalSheet}>
+          <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+
+                          <ScrollView
+                            contentContainerStyle={styles.modalScrollContent}
+                            keyboardShouldPersistTaps='handled'
+                            automaticallyAdjustKeyboardInsets={true}
+                            showsVerticalScrollIndicator={true}
+                          >
             <View style={styles.modalHeader}>
               <Text variant='h4' className='text-foreground'>{editingSupplier ? 'Edit supplier' : 'Add supplier'}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
@@ -244,11 +244,11 @@ export default function SuppliersScreen() {
               </Pressable>
             </View>
 
-            <Label className='text-foreground' style={styles.label}>Supplier Name</Label>
+            <Label className='text-foreground' style={styles.label}>Supplier Name *</Label>
             <Input
               placeholder='Enter supplier name'
               value={editingSupplier?.supplierName}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, supplierName: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, supplierName: text } as Supplier))}
               autoCapitalize='words'
               style={styles.input}
             />
@@ -257,7 +257,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter email'
               value={editingSupplier?.email}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, email: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, email: text } as Supplier))}
               keyboardType='email-address'
               style={styles.input}
             />
@@ -266,7 +266,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter phone number'
               value={editingSupplier?.phoneNumber}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, phoneNumber: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, phoneNumber: text } as Supplier))}
               keyboardType='phone-pad'
               style={styles.input}
             />
@@ -275,7 +275,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter address'
               value={editingSupplier?.address}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, address: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, address: text } as Supplier))}
               style={styles.input}
             />
 
@@ -283,7 +283,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter state or division'
               value={editingSupplier?.stateDivision}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, stateDivision: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, stateDivision: text } as Supplier))}
               style={styles.input}
             />
 
@@ -291,7 +291,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter city'
               value={editingSupplier?.city}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, city: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, city: text } as Supplier))}
               style={styles.input}
             />
 
@@ -299,7 +299,7 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter country'
               value={editingSupplier?.country}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, country: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, country: text } as Supplier))}
               style={styles.input}
             />
 
@@ -307,21 +307,14 @@ export default function SuppliersScreen() {
             <Input
               placeholder='Enter logo url'
               value={editingSupplier?.logoUrl}
-              onChangeText={(text) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, logoUrl: text } as SupplierItem))}
+              onChangeText={(text) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, logoUrl: text } as Supplier))}
               style={styles.input}
             />
 
             <View style={styles.switchRow}>
-              <Text className='text-foreground' style={styles.switchLabel}>Is Required</Text>
-              <Switch value={editingSupplier?.isRequired} onValueChange={(value) => setEditingSupplier((prev: SupplierItem | null) => ({ ...prev, isRequired: value } as SupplierItem))} />
+              <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+              <Switch value={editingSupplier?.isActive} onValueChange={(value) => setEditingSupplier((prev: Supplier | null) => ({ ...prev, isActive: value } as Supplier))} />
             </View>
-
-            {errorMessage ? (
-              <Alert variant='destructive' icon={X} className='mt-3'>
-                <AlertTitle>Unable to save</AlertTitle>
-                <AlertDescription>{errorMessage}</AlertDescription>
-              </Alert>
-            ) : null}
 
             <View style={styles.modalActions}>
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
@@ -331,8 +324,9 @@ export default function SuppliersScreen() {
                 {saving ? <ActivityIndicator size='small' color='#fff' /> : <Text className='text-primary-foreground'>Save</Text>}
               </Button>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -392,6 +386,12 @@ const styles = StyleSheet.create({
   emptyText: { marginTop: 8, textAlign: 'center' },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24 },
+  modalScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 32, // Ensures bottom buttons are fully visible above keyboard
+  },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   closeButton: { padding: 4 },
   label: { marginBottom: 8 },

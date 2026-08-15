@@ -16,6 +16,7 @@ using FarmPlus.Api.Filters;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using FarmPlus.Api.Caching;
+using FarmPlus.Api.Dtos.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -166,6 +167,10 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.Parse("8.0.32-mysql")));
 builder.Services.AddHttpContextAccessor();
+
+
+builder.Services.Configure<ComponentSettings>(builder.Configuration.GetSection("Ai"));
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
@@ -178,6 +183,8 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IPasswordHasher<UserEntity>, PasswordHasher<UserEntity>>();
 builder.Services.AddScoped<IPasswordHasher<AdminUserEntity>, PasswordHasher<AdminUserEntity>>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IAiApiClient, GeminiApiClient>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

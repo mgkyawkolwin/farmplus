@@ -1,4 +1,4 @@
-export interface SupplierItem {
+export interface Supplier {
   id: string;
   supplierName: string;
   email?: string;
@@ -8,14 +8,14 @@ export interface SupplierItem {
   city?: string;
   country?: string;
   logoUrl?: string;
-  isRequired: boolean;
+  isActive: boolean;
   rowVersion?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;
 }
 
 export interface SupplierListPayload {
-  items?: SupplierItem[];
+  items?: Supplier[];
   page?: number;
   pageSize?: number;
   totalCount?: number;

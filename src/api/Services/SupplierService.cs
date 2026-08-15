@@ -88,7 +88,7 @@ public class SupplierService : ISupplierService
     {
         _logger.LogDebug("CALLED: CreateSupplierAsync(request={Request})", request);
         ValidationHelper.ValidateRequiredString(_localizer, "SupplierName", request.SupplierName);
-        ValidationHelper.ValidateNull(_localizer, "IsRequired", request.IsActive);
+        ValidationHelper.ValidateNull(_localizer, "IsActive", request.IsActive);
 
         var normalizedName = request.SupplierName!.Trim();
         var supplierExists = await _dbContext.Suppliers.AnyAsync(s => s.SupplierName.ToLower() == normalizedName.ToLower() && s.MainTenantId == Guid.Parse(_currentUserService.TenantId!));

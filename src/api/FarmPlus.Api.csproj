@@ -23,4 +23,10 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="system-prompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
