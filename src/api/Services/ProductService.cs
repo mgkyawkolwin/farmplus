@@ -10,6 +10,8 @@ using FarmPlus.Api.I18N;
 using FarmPlus.Api.Mappings;
 using FarmPlus.Api.Utilities;
 using FarmPlus.Api.Services;
+using FarmPlus.Api.Models;
+using Microsoft.Extensions.Options;
 
 namespace FarmPlus.Api.Services;
 
@@ -32,14 +34,16 @@ public class ProductService : IProductService
     private readonly ILogger<ProductService> _logger;
     private readonly ICurrentUserService _currentUserService;
     private readonly IStorageService _storageService;
+    private readonly MinioSettings _minioSettings;
 
-    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService)
+    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService, IOptions<MinioSettings> minioSettings)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
         _storageService = storageService;
+        _minioSettings = minioSettings?.Value ?? throw new InvalidOperationException("Minio settings are not configured.");
     }
 
     public async Task<PaginatedResultDto<ProductDto>> GetProductsAsync(int page, int pageSize)
@@ -420,7 +424,7 @@ public class ProductService : IProductService
             return null;
         }
 
-        return await _storageService.GetPresignedUrlAsync(objectName);
+        return BuildObjectUrl(objectName);
     }
 
     private async Task<List<ProductMediaDto>> MapMediaListAsync(IEnumerable<MediaEntity> medias)
@@ -439,6 +443,21 @@ public class ProductService : IProductService
         }
 
         return result;
+    }
+
+    private string BuildObjectUrl(string objectName)
+    {
+        if (_minioSettings is null)
+        {
+            throw new InvalidOperationException("Minio settings are not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_minioSettings.ObjectAccessUrl))
+        {
+            return objectName;
+        }
+
+        return $"{_minioSettings.ObjectAccessUrl}/{_minioSettings.BucketName}/{objectName}";
     }
 
     public async Task DeleteProductAsync(Guid id)

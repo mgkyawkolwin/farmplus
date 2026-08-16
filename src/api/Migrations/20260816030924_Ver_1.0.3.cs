@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FarmPlus.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class bbb : Migration
+    public partial class Ver_103 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,6 +17,13 @@ namespace FarmPlus.Api.Migrations
                 type: "char(36)",
                 nullable: true,
                 collation: "ascii_general_ci");
+
+            migrationBuilder.AddColumn<string>(
+                name: "CoverImageUrl",
+                table: "Products",
+                type: "longtext",
+                nullable: true)
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.AddColumn<Guid>(
                 name: "MainTenantId",
@@ -41,17 +48,31 @@ namespace FarmPlus.Api.Migrations
 
             migrationBuilder.AddColumn<Guid>(
                 name: "MainTenantId",
-                table: "Brands",
-                type: "char(36)",
-                nullable: true,
-                collation: "ascii_general_ci");
-
-            migrationBuilder.AddColumn<Guid>(
-                name: "MainTenantId",
                 table: "AdminUsers",
                 type: "char(36)",
                 nullable: true,
                 collation: "ascii_general_ci");
+
+            migrationBuilder.CreateTable(
+                name: "Brands",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Brand = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    MainTenantId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    RowVersion = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Brands", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Dealers",
@@ -74,7 +95,7 @@ namespace FarmPlus.Api.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     LogoUrl = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    IsRequired = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     MainTenantId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     RowVersion = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
@@ -85,6 +106,30 @@ namespace FarmPlus.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Dealers", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Medias",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ObjectName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    MediaType = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    OwnerId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
+                    MainTenantId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    RowVersion = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Medias", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -109,7 +154,7 @@ namespace FarmPlus.Api.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     LogoUrl = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    IsRequired = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     MainTenantId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     RowVersion = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     CreatedAtUtc = table.Column<DateTime>(type: "datetime(6)", nullable: false),
@@ -149,7 +194,13 @@ namespace FarmPlus.Api.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Brands");
+
+            migrationBuilder.DropTable(
                 name: "Dealers");
+
+            migrationBuilder.DropTable(
+                name: "Medias");
 
             migrationBuilder.DropTable(
                 name: "Suppliers");
@@ -162,6 +213,10 @@ namespace FarmPlus.Api.Migrations
                 table: "Users");
 
             migrationBuilder.DropColumn(
+                name: "CoverImageUrl",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
                 name: "MainTenantId",
                 table: "Products");
 
@@ -172,10 +227,6 @@ namespace FarmPlus.Api.Migrations
             migrationBuilder.DropColumn(
                 name: "MainTenantId",
                 table: "Categories");
-
-            migrationBuilder.DropColumn(
-                name: "MainTenantId",
-                table: "Brands");
 
             migrationBuilder.DropColumn(
                 name: "MainTenantId",

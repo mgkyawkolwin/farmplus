@@ -227,8 +227,8 @@ export default function SuppliersScreen() {
       </KeyboardAwareScrollView>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-        <View className='bg-card border-border' style={styles.modalSheet}>
-          <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView className='bg-card border-border' style={styles.modalSheet}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
                           <ScrollView
@@ -384,8 +384,20 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   emptyState: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center' },
   emptyText: { marginTop: 8, textAlign: 'center' },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24 },
+  modalOverlay: { 
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    paddingTop: 60, // Preserves status bar gap
+  },
+  modalSheet: { 
+    borderTopLeftRadius: 20, 
+    borderTopRightRadius: 20, 
+    paddingHorizontal: 20, 
+    paddingTop: 18, 
+    paddingBottom: 24 ,
+    maxHeight: '90%',
+  },
   modalScrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,

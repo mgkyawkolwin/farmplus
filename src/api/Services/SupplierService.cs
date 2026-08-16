@@ -9,6 +9,8 @@ using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.I18N;
 using FarmPlus.Api.Mappings;
 using FarmPlus.Api.Utilities;
+using FarmPlus.Api.Models;
+using Microsoft.Extensions.Options;
 
 namespace FarmPlus.Api.Services;
 
@@ -29,14 +31,16 @@ public class SupplierService : ISupplierService
     private readonly ILogger<SupplierService> _logger;
     private readonly ICurrentUserService _currentUserService;
     private readonly IStorageService _storageService;
+    private readonly MinioSettings _minioSettings;
 
-    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger, ICurrentUserService currentUserService, IStorageService storageService)
+    public SupplierService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<SupplierService> logger, ICurrentUserService currentUserService, IStorageService storageService, IOptions<MinioSettings> minioSettings)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
         _storageService = storageService;
+        _minioSettings = minioSettings?.Value ?? throw new InvalidOperationException("Minio settings are not configured.");
     }
 
     public async Task<PaginatedResultDto<SupplierDto>> GetSuppliersAsync(int page, int pageSize, string? supplierName = null)
@@ -185,10 +189,25 @@ public class SupplierService : ISupplierService
         var dto = entity.MapToDto();
         if (!string.IsNullOrWhiteSpace(dto.LogoUrl) && !Uri.IsWellFormedUriString(dto.LogoUrl, UriKind.Absolute))
         {
-            dto.LogoUrl = await _storageService.GetPresignedUrlAsync(dto.LogoUrl);
+            dto.LogoUrl = BuildObjectUrl(dto.LogoUrl);
         }
 
         return dto;
+    }
+
+    private string BuildObjectUrl(string objectName)
+    {
+        if (_minioSettings is null)
+        {
+            throw new InvalidOperationException("Minio settings are not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_minioSettings.ObjectAccessUrl))
+        {
+            return objectName;
+        }
+
+        return $"{_minioSettings.ObjectAccessUrl}/{_minioSettings.BucketName}/{objectName}";
     }
 
     public async Task DeleteSupplierAsync(Guid id)
