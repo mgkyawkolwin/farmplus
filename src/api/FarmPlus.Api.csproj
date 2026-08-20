@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>FarmPlus.Api</RootNamespace>
     <AssemblyName>FarmPlus.Api</AssemblyName>
-    <Version>1.0.8</Version>
+    <Version>1.0.14</Version>
   </PropertyGroup>
 
   <ItemGroup>

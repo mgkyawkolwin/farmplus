@@ -28,6 +28,8 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting
 var googleAuthSettings = builder.Configuration.GetSection("GoogleAuth").Get<GoogleAuthSettings>()
     ?? throw new InvalidOperationException("GoogleAuth section is missing from configuration.");
 
+builder.Services.AddHttpClient(); // Register IHttpClientFactory for dependency injection
+
 // Caching
 builder.Services.AddOutputCache(options =>
 {

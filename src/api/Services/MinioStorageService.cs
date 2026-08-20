@@ -12,21 +12,21 @@ namespace FarmPlus.Api.Services;
 public class MinioStorageService : IStorageService
 {
     private readonly Minio.IMinioClient _client;
-    private readonly MinioSettings _settings;
+    private readonly MinioSettings _minioSettings;
     private readonly AppDbContext _dbContext;
     private readonly ILogger<MinioStorageService> _logger;
 
     public MinioStorageService(IOptions<MinioSettings> options, AppDbContext dbContext, ILogger<MinioStorageService> logger)
     {
-        _settings = options.Value;
+        _minioSettings = options.Value;
         _dbContext = dbContext;
         _logger = logger;
-        _logger.LogInformation("Initializing MinioStorageService with ServerAddress: {ServerAddress}, BucketName: {BucketName}", _settings.ServerAddress, _settings.BucketName);
+        _logger.LogInformation("Initializing MinioStorageService with ServerAddress: {ServerAddress}, BucketName: {BucketName}", _minioSettings.ServerAddress, _minioSettings.BucketName);
 
         // Build Minio client using builder pattern
         _client = new Minio.MinioClient()
-            .WithEndpoint(_settings.ServerAddress)
-            .WithCredentials(_settings.AccessKey, _settings.SecretKey)
+            .WithEndpoint(_minioSettings.ServerAddress)
+            .WithCredentials(_minioSettings.AccessKey, _minioSettings.SecretKey)
             .Build();
     }
 
@@ -36,12 +36,12 @@ public class MinioStorageService : IStorageService
         {
             _logger.LogDebug("CALLED: EnsureBucketExistsAsync()");
             var beArgs = new Minio.DataModel.Args.BucketExistsArgs()
-                .WithBucket(_settings.BucketName);
+                .WithBucket(_minioSettings.BucketName);
             var found = await _client.BucketExistsAsync(beArgs).ConfigureAwait(false);
             if (!found)
             {
                 var mbArgs = new Minio.DataModel.Args.MakeBucketArgs()
-                    .WithBucket(_settings.BucketName);
+                    .WithBucket(_minioSettings.BucketName);
                 await _client.MakeBucketAsync(mbArgs).ConfigureAwait(false);
             }
         }
@@ -67,7 +67,7 @@ public class MinioStorageService : IStorageService
         try
         {
             var putArgs = new Minio.DataModel.Args.PutObjectArgs()
-                .WithBucket(_settings.BucketName)
+                .WithBucket(_minioSettings.BucketName)
                 .WithObject(objectName)
                 .WithStreamData(stream)
                 .WithObjectSize(stream.Length)
@@ -97,7 +97,7 @@ public class MinioStorageService : IStorageService
         try
         {
             var removeArgs = new Minio.DataModel.Args.RemoveObjectArgs()
-                .WithBucket(_settings.BucketName)
+                .WithBucket(_minioSettings.BucketName)
                 .WithObject(objectName);
 
             await _client.RemoveObjectAsync(removeArgs).ConfigureAwait(false);
@@ -119,7 +119,7 @@ public class MinioStorageService : IStorageService
         try
         {
             var presignedArgs = new Minio.DataModel.Args.PresignedGetObjectArgs()
-                .WithBucket(_settings.BucketName)
+                .WithBucket(_minioSettings.BucketName)
                 .WithObject(objectName)
                 .WithExpiry(expirySeconds);
 
@@ -131,5 +131,20 @@ public class MinioStorageService : IStorageService
             _logger.LogError(ex, "Failed to generate presigned url for {ObjectName}", objectName);
             throw;
         }
+    }
+
+    public string BuildObjectUrl(string objectName)
+    {
+        if (_minioSettings is null)
+        {
+            throw new InvalidOperationException("Minio settings are not configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_minioSettings.ObjectAccessUrl))
+        {
+            return objectName;
+        }
+
+        return $"{_minioSettings.ObjectAccessUrl}/{_minioSettings.BucketName}/{objectName}";
     }
 }

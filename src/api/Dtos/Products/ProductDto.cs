@@ -13,7 +13,7 @@ public sealed record ProductDto
     public int CurrentStock { get; set; } = 0;
     public int MinimumStock { get; set; } = 0;
     public string? CoverImageUrl { get; set; }
-    public List<ProductMediaDto> Medias { get; set; } = new();
+    public List<ProductMediaDto> Medias { get; set; } = [];
     public Guid RowVersion { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public Guid CreatedById { get; set; }
