@@ -17,6 +17,7 @@ export interface ProductItem {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  isActive?: boolean;
   coverImageUrl?: string;
   medias?: ProductMediaItem[];
   rowVersion?: string;
@@ -44,6 +45,7 @@ export interface CreateProductRequest {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  isActive?: boolean;
   coverImageUrl?: string;
   medias?: ProductMediaItem[];
 }
@@ -59,6 +61,7 @@ export interface UpdateProductRequest {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  isActive?: boolean;
   coverImageUrl?: string;
   medias?: ProductMediaItem[];
   rowVersion?: string;

@@ -11,6 +11,7 @@ public sealed record CreateProductRequestDto
     public decimal? SalePrice { get; set; }
     public int? CurrentStock { get; set; }
     public int? MinimumStock { get; set; }
+    public bool? IsActive { get; set; }
     public string? CoverImageUrl { get; set; }
     public List<ProductMediaDto>? Medias { get; set; }
 }

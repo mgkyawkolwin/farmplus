@@ -12,6 +12,7 @@ public sealed record ProductDto
     public decimal SalePrice { get; set; } = 0.00m;
     public int CurrentStock { get; set; } = 0;
     public int MinimumStock { get; set; } = 0;
+    public bool IsActive { get; set; } = true;
     public string? CoverImageUrl { get; set; }
     public List<ProductMediaDto> Medias { get; set; } = [];
     public Guid RowVersion { get; set; }

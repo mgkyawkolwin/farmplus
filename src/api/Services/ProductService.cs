@@ -150,6 +150,7 @@ public class ProductService : IProductService
             SalePrice = request.SalePrice ?? throw new CustomException("SalePrice is required."),
             CurrentStock = request.CurrentStock ?? throw new CustomException("CurrentStock is required."),
             MinimumStock = request.MinimumStock ?? throw new CustomException("MinimumStock is required."),
+            IsActive = request.IsActive ?? true,
             CoverImageUrl = request.CoverImageUrl,
             CreatedAtUtc = DateTime.UtcNow,
             CreatedById = Guid.Parse(_currentUserService.UserId!),
@@ -264,6 +265,11 @@ public class ProductService : IProductService
             if (request.MinimumStock.HasValue)
             {
                 product.MinimumStock = request.MinimumStock.Value;
+            }
+
+            if (request.IsActive.HasValue)
+            {
+                product.IsActive = request.IsActive.Value;
             }
 
             if (request.CoverImageUrl != null)

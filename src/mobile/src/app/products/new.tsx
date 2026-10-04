@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
+import { Checkbox } from '@/components/ui/checkbox';
 import DropdownModel, { DropdownModelItem } from '@/components/dropdownModel';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -28,6 +29,7 @@ import { IProductService } from '@/services/productService';
 import { BrandServiceClient } from '@/services/brandService';
 import { CategoryServiceClient } from '@/services/categoryService';
 import { UnitServiceClient } from '@/services/unitService';
+import { normalizeMediaFile } from '@/lib/mediaFile';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -51,6 +53,7 @@ export default function NewProductScreen() {
     currentStock: '',
     minimumStock: '',
   });
+  const [isActive, setIsActive] = React.useState(true);
   const [coverImageUri, setCoverImageUri] = React.useState<string | null>(null);
   const [coverImageFile, setCoverImageFile] = React.useState<{ uri: string; name: string; type: string } | null>(null);
   const [productMediaFiles, setProductMediaFiles] = React.useState<{ uri: string; name: string; type: string }[]>([]);
@@ -109,11 +112,16 @@ export default function NewProductScreen() {
     }
 
     const uri = asset.uri;
-    const name = asset.fileName ?? uri.split('/').pop() ?? `product-cover-${Date.now()}.jpg`;
-    const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
+    const normalizedFile = normalizeMediaFile({
+      uri,
+      fileName: asset.fileName,
+      mimeType: asset.mimeType,
+      assetType: asset.type,
+      fallbackName: 'product-cover',
+    });
 
     setCoverImageUri(uri);
-    setCoverImageFile({ uri, name, type });
+    setCoverImageFile(normalizedFile);
   };
 
   const removeCoverImage = () => {
@@ -140,9 +148,13 @@ export default function NewProductScreen() {
 
     const newFiles = pickerResult.assets.map((asset) => {
       const uri = asset.uri;
-      const name = asset.fileName ?? uri.split('/').pop() ?? `product-media-${Date.now()}.jpg`;
-      const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
-      return { uri, name, type };
+      return normalizeMediaFile({
+        uri,
+        fileName: asset.fileName,
+        mimeType: asset.mimeType,
+        assetType: asset.type,
+        fallbackName: 'product-media',
+      });
     });
 
     setProductMediaFiles((prev) => [...prev, ...newFiles]);
@@ -170,6 +182,7 @@ export default function NewProductScreen() {
         salePrice: formData.salePrice ? Number(formData.salePrice) : undefined,
         currentStock: formData.currentStock ? Number(formData.currentStock) : undefined,
         minimumStock: formData.minimumStock ? Number(formData.minimumStock) : undefined,
+        isActive,
       });
 
       if (coverImageFile) {
@@ -182,8 +195,12 @@ export default function NewProductScreen() {
         }
       }
 
+      setCoverImageUri(null);
+      setCoverImageFile(null);
+      setProductMediaFiles([]);
+
       SnackBar.Success('Product created successfully');
-      router.back();
+      router.replace('/products/list');
     } catch (error) {
       if (error instanceof Error) {
         SnackBar.Error(`Failed to create product: ${error.message}`);
@@ -282,6 +299,11 @@ export default function NewProductScreen() {
           <Input placeholder="0" value={formData.minimumStock} onChangeText={(value) => handleInputChange('minimumStock', value)} className="mt-2" keyboardType="numeric" editable={!loading} />
         </View>
 
+        <View style={styles.checkboxField}>
+          <Checkbox checked={isActive} onCheckedChange={setIsActive} disabled={loading} />
+          <Text className="text-foreground ml-2">Active Product</Text>
+        </View>
+
         <View style={styles.field}>
           <Label className="text-foreground">Cover Image</Label>
           {coverImageUri ? (
@@ -336,6 +358,7 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 40 },
   content: { flexGrow: 1, padding: 16, gap: 12 },
   field: { gap: 6 },
+  checkboxField: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   cancelButton: { flex: 1, minWidth: 100 },
   submitButton: { flex: 1, minWidth: 140 },

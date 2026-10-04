@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -23,6 +24,7 @@ import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import Gallery from '@/components/gallery';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -37,11 +39,15 @@ export default function ProductViewScreen() {
 
 
 
-  const loadProduct = async () => {
+  const loadProduct = React.useCallback(async () => {
+    if (!productId) {
+      router.back();
+      return;
+    }
 
     setLoading(true);
     try {
-      const result = await productService.getProductById(productId ?? "");
+      const result = await productService.getProductById(productId);
       setProduct(result);
     } catch (error) {
       SnackBar.Error('Failed to load product details');
@@ -49,26 +55,36 @@ export default function ProductViewScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  React.useEffect(() => {
-    if (!productId) {
-      router.back();
-      return;
-    }
-
-    loadProduct();
   }, [productId, router]);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadProduct();
+      void loadProduct();
       return undefined;
     }, [loadProduct])
   );
 
+  const otherImages = React.useMemo(() => {
+    if (!product) {
+      return [] as string[];
+    }
+
+    const urls = (product.medias ?? [])
+      .map((media) => media.url)
+      .filter((url): url is string => Boolean(url));
+
+    return urls.filter((url) => url !== product.coverImageUrl);
+  }, [product]);
+
   if (!product) {
-    return null;
+    return (
+      <SafeAreaView className="flex-1 bg-background" style={styles.page}>
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text className="text-muted-foreground" style={styles.loadingText}>Loading product...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const detailRows = [
@@ -107,23 +123,29 @@ export default function ProductViewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heroCard}>
+          {product.coverImageUrl ? (
+            <Image source={{ uri: product.coverImageUrl }} style={styles.heroImage} />
+          ) : (
+            <View style={styles.heroPlaceholder}>
+              <Text style={styles.heroPlaceholderText}>{product.name?.charAt(0) || 'P'}</Text>
+            </View>
+          )}
+
+          <View style={styles.heroInfo}>
+            <Text className="text-foreground" style={styles.productName}>
+              {product.name}
+            </Text>
+            <Text className="text-muted-foreground" style={styles.productSince}>
+              {product.description || 'No description provided'}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.profileCard}>
           <View style={styles.profileMain}>
-            <View style={styles.avatarWrap}>
-              <Text style={styles.avatarText}>{product.name?.charAt(0) || 'P'}</Text>
-            </View>
-
-            <View style={styles.profileInfo}>
-              <Text className="text-foreground" style={styles.productName}>
-                {product.name}
-              </Text>
-              <Text className="text-muted-foreground" style={styles.productSince}>
-                {product.description || 'No description provided'}
-              </Text>
-            </View>
-
-            <Badge variant="default" style={styles.badge}>
-              <Text>In Stock</Text>
+            <Badge variant={product.isActive ? 'default' : 'outline'} style={styles.badge}>
+              <Text>{product.isActive ? 'Active' : 'Inactive'}</Text>
             </Badge>
           </View>
 
@@ -172,6 +194,10 @@ export default function ProductViewScreen() {
             </View>
           </View>
         </View>
+
+        {otherImages.length > 0 ? (
+          <Gallery images={otherImages} title="Other Images" />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -184,6 +210,13 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
   headerAction: { minWidth: 40 },
   content: { padding: 16, gap: 16 },
+  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 12 },
+  heroCard: { borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
+  heroImage: { width: '100%', height: 220, resizeMode: 'cover' },
+  heroPlaceholder: { width: '100%', height: 220, backgroundColor: '#4f46e5', alignItems: 'center', justifyContent: 'center' },
+  heroPlaceholderText: { color: '#FFFFFF', fontSize: 36, fontWeight: '700' },
+  heroInfo: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
   profileCard: { borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', padding: 16 },
   profileMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatarWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4f46e5', alignItems: 'center', justifyContent: 'center' },

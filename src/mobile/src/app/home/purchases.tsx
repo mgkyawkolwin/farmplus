@@ -1,16 +1,13 @@
-'use client';
-
-import * as React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import HomeTopBar from '@/components/homeTopBar';
-import { SalesDashboardContent } from '@/components/sales-dashboard';
+import { PurchaseDashboardContent } from '@/components/purchase-dashboard';
 
-export default function SalesScreen() {
+export default function PurchasesTab() {
   return (
     <SafeAreaView className="bg-background" style={{ flex: 1 }}>
       <HomeTopBar />
-      <SalesDashboardContent showHeader={false} />
+      <PurchaseDashboardContent showHeader={false} title="Purchases" />
     </SafeAreaView>
   );
 }

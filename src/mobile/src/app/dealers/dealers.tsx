@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
 import { DealerItem } from '@/models/dealer';
+import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
 
 export default function DealersScreen() {
@@ -145,11 +146,16 @@ export default function DealersScreen() {
     }
 
     const uri = asset.uri;
-    const name = asset.fileName ?? uri.split('/').pop() ?? `dealer-logo-${Date.now()}.jpg`;
-    const type = asset.type ? `${asset.type}/${uri.split('.').pop() ?? 'jpeg'}` : 'image/jpeg';
+    const normalizedFile = normalizeMediaFile({
+      uri,
+      fileName: asset.fileName,
+      mimeType: asset.mimeType,
+      assetType: asset.type,
+      fallbackName: 'dealer-logo',
+    });
 
     setLogoImage(uri);
-    setLogoFile({ uri, name, type });
+    setLogoFile(normalizedFile);
   };
 
   const removeLogo = () => {

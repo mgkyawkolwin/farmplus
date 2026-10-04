@@ -36,41 +36,30 @@ export default function CustomerViewScreen() {
   const [customer, setCustomer] = React.useState<CustomerItem | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  const loadCustomer = async () => {
-
-    let isActive = true;
-      setLoading(true);
-      try {
-        const result = await customerService.getCustomerById(customerId ?? "");
-        if (isActive) {
-          setCustomer(result);
-        }
-      } catch (error) {
-        if (isActive) {
-          SnackBar.Error('Failed to load customer details');
-          router.back();
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
-      }
-    };
-
-  React.useEffect(() => {
+  const loadCustomer = React.useCallback(async () => {
     if (!customerId) {
       router.back();
       return;
     }
-    loadCustomer();
+
+    setLoading(true);
+    try {
+      const result = await customerService.getCustomerById(customerId);
+      setCustomer(result);
+    } catch (error) {
+      SnackBar.Error('Failed to load customer details');
+      router.back();
+    } finally {
+      setLoading(false);
+    }
   }, [customerId, router]);
-  
-    useFocusEffect(
-      React.useCallback(() => {
-        loadCustomer();
-        return undefined;
-      }, [loadCustomer])
-    );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadCustomer();
+      return undefined;
+    }, [loadCustomer])
+  );
 
   if (!customer) {
     return null;
