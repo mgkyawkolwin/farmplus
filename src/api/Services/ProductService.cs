@@ -296,6 +296,7 @@ public class ProductService : IProductService
             }
 
             _dbContext.Entry(product).Property(p => p.RowVersion).OriginalValue = request.RowVersion;
+            product.RowVersion = Guid.NewGuid();
             product.UpdatedAtUtc = DateTime.UtcNow;
             product.UpdatedById = Guid.Parse(_currentUserService.UserId!);
             await _dbContext.SaveChangesAsync();

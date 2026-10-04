@@ -20,9 +20,24 @@ public class AppDbContext : DbContext
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
     public DbSet<MediaEntity> Medias => Set<MediaEntity>();
+    public DbSet<RoleEntity> Roles => Set<RoleEntity>();
+    public DbSet<PurchaseEntity> Purchases => Set<PurchaseEntity>();
+    public DbSet<PurchaseItemEntity> PurchaseItems => Set<PurchaseItemEntity>();
+    public DbSet<SaleEntity> Sales => Set<SaleEntity>();
+    public DbSet<SaleItemEntity> SaleItems => Set<SaleItemEntity>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<PurchaseEntity>()
+            .HasMany(purchase => purchase.Items)
+            .WithOne()
+            .HasForeignKey(item => item.PurchaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SaleEntity>()
+            .HasMany(sale => sale.Items)
+            .WithOne()
+            .HasForeignKey(item => item.SaleId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -30,8 +30,8 @@ const sections = [
     {
       title: 'Users, Roles & Permissions',
       items: [
-        { label: 'Users', icon: Users, path: '/settings' },
-        { label: 'Roles', icon: ShieldCheck, path: '/settings' },
+        { label: 'Users', icon: Users, path: '/users/list' },
+        { label: 'Roles', icon: ShieldCheck, path: '/roles/list' },
         { label: 'Role Permissions', icon: UserCog, path: '/settings' },
       ],
     },
@@ -52,9 +52,9 @@ const sections = [
         { label: 'Dealer', icon: Briefcase, path: '/dealers/dealers' },
         { label: 'Supplier', icon: Building, path: '/suppliers/suppliers' },
         { label: 'Product', icon: Package, path: '/products/list' },
-        { label: 'Inventory', icon: Warehouse, path: '/settings' },
-        { label: 'Sale', icon: ShoppingBag, path: '/settings' },
-        { label: 'Purchase', icon: HandCoins, path: '/settings' },
+        { label: 'Inventory', icon: Warehouse, path: '/inventory/dashboard' },
+        { label: 'Sale', icon: ShoppingBag, path: '/sales/dashboard' },
+        { label: 'Purchase', icon: HandCoins, path: '/purchases/list' },
       ],
     },
     {
@@ -64,9 +64,9 @@ const sections = [
         { label: 'Dealer', icon: Briefcase, path: '/settings' },
         { label: 'Supplier', icon: Building, path: '/settings' },
         { label: 'Product', icon: Package, path: '/products/list' },
-        { label: 'Inventory', icon: Warehouse, path: '/settings' },
-        { label: 'Sale', icon: ShoppingBag, path: '/settings' },
-        { label: 'Purchase', icon: HandCoins, path: '/settings' },
+        { label: 'Inventory', icon: Warehouse, path: '/inventory/dashboard' },
+        { label: 'Sale', icon: ShoppingBag, path: '/sales/dashboard' },
+        { label: 'Purchase', icon: HandCoins, path: '/purchases/list' },
       ],
     },
   ];

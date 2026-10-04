@@ -1,0 +1,32 @@
+@API_URL=http://127.0.0.1:5555/api
+@TOKEN=replace-with-access-token
+@SALE_ID=00000000-0000-0000-0000-000000000000
+@CUSTOMER_ID=00000000-0000-0000-0000-000000000000
+@PRODUCT_ID=00000000-0000-0000-0000-000000000000
+
+### Sales dashboard
+GET {{API_URL}}/sales/dashboard
+Authorization: Bearer {{TOKEN}}
+
+### List sales
+GET {{API_URL}}/sales?page=1&pageSize=20
+Authorization: Bearer {{TOKEN}}
+
+### Get sale
+GET {{API_URL}}/sales/{{SALE_ID}}
+Authorization: Bearer {{TOKEN}}
+
+### Create sale
+POST {{API_URL}}/sales
+Content-Type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+  "customerId": "{{CUSTOMER_ID}}",
+  "items": [
+    {
+      "productId": "{{PRODUCT_ID}}",
+      "quantity": 1
+    }
+  ]
+}

@@ -30,14 +30,16 @@ public class UserService : IUserService
     private readonly IStorageService _storageService;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<UserService> _logger;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UserService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IStorageService storageService, IStringLocalizer<LocalizedStrings> localizer, ILogger<UserService> logger)
+    public UserService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IStorageService storageService, IStringLocalizer<LocalizedStrings> localizer, ILogger<UserService> logger, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _storageService = storageService;
         _localizer = localizer;
         _logger = logger;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PaginatedResultDto<UserDto>> GetUsersAsync(int page, int pageSize)
@@ -46,7 +48,7 @@ public class UserService : IUserService
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
-        var query = _dbContext.Users.AsNoTracking().OrderByDescending(u => u.CreatedAtUtc);
+        var query = GetTenantUsers().AsNoTracking().OrderByDescending(u => u.CreatedAtUtc);
         var total = await query.CountAsync();
 
         var users = await query
@@ -71,7 +73,7 @@ public class UserService : IUserService
     public async Task<UserDto?> GetUserByIdAsync(Guid id)
     {
         _logger.LogDebug("CALLED: GetUserByIdAsync(id={Id})", id);
-        var user = await _dbContext.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id);
+        var user = await GetTenantUsers().AsNoTracking().SingleOrDefaultAsync(u => u.Id == id);
         return user == null ? null : MapToDto(user);
     }
 
@@ -84,6 +86,7 @@ public class UserService : IUserService
 
         var normalizedUserName = request.UserName.Trim();
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var tenantId = GetCurrentTenantId();
 
         if (await _dbContext.Users.AnyAsync(u => u.UserName == normalizedUserName || u.Email == normalizedEmail))
         {
@@ -100,7 +103,8 @@ public class UserService : IUserService
             CreatedAtUtc = DateTime.UtcNow,
             CreatedById = currentUserId,
             UpdatedAtUtc = DateTime.UtcNow,
-            UpdatedById = currentUserId
+            UpdatedById = currentUserId,
+            MainTenantId = tenantId
         };
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password!);
         _dbContext.Users.Add(user);
@@ -119,7 +123,7 @@ public class UserService : IUserService
             ValidationHelper.ValidateRequiredString(_localizer, "DisplayName", request.DisplayName);
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
 
-            var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException("User not found.");
+            var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException("User not found.");
             user.DisplayName = request.DisplayName ?? "";
 
             if (!string.IsNullOrWhiteSpace(request.Email))
@@ -152,7 +156,7 @@ public class UserService : IUserService
     public async Task<bool> DeleteUserAsync(Guid id)
     {
         _logger.LogDebug("CALLED: DeleteUserAsync(id={Id})", id);
-        var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException("User not found.");
+        var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException("User not found.");
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync();
         return true;
@@ -164,7 +168,7 @@ public class UserService : IUserService
         ValidationHelper.ValidateRequiredString( _localizer, "CurrentPassword", request.CurrentPassword);
         ValidationHelper.ValidateRequiredString(_localizer, "NewPassword", request.NewPassword);
 
-        var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id);
+        var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id);
         if (user == null)
         {
             throw new CustomException(_localizer[$"Template.NotFound", "User"]);
@@ -190,7 +194,7 @@ public class UserService : IUserService
             throw new CustomException(_localizer[$"Template.Required", "picture"]);
         }
 
-        var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException(_localizer[$"Template.NotFound", "User"]);
+        var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException(_localizer[$"Template.NotFound", "User"]);
 
         var objectName = await _storageService.UploadFileAsync(file);
         user.ProfilePictureUrl = objectName;
@@ -214,5 +218,36 @@ public class UserService : IUserService
             ProfilePictureUrl = user.ProfilePictureUrl,
             RowVersion = user.RowVersion
         };
+    }
+
+    private IQueryable<UserEntity> GetTenantUsers()
+    {
+        var query = _dbContext.Users.AsQueryable();
+        if (_currentUserService.IsAdmin)
+        {
+            return query;
+        }
+
+        if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+        {
+            throw new CustomException("Tenant ID is missing for the current user.");
+        }
+
+        return query.Where(user => user.MainTenantId == tenantId);
+    }
+
+    private Guid? GetCurrentTenantId()
+    {
+        if (Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+        {
+            return tenantId;
+        }
+
+        if (!_currentUserService.IsAdmin)
+        {
+            throw new CustomException("Tenant ID is missing for the current user.");
+        }
+
+        return null;
     }
 }
