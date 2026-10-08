@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import SnackBar from '@/components/ui/snack-bar';
+import ShopBanner from '@/components/shopBanner';
+import { useSelectedShopName } from '@/lib/useSelectedShopName';
 import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
@@ -72,6 +74,7 @@ function SummaryRow({ label, value, strong, color }: { label: string; value: str
 
 export default function SaleViewScreen() {
   const router = useRouter();
+  const { shopName, shopLoaded } = useSelectedShopName();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const saleId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -193,6 +196,11 @@ export default function SaleViewScreen() {
         </View>
       ) : sale ? (
         <ScrollView contentContainerStyle={styles.content}>
+          <ShopBanner
+            label="Shop"
+            name={shopName}
+            emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+          />
           <View style={styles.panel}>
             <View style={styles.titleRow}>
               <View style={styles.titleInfo}>

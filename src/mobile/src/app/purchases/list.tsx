@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CalendarDays, ChevronLeft, Package, Pencil, Plus, Store, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -14,12 +14,38 @@ import LoadingOverlay from '@/components/loadingOverlay';
 import { container, DI_TOKENS } from '@/di';
 import { Purchase } from '@/models/purchase';
 import { IPurchaseService } from '@/services/purchaseService';
+import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { getSelectedShopId } from '@/lib/authStorage';
+import { ShopServiceClient } from '@/services/shopService';
+import ShopBanner from '@/components/shopBanner';
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
 const PAGE_SIZE = 20;
+const shopService = new ShopServiceClient();
 
-function formatMoney(amount: number) {
-  return `${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
+const COLORS = {
+  ink: '#0F172A',
+  muted: '#64748B',
+};
+
+function money(value: number) {
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? '-'
+    : date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function Field({ label, value, align }: { label: string; value: string | number; align?: 'left' | 'right' }) {
+  return (
+    <View style={[styles.field, align === 'right' && styles.fieldRight]}>
+      <Text style={[styles.fieldLabel, align === 'right' && styles.textRight]}>{label}</Text>
+      <Text style={[styles.fieldValue, align === 'right' && styles.textRight]} numberOfLines={1}>{value}</Text>
+    </View>
+  );
 }
 
 export default function PurchaseListScreen() {
@@ -30,6 +56,16 @@ export default function PurchaseListScreen() {
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
+  const [shopName, setShopName] = React.useState<string | null>(null);
+
+  const loadShopName = React.useCallback(async () => {
+    try {
+      const [shopId, shops] = await Promise.all([getSelectedShopId(), shopService.getShops(1, 200)]);
+      setShopName(shops.find((shop) => shop.id === shopId)?.name ?? null);
+    } catch {
+      setShopName(null);
+    }
+  }, []);
 
   const fetchPurchases = React.useCallback(async (nextPage = 1, append = false) => {
     try {
@@ -50,34 +86,23 @@ export default function PurchaseListScreen() {
   useFocusEffect(
     React.useCallback(() => {
       setLoading(true);
-      fetchPurchases();
+      void fetchPurchases();
+      void loadShopName();
       return undefined;
-    }, [fetchPurchases]),
+    }, [fetchPurchases, loadShopName]),
   );
 
-  const deletePurchase = (purchase: Purchase) => {
-    Alert.alert('Delete purchase', `Delete the purchase from ${purchase.supplierName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await purchaseService.deletePurchase(purchase.id);
-            setPurchases((current) => current.filter((item) => item.id !== purchase.id));
-            SnackBar.Success('Purchase deleted successfully');
-          } catch (error) {
-            SnackBar.Error(error instanceof Error ? error.message : 'Failed to delete purchase');
-          }
-        },
-      },
-    ]);
-  };
+  // The API scopes purchases to the selected shop, so reload when it changes.
+  useSelectedShopChanged(() => {
+    setLoading(true);
+    void fetchPurchases();
+    void loadShopName();
+  });
 
   const loadMore = () => {
     if (loading || loadingMore || !hasMore) return;
     setLoadingMore(true);
-    fetchPurchases(page + 1, true);
+    void fetchPurchases(page + 1, true);
   };
 
   return (
@@ -87,7 +112,9 @@ export default function PurchaseListScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Purchases</Text>
+        <View style={styles.headerTitleWrap}>
+          <Text className="text-foreground" style={styles.headerTitle}>Purchases</Text>
+        </View>
         <Button
           variant="ghost"
           onPress={() => router.push('/purchases/new' as Parameters<typeof router.push>[0])}
@@ -97,9 +124,13 @@ export default function PurchaseListScreen() {
         </Button>
       </View>
 
+      <View style={styles.shopBannerWrap}>
+        <ShopBanner label="Showing purchases for" name={shopName} emptyText="No shop selected. Choose one from the top bar." />
+      </View>
+
       {loading && purchases.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading purchases...</Text>
         </View>
       ) : purchases.length === 0 ? (
@@ -115,7 +146,7 @@ export default function PurchaseListScreen() {
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
-                fetchPurchases();
+                void fetchPurchases();
               }}
             />
           }
@@ -127,60 +158,33 @@ export default function PurchaseListScreen() {
           {purchases.map((purchase) => (
             <Pressable
               key={purchase.id}
-              style={styles.purchaseCard}
-              onPress={() => router.push(`/purchases/edit?id=${encodeURIComponent(purchase.id)}` as Parameters<typeof router.push>[0])}
+              accessibilityRole="button"
+              accessibilityLabel={`Purchase from ${purchase.supplierName}`}
+              style={({ pressed }) => [styles.purchaseRow, pressed && styles.purchaseRowPressed]}
+              onPress={() => router.push({ pathname: '/purchases/view', params: { id: purchase.id } } as Parameters<typeof router.push>[0])}
             >
-              <View style={styles.cardHeader}>
-                <View style={styles.supplierIcon}>
-                  <Icon className="text-muted-foreground" as={Store} size={20} />
-                </View>
-                <View style={styles.purchaseMain}>
-                  <Text className="text-foreground" style={styles.supplierName} numberOfLines={1}>
-                    {purchase.supplierName}
-                  </Text>
-                  <View style={styles.detailRow}>
-                    <Icon className="text-muted-foreground" as={CalendarDays} size={14} />
-                    <Text className="text-muted-foreground" style={styles.detailText}>
-                      {new Date(purchase.purchaseDate).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-foreground" style={styles.purchaseTotal} numberOfLines={1}>
-                  {formatMoney(purchase.netTotal)}
-                </Text>
+              <View style={styles.topRow}>
+                <Text style={styles.purchaseId}>#{purchase.id.slice(0, 8).toUpperCase()}</Text>
+                <Text style={styles.purchaseDate}>{formatDate(purchase.purchaseDate)}</Text>
+                <Icon className="text-muted-foreground" as={ChevronRight} size={14} />
               </View>
-              <View style={styles.cardFooter}>
-                <View style={styles.detailRow}>
-                  <Icon className="text-muted-foreground" as={Package} size={14} />
-                  <Text className="text-muted-foreground" style={styles.detailText}>
-                    {purchase.totalProducts} products
-                  </Text>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldWide}>
+                  <Field label="Supplier" value={purchase.supplierName} />
                 </View>
-                <View style={styles.actions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit purchase from ${purchase.supplierName}`}
-                    onPress={() => router.push(`/purchases/edit?id=${encodeURIComponent(purchase.id)}` as Parameters<typeof router.push>[0])}
-                    style={styles.iconButton}
-                  >
-                    <Icon className="text-foreground" as={Pencil} size={18} />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete purchase from ${purchase.supplierName}`}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      deletePurchase(purchase);
-                    }}
-                    style={styles.iconButton}
-                  >
-                    <Icon className="text-destructive" as={Trash2} size={18} />
-                  </Pressable>
-                </View>
+                <Field label="Products" value={purchase.totalProducts} align="right" />
+              </View>
+
+              <View style={styles.amountRow}>
+                <Field label="Sub Total" value={money(purchase.subTotal)} align="right" />
+                <Field label="Discount" value={money(purchase.discount)} align="right" />
+                <Field label="Net Total" value={money(purchase.netTotal)} align="right" />
               </View>
             </Pressable>
           ))}
-          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#2563EB" /> : null}
+          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#16794B" /> : null}
+          {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -197,28 +201,40 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   headerButton: { minWidth: 44 },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
-  content: { padding: 16, gap: 10 },
-  purchaseCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 14, gap: 12 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  supplierIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+  headerTitleWrap: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  shopBannerWrap: { paddingHorizontal: 10, paddingTop: 10 },
+  content: { paddingHorizontal: 10, paddingTop: 10, paddingBottom: 16, gap: 10 },
+  purchaseRow: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
-  purchaseMain: { flex: 1, gap: 4 },
-  supplierName: { fontSize: 15, fontWeight: '600' },
-  purchaseTotal: { maxWidth: 130, fontSize: 14, fontWeight: '700', textAlign: 'right' },
-  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailText: { fontSize: 12 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  actions: { flexDirection: 'row', gap: 4 },
-  iconButton: { padding: 7 },
+  purchaseRowPressed: { backgroundColor: '#EEF2F7' },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  purchaseId: { flex: 1, fontSize: 13, fontWeight: '800', color: COLORS.ink, letterSpacing: 0.3 },
+  purchaseDate: { fontSize: 10, color: COLORS.muted },
+  fieldRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  fieldWide: { flex: 1, minWidth: 0 },
+  amountRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#CBD5E1',
+  },
+  field: { flex: 1, minWidth: 0 },
+  fieldRight: { alignItems: 'flex-end' },
+  fieldLabel: { fontSize: 8.5, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
+  fieldValue: { fontSize: 12.5, fontWeight: '700', color: COLORS.ink },
+  textRight: { textAlign: 'right' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   stateTitle: { fontSize: 17, fontWeight: '600' },
   stateText: { marginTop: 8, textAlign: 'center' },
   loadMore: { marginVertical: 12 },
+  endNote: { textAlign: 'center', fontSize: 10, color: COLORS.muted, marginVertical: 8 },
 });

@@ -292,8 +292,8 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
             <View style={[styles.shopBanner, shopMissing && styles.shopBannerWarn]}>
               <View style={[styles.shopIcon, shopMissing && styles.shopIconWarn]}>
                 {shopMissing
-                  ? <AlertTriangle size={18} color="#B45309" />
-                  : <Store size={18} color="#16794B" />}
+                  ? <AlertTriangle size={14} color="#B45309" />
+                  : <Store size={14} color="#16794B" />}
               </View>
               <View style={styles.shopInfo}>
                 <Text style={styles.eyebrow}>{mode === 'create' ? 'Receiving stock into' : 'Shop'}</Text>
@@ -559,19 +559,20 @@ const styles = StyleSheet.create({
   shopBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 10,
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: '#D5E9DC',
     borderRadius: 8,
     backgroundColor: '#F4FAF6',
   },
   shopBannerWarn: { borderColor: '#EFE2BF', backgroundColor: '#FFFAEE' },
-  shopIcon: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F4EC' },
+  shopIcon: { width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F4EC' },
   shopIconWarn: { backgroundColor: '#FFF1CC' },
-  shopInfo: { flex: 1, minWidth: 0, gap: 2 },
-  shopName: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  shopWarnText: { fontSize: 12, fontWeight: '600', color: '#92400E' },
+  shopInfo: { flex: 1, minWidth: 0 },
+  shopName: { fontSize: 13, fontWeight: '800', color: '#0F172A', lineHeight: 16 },
+  shopWarnText: { fontSize: 11, fontWeight: '600', color: '#92400E', lineHeight: 14 },
   panel: { borderWidth: 1, borderColor: '#D9DEE5', borderRadius: 8, backgroundColor: '#FFFFFF', padding: 12, gap: 10 },
   panelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   panelTitle: { fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: 0.5 },

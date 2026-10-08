@@ -4,31 +4,53 @@ import * as React from 'react';
 import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Package, Plus, Search, Trash2, User, X } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft, Package, Plus, Search, Trash2, User, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
+import ShopBanner from '@/components/shopBanner';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
+import { getSelectedShopId } from '@/lib/authStorage';
+import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { CustomerItem } from '@/models/customer';
 import { ProductItem } from '@/models/product';
 import { ICustomerService } from '@/services/customerService';
 import { IProductService } from '@/services/productService';
 import { ISaleService } from '@/services/saleService';
+import { ShopServiceClient } from '@/services/shopService';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
+const shopService = new ShopServiceClient();
 
 type SelectedProduct = { product: ProductItem; quantity: string };
 const WALK_IN = 'walk-in';
 
 function money(value: number) {
-  return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function SummaryRow({ label, value, strong, color }: { label: string; value: string; strong?: boolean; color?: string }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={[styles.summaryLabel, strong && styles.summaryLabelStrong]}>{label}</Text>
+      <Text style={[styles.summaryValue, strong && styles.summaryValueStrong, color ? { color } : null]}>{value}</Text>
+    </View>
+  );
+}
+
+function InputRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.inputRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <View style={styles.inputRowControl}>{children}</View>
+    </View>
+  );
 }
 
 export default function NewSaleScreen() {
@@ -47,6 +69,27 @@ export default function NewSaleScreen() {
   const [paidAmount, setPaidAmount] = React.useState('0');
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [shopName, setShopName] = React.useState<string | null>(null);
+  const [shopLoaded, setShopLoaded] = React.useState(false);
+
+  const loadShopName = React.useCallback(async () => {
+    try {
+      const [shopId, shops] = await Promise.all([getSelectedShopId(), shopService.getShops(1, 200)]);
+      setShopName(shops.find((shop) => shop.id === shopId)?.name ?? null);
+    } catch {
+      setShopName(null);
+    } finally {
+      setShopLoaded(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadShopName();
+  }, [loadShopName]);
+
+  useSelectedShopChanged(() => {
+    void loadShopName();
+  });
 
   React.useEffect(() => {
     let active = true;
@@ -162,134 +205,139 @@ export default function NewSaleScreen() {
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
         </View>
       ) : (
+        <>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.field}>
-            <Label className="text-foreground">Customer</Label>
+          <ShopBanner
+            label="Selling from"
+            name={shopName}
+            emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+          />
+
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>Customer</Text>
             <Pressable
               onPress={() => setCustomerPickerVisible(true)}
               style={styles.customerSelector}
               accessibilityRole="button"
               accessibilityLabel="Choose customer"
             >
-              <Text className="text-foreground" style={styles.customerSelectorText}>
+              <View style={styles.customerSelectorIcon}>
+                <Icon className="text-muted-foreground" as={User} size={14} />
+              </View>
+              <Text className="text-foreground" style={styles.customerSelectorText} numberOfLines={1}>
                 {selectedCustomer ? selectedCustomer.name : 'Walk-in Customer'}
               </Text>
-              <Icon className="text-muted-foreground" as={ChevronLeft} size={16} style={styles.customerSelectorChevron} />
+              <Icon className="text-muted-foreground" as={ChevronDown} size={16} />
             </Pressable>
           </View>
 
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text className="text-foreground" style={styles.sectionTitle}>Products</Text>
-              <Text className="text-muted-foreground" style={styles.helperText}>Available stock is deducted after saving.</Text>
+          <View style={styles.panel}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderInfo}>
+                <Text style={styles.sectionTitle}>Items ({selectedProducts.length})</Text>
+                <Text style={styles.helperText}>Stock is deducted after saving.</Text>
+              </View>
+              <Pressable
+                onPress={() => setPickerVisible(true)}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Add product"
+                style={styles.addButton}
+              >
+                <Icon as={Plus} size={14} color="#16794B" />
+                <Text style={styles.addButtonText}>Add</Text>
+              </Pressable>
             </View>
-            <Button variant="outline" onPress={() => setPickerVisible(true)} disabled={saving}>
-              <Icon className="text-foreground" as={Plus} size={16} />
-              <Text className="text-foreground">Add Product</Text>
-            </Button>
-          </View>
 
-          {selectedProducts.length === 0 ? (
-            <View style={styles.emptyProducts}>
-              <Text className="text-muted-foreground">No products added yet.</Text>
-            </View>
-          ) : selectedProducts.map(({ product, quantity }) => (
-            <View key={product.id} style={styles.lineCard}>
-              <View style={styles.lineHeader}>
-                <View style={styles.productInfo}>
-                  <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                  <Text className="text-muted-foreground" style={styles.helperText}>
-                    {money(product.salePrice ?? 0)} each · {product.currentStock ?? 0} available
+            {selectedProducts.length === 0 ? (
+              <View style={styles.emptyProducts}>
+                <Text style={styles.helperText}>No products added yet.</Text>
+              </View>
+            ) : selectedProducts.map(({ product, quantity }) => (
+              <View key={product.id} style={styles.lineCard}>
+                <View style={styles.lineHeader}>
+                  <View style={styles.lineIcon}>
+                    <Icon className="text-muted-foreground" as={Package} size={16} />
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                    <Text style={styles.helperText} numberOfLines={1}>
+                      {money(product.salePrice ?? 0)} each · {product.currentStock ?? 0} available
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${product.name}`}
+                    onPress={() => setSelectedProducts((current) => current.filter((line) => line.product.id !== product.id))}
+                    style={styles.removeButton}
+                  >
+                    <Icon className="text-destructive" as={Trash2} size={16} />
+                  </Pressable>
+                </View>
+                <View style={styles.quantityRow}>
+                  <Text style={styles.qtyLabel}>Qty</Text>
+                  <Input
+                    value={quantity}
+                    onChangeText={(value) => updateQuantity(product.id, value)}
+                    keyboardType="number-pad"
+                    editable={!saving}
+                    style={styles.quantityInput}
+                  />
+                  <Text style={styles.lineTotal}>
+                    {money((Number(quantity) || 0) * (product.salePrice ?? 0))}
                   </Text>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${product.name}`}
-                  onPress={() => setSelectedProducts((current) => current.filter((line) => line.product.id !== product.id))}
-                  style={styles.removeButton}
-                >
-                  <Icon className="text-destructive" as={Trash2} size={18} />
-                </Pressable>
               </View>
-              <View style={styles.quantityRow}>
-                <Label className="text-muted-foreground">Quantity</Label>
-                <Input
-                  value={quantity}
-                  onChangeText={(value) => updateQuantity(product.id, value)}
-                  keyboardType="number-pad"
-                  editable={!saving}
-                  style={styles.quantityInput}
-                />
-                <Text className="text-foreground" style={styles.lineTotal}>
-                  {money((Number(quantity) || 0) * (product.salePrice ?? 0))}
-                </Text>
-              </View>
-            </View>
-          ))}
+            ))}
+          </View>
 
-          <View style={styles.totalsCard}>
-            <View style={styles.totalRow}>
-              <Text className="text-foreground" style={styles.totalLabel}>Subtotal</Text>
-              <Text className="text-foreground" style={styles.totalAmount}>{money(subtotal)}</Text>
-            </View>
+          <View style={styles.panel}>
+            <Text style={styles.sectionTitle}>Summary</Text>
+            <SummaryRow label="Subtotal" value={money(subtotal)} />
+            <InputRow label="Discount">
+              <Input
+                value={discount}
+                onChangeText={setDiscount}
+                keyboardType="decimal-pad"
+                editable={!saving}
+                style={styles.compactInput}
+              />
+            </InputRow>
+            <InputRow label="Tax %">
+              <Input
+                value={taxRate}
+                onChangeText={setTaxRate}
+                keyboardType="decimal-pad"
+                editable={!saving}
+                style={styles.compactInput}
+              />
+            </InputRow>
+            <SummaryRow label="Tax Amount" value={money(taxAmount)} />
+            <View style={styles.divider} />
+            <SummaryRow label="Net Total" value={money(netTotal)} strong />
+            <InputRow label="Paid">
+              <Input
+                value={paidAmount}
+                onChangeText={setPaidAmount}
+                keyboardType="decimal-pad"
+                editable={!saving}
+                style={styles.compactInput}
+              />
+            </InputRow>
+            <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? '#B45309' : '#047857'} />
+          </View>
+        </ScrollView>
 
-            <View style={styles.inlineFieldRow}>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Tax %</Label>
-                <Input
-                  value={taxRate}
-                  onChangeText={setTaxRate}
-                  keyboardType="decimal-pad"
-                  editable={!saving}
-                  style={styles.totalInput}
-                />
-              </View>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Tax Amount</Label>
-                <Text className="text-foreground" style={styles.readOnlyTotal}>{money(taxAmount)}</Text>
-              </View>
-            </View>
-
-            <View style={styles.inlineFieldRow}>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Discount</Label>
-                <Input
-                  value={discount}
-                  onChangeText={setDiscount}
-                  keyboardType="decimal-pad"
-                  editable={!saving}
-                  style={styles.totalInput}
-                />
-              </View>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Net Total</Label>
-                <Text className="text-foreground" style={styles.readOnlyTotal}>{money(netTotal)}</Text>
-              </View>
-            </View>
-
-            <View style={styles.inlineFieldRow}>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Paid</Label>
-                <Input
-                  value={paidAmount}
-                  onChangeText={setPaidAmount}
-                  keyboardType="decimal-pad"
-                  editable={!saving}
-                  style={styles.totalInput}
-                />
-              </View>
-              <View style={styles.inlineField}>
-                <Label className="text-muted-foreground">Balance</Label>
-                <Text style={[styles.readOnlyTotal, balance < 0 ? styles.balancePositive : styles.balanceNegative]}>
-                  {money(balance)}
-                </Text>
-              </View>
-            </View>
+        <View style={styles.actionBar}>
+          <View style={styles.actionTotal}>
+            <Text style={styles.eyebrow}>Net Total</Text>
+            <Text style={styles.actionTotalValue} numberOfLines={1}>{money(netTotal)}</Text>
           </View>
           <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={styles.saveButton}>
             {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Complete Sale</Text>}
           </Button>
-        </ScrollView>
+        </View>
+        </>
       )}
 
       <Modal visible={customerPickerVisible} transparent animationType="slide" onRequestClose={closeCustomerPicker}>
@@ -451,46 +499,54 @@ const styles = StyleSheet.create({
   headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   headerButton: { minWidth: 44 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
-  content: { padding: 16, paddingBottom: 32, gap: 16 },
-  field: { gap: 7 },
+  content: { padding: 12, paddingBottom: 24, gap: 12 },
+  panel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 8 },
+  eyebrow: { fontSize: 9, color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sectionTitle: { fontSize: 17, fontWeight: '700' },
-  helperText: { fontSize: 11 },
-  emptyProducts: { paddingVertical: 22, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8 },
-  lineCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, gap: 10 },
+  sectionHeaderInfo: { flex: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: 0.4 },
+  helperText: { fontSize: 11, color: '#64748B' },
+  addButton: { height: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, borderWidth: 1, borderColor: '#16794B', borderRadius: 6, backgroundColor: '#F4FAF6' },
+  addButtonText: { fontSize: 12, fontWeight: '700', color: '#16794B' },
+  emptyProducts: { paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#CBD5E1', borderRadius: 8 },
+  lineCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
   lineHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  productInfo: { flex: 1, gap: 3 },
+  lineIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  productInfo: { flex: 1, minWidth: 0, gap: 1 },
   productName: { fontSize: 13, fontWeight: '600' },
   removeButton: { padding: 6 },
-  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  quantityInput: { width: 76, textAlign: 'center' },
-  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '600' },
-  totalsCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, gap: 12, backgroundColor: '#F9FAFB' },
-  totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', paddingVertical: 14 },
-  totalLabel: { fontWeight: '600' },
-  totalAmount: { fontSize: 17, fontWeight: '700' },
-  inlineFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  inlineField: { flex: 1, gap: 4 },
-  totalInput: { width: '100%', minWidth: 0 },
-  readOnlyTotal: { fontSize: 14, fontWeight: '600', minHeight: 42, textAlignVertical: 'center' },
-  balancePositive: { color: '#059669' },
-  balanceNegative: { color: '#DC2626' },
-  saveButton: { marginTop: 2 },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E2E8F0' },
+  qtyLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 },
+  quantityInput: { width: 64, height: 34, textAlign: 'center', paddingVertical: 0 },
+  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '800', color: '#0F172A' },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
+  summaryLabel: { fontSize: 12, color: '#475569' },
+  summaryLabelStrong: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
+  summaryValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
+  summaryValueStrong: { fontSize: 15, fontWeight: '800' },
+  inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  inputRowControl: { width: 120 },
+  compactInput: { height: 34, textAlign: 'right', paddingVertical: 0 },
+  divider: { height: 1, backgroundColor: '#CBD5E1', marginVertical: 4 },
+  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
+  actionTotal: { flex: 1, minWidth: 0 },
+  actionTotalValue: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  saveButton: { minWidth: 150 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 8 },
   customerSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderColor: '#D9DEE5',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: '#FFFFFF',
   },
-  customerSelectorText: { fontSize: 14, fontWeight: '500' },
-  customerSelectorChevron: { transform: [{ rotate: '180deg' }] },
+  customerSelectorIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  customerSelectorText: { flex: 1, fontSize: 14, fontWeight: '600' },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.38)' },
   sheetWrap: { justifyContent: 'flex-end', maxHeight: '90%' },
   customerSheet: { height: '90%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },

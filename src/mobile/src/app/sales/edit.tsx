@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import ShopBanner from '@/components/shopBanner';
+import { useSelectedShopName } from '@/lib/useSelectedShopName';
 import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
@@ -38,6 +40,7 @@ function PreviewRow({ label, value, strong }: { label: string; value: string; st
 
 export default function SaleEditScreen() {
   const router = useRouter();
+  const { shopName, shopLoaded } = useSelectedShopName();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const saleId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -128,6 +131,12 @@ export default function SaleEditScreen() {
       ) : sale ? (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <ShopBanner
+              label="Shop"
+              name={shopName}
+              emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+            />
+
             <Text style={styles.hint}>
               Sale #{sale.id.slice(0, 8).toUpperCase()} · {sale.customerName}. Products and quantities cannot be changed; void the sale and create a new one instead.
             </Text>

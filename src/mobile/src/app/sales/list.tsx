@@ -11,6 +11,8 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import ShopBanner from '@/components/shopBanner';
+import { useSelectedShopName } from '@/lib/useSelectedShopName';
 import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
@@ -54,6 +56,7 @@ function Field({ label, value, align }: { label: string; value: string | number;
 
 export default function SalesListScreen() {
   const router = useRouter();
+  const { shopName, shopLoaded } = useSelectedShopName();
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -102,6 +105,14 @@ export default function SalesListScreen() {
           <Text className="text-foreground" style={styles.headerTitle}>Sales</Text>
         </View>
         <View style={styles.headerButton} />
+      </View>
+
+      <View style={styles.shopBannerWrap}>
+        <ShopBanner
+          label="Showing sales for"
+          name={shopName}
+          emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar.' : undefined}
+        />
       </View>
 
       {loading && sales.length === 0 ? (
@@ -192,6 +203,7 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 44 },
   headerTitleWrap: { flex: 1, alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700' },
+  shopBannerWrap: { paddingHorizontal: 10, paddingTop: 10 },
   content: { paddingHorizontal: 10, paddingTop: 10, paddingBottom: 16, gap: 10 },
   saleRow: {
     backgroundColor: '#F8FAFC',
