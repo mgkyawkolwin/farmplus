@@ -67,7 +67,19 @@ public class UserService : IUserService
             })
             .ToListAsync();
 
-        return new PaginatedResultDto<UserDto>(users, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+        var mappedUsers = users.Select(user => new UserDto
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            DisplayName = user.DisplayName,
+            Email = user.Email,
+            Address = user.Address,
+            City = user.City,
+            ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
+            RowVersion = user.RowVersion
+        }).ToList();
+
+        return new PaginatedResultDto<UserDto>(mappedUsers, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<UserDto?> GetUserByIdAsync(Guid id)
@@ -196,6 +208,18 @@ public class UserService : IUserService
 
         var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException(_localizer[$"Template.NotFound", "User"]);
 
+        if (!string.IsNullOrWhiteSpace(user.ProfilePictureUrl) && !user.ProfilePictureUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _storageService.DeleteObjectAsync(user.ProfilePictureUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete previous profile picture for user {UserId}", user.Id);
+            }
+        }
+
         var objectName = await _storageService.UploadFileAsync(file);
         user.ProfilePictureUrl = objectName;
         user.UpdatedAtUtc = DateTime.UtcNow;
@@ -205,7 +229,7 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    private static UserDto MapToDto(UserEntity user)
+    private UserDto MapToDto(UserEntity user)
     {
         return new UserDto
         {
@@ -215,9 +239,24 @@ public class UserService : IUserService
             Email = user.Email,
             Address = user.Address,
             City = user.City,
-            ProfilePictureUrl = user.ProfilePictureUrl,
+            ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
             RowVersion = user.RowVersion
         };
+    }
+
+    private string? ResolvePictureUrl(string? objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        if (objectName.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || objectName.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return objectName;
+        }
+
+        return _storageService.BuildObjectUrl(objectName);
     }
 
     private IQueryable<UserEntity> GetTenantUsers()

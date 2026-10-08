@@ -22,12 +22,14 @@ public class PurchaseService : IPurchaseService
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<PurchaseService> _logger;
+    private readonly IShopStockService _shopStock;
 
-    public PurchaseService(AppDbContext dbContext, ICurrentUserService currentUserService, ILogger<PurchaseService> logger)
+    public PurchaseService(AppDbContext dbContext, ICurrentUserService currentUserService, ILogger<PurchaseService> logger, IShopStockService shopStock)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _logger = logger;
+        _shopStock = shopStock;
     }
 
     public async Task<PaginatedResultDto<PurchaseDto>> GetPurchasesAsync(int page, int pageSize)
@@ -35,6 +37,10 @@ public class PurchaseService : IPurchaseService
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
         var query = GetTenantPurchases().AsNoTracking();
+        if (_currentUserService.ShopId is { } currentShopId)
+        {
+            query = query.Where(purchase => purchase.ShopId == currentShopId);
+        }
         var total = await query.CountAsync();
         var purchases = await query
             .Include(purchase => purchase.Items)
@@ -61,18 +67,21 @@ public class PurchaseService : IPurchaseService
     {
         var userId = GetCurrentUserId();
         var tenantId = GetCurrentTenantId();
+        var shop = await _shopStock.RequireCurrentShopAsync();
         var supplier = await GetTenantSuppliers().SingleOrDefaultAsync(item => item.Id == request.SupplierId)
             ?? throw new CustomException("Supplier not found.");
         var items = await CreateItemsAsync(request.Items);
         var totals = CalculateTotals(items, request.Discount, request.Tax);
         var purchaseDate = NormalizeDate(request.PurchaseDate);
 
-        await AdjustProductStockAsync([], items, userId);
+        await AdjustProductStockAsync(shop.Id, [], items, userId);
 
         var purchase = new PurchaseEntity
         {
             SupplierId = supplier.Id,
             SupplierName = supplier.SupplierName,
+            ShopId = shop.Id,
+            ShopName = shop.Name,
             PurchaseDate = purchaseDate,
             TotalProducts = totals.TotalProducts,
             SubTotal = totals.SubTotal,
@@ -110,7 +119,7 @@ public class PurchaseService : IPurchaseService
             var purchaseDate = NormalizeDate(request.PurchaseDate);
             var userId = GetCurrentUserId();
 
-            await AdjustProductStockAsync(purchase.Items.ToList(), items, userId);
+            await AdjustProductStockAsync(purchase.ShopId, purchase.Items.ToList(), items, userId);
 
             _dbContext.Entry(purchase).Property(item => item.RowVersion).OriginalValue = request.RowVersion;
             purchase.RowVersion = Guid.NewGuid();
@@ -146,7 +155,7 @@ public class PurchaseService : IPurchaseService
             .SingleOrDefaultAsync(item => item.Id == id)
             ?? throw new CustomException("Purchase not found.");
 
-        await AdjustProductStockAsync(purchase.Items.ToList(), [], GetCurrentUserId());
+        await AdjustProductStockAsync(purchase.ShopId, purchase.Items.ToList(), [], GetCurrentUserId());
         _dbContext.Purchases.Remove(purchase);
         await _dbContext.SaveChangesAsync();
     }
@@ -192,10 +201,14 @@ public class PurchaseService : IPurchaseService
     }
 
     private async Task AdjustProductStockAsync(
+        Guid? shopId,
         IReadOnlyCollection<PurchaseItemEntity> previousItems,
         IReadOnlyCollection<PurchaseItemEntity> nextItems,
         Guid userId)
     {
+        // Purchases recorded before shops existed have no shop, so there is no shop stock to adjust.
+        if (shopId is null) return;
+
         var oldQuantities = previousItems
             .GroupBy(item => item.ProductId)
             .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
@@ -213,20 +226,17 @@ public class PurchaseService : IPurchaseService
             throw new CustomException("One or more products could not be found in the current tenant.");
         }
 
+        var tenantId = GetCurrentTenantId();
         foreach (var productId in productIds)
         {
-            if (!products.TryGetValue(productId, out var product)) continue;
             var stockDelta = newQuantities.GetValueOrDefault(productId) - oldQuantities.GetValueOrDefault(productId);
-            if (product.CurrentStock + stockDelta < 0)
-            {
-                throw new CustomException($"Purchase cannot be changed because {product.Name} stock has already been used.");
-            }
-
             if (stockDelta == 0) continue;
-            product.CurrentStock += stockDelta;
-            product.RowVersion = Guid.NewGuid();
-            product.UpdatedAtUtc = DateTime.UtcNow;
-            product.UpdatedById = userId;
+
+            if (!await _shopStock.TryAdjustAsync(shopId.Value, productId, stockDelta, userId, tenantId))
+            {
+                var name = products.TryGetValue(productId, out var product) ? product.Name : "this product";
+                throw new CustomException($"Purchase cannot be changed because {name} stock in this shop has already been used.");
+            }
         }
     }
 
@@ -295,6 +305,8 @@ public class PurchaseService : IPurchaseService
             Id = purchase.Id,
             SupplierId = purchase.SupplierId,
             SupplierName = purchase.SupplierName,
+            ShopId = purchase.ShopId,
+            ShopName = purchase.ShopName,
             PurchaseDate = new DateTimeOffset(DateTime.SpecifyKind(purchase.PurchaseDate, DateTimeKind.Utc)),
             TotalProducts = purchase.TotalProducts,
             SubTotal = purchase.SubTotal,

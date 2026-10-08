@@ -41,8 +41,9 @@ public class AuthService : IAuthService
     private readonly GoogleAuthSettings _googleAuthSettings;
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IStorageService _storageService;
 
-    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IPasswordHasher<AdminUserEntity> adminPasswordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer, IHttpContextAccessor httpContextAccessor)
+    public AuthService(AppDbContext dbContext, IPasswordHasher<UserEntity> passwordHasher, IPasswordHasher<AdminUserEntity> adminPasswordHasher, ILogger<AuthService> logger, JwtSettings jwtSettings, GoogleAuthSettings googleAuthSettings, IStringLocalizer<LocalizedStrings> localizer, IHttpContextAccessor httpContextAccessor, IStorageService storageService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
@@ -52,6 +53,7 @@ public class AuthService : IAuthService
         _googleAuthSettings = googleAuthSettings;
         _localizer = localizer;
         _httpContextAccessor = httpContextAccessor;
+        _storageService = storageService;
     }
 
     private async Task<string> SignInAndCreateTokenAsync(UserEntity user)
@@ -153,7 +155,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
-                ProfilePictureUrl = user.ProfilePictureUrl,
+                ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
                 Token = token
             }
         );
@@ -196,7 +198,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
-                ProfilePictureUrl = user.ProfilePictureUrl,
+                ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
                 Token = token
             }
         );
@@ -332,12 +334,27 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
-                ProfilePictureUrl = user.ProfilePictureUrl,
+                ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
                 Token = token
             }
         );
         _logger.LogTrace("Google auth response created for {Email}", tokenInfo.Email);
         return response;
+    }
+
+    private string? ResolvePictureUrl(string? objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        if (objectName.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || objectName.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return objectName;
+        }
+
+        return _storageService.BuildObjectUrl(objectName);
     }
 
     private async Task<GoogleIdTokenInfo?> ValidateGoogleIdTokenAsync(string idToken)

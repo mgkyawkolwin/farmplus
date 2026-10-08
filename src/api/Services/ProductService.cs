@@ -34,14 +34,16 @@ public class ProductService : IProductService
     private readonly ILogger<ProductService> _logger;
     private readonly ICurrentUserService _currentUserService;
     private readonly IStorageService _storageService;
+    private readonly IShopStockService _shopStock;
 
-    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService)
+    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService, IShopStockService shopStock)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
         _storageService = storageService;
+        _shopStock = shopStock;
     }
 
     public async Task<PaginatedResultDto<ProductDto>> GetProductsAsync(int page, int pageSize)
@@ -79,6 +81,8 @@ public class ProductService : IProductService
             return dto;
         }));
 
+        await ApplyShopStockAsync(productDtos);
+
         return new PaginatedResultDto<ProductDto>(productDtos.ToList(), page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
@@ -110,6 +114,7 @@ public class ProductService : IProductService
         var dto = productWithMedia.product.MapToDto();
         dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
         dto.Medias = await MapMediaListAsync(productWithMedia.medias);
+        await ApplyShopStockAsync([dto]);
         return dto;
     }
 
@@ -133,6 +138,9 @@ public class ProductService : IProductService
         var normalizedCategory = request.Category!.Trim();
         var normalizedUnit = request.Unit!.Trim();
 
+        // Initial stock is stored against the selected shop, so a shop is needed when stock is entered.
+        var stockShop = request.CurrentStock!.Value > 0 ? await _shopStock.RequireCurrentShopAsync() : null;
+
         var productExists = await _dbContext.Products.AnyAsync(p => p.Name.ToLower() == normalizedName.ToLower() && p.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (productExists)
         {
@@ -148,7 +156,7 @@ public class ProductService : IProductService
             Unit = normalizedUnit,
             PurchasePrice = request.PurchasePrice ?? throw new CustomException("PurchasePrice is required."),
             SalePrice = request.SalePrice ?? throw new CustomException("SalePrice is required."),
-            CurrentStock = request.CurrentStock ?? throw new CustomException("CurrentStock is required."),
+            CurrentStock = 0,
             MinimumStock = request.MinimumStock ?? throw new CustomException("MinimumStock is required."),
             IsActive = request.IsActive ?? true,
             CoverImageUrl = request.CoverImageUrl,
@@ -160,6 +168,10 @@ public class ProductService : IProductService
         };
 
         _dbContext.Products.Add(product);
+        if (stockShop is not null)
+        {
+            await _shopStock.SetAsync(stockShop.Id, product.Id, request.CurrentStock!.Value, Guid.Parse(_currentUserService.UserId!), product.MainTenantId);
+        }
         await _dbContext.SaveChangesAsync();
 
         if (request.Medias != null && request.Medias.Any())
@@ -183,6 +195,7 @@ public class ProductService : IProductService
 
         var dto = product.MapToDto();
         dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
+        dto.CurrentStock = stockShop is null ? 0 : request.CurrentStock!.Value;
         if (request.Medias != null)
         {
             var tasks = request.Medias.Select(async media => new ProductMediaDto
@@ -257,9 +270,11 @@ public class ProductService : IProductService
                 product.SalePrice = request.SalePrice.Value;
             }
 
-            if (request.CurrentStock.HasValue)
+            if (request.CurrentStock.HasValue && (_currentUserService.ShopId.HasValue || request.CurrentStock.Value != 0))
             {
-                product.CurrentStock = request.CurrentStock.Value;
+                // Stock is kept per shop: write the quantity to the selected shop, not the product row.
+                var stockShop = await _shopStock.RequireCurrentShopAsync();
+                await _shopStock.SetAsync(stockShop.Id, product.Id, request.CurrentStock.Value, Guid.Parse(_currentUserService.UserId!), product.MainTenantId);
             }
 
             if (request.MinimumStock.HasValue)
@@ -309,6 +324,7 @@ public class ProductService : IProductService
 
             var dto = product.MapToDto();
             dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
+            await ApplyShopStockAsync([dto]);
             if (request.Medias != null)
             {
                 var tasks = request.Medias.Select(async media => new ProductMediaDto
@@ -356,6 +372,7 @@ public class ProductService : IProductService
         var dto = product.MapToDto();
         dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
         dto.Medias = await MapMediaListAsync(await _dbContext.Medias.Where(m => m.OwnerId == product.Id).ToListAsync());
+        await ApplyShopStockAsync([dto]);
         return dto;
     }
 
@@ -389,6 +406,7 @@ public class ProductService : IProductService
         var dto = product.MapToDto();
         dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
         dto.Medias = await MapMediaListAsync(await _dbContext.Medias.Where(m => m.OwnerId == product.Id).ToListAsync());
+        await ApplyShopStockAsync([dto]);
         return dto;
     }
 
@@ -419,6 +437,7 @@ public class ProductService : IProductService
         var dto = product.MapToDto();
         dto.CoverImageUrl = await ResolveObjectUrlAsync(dto.CoverImageUrl);
         dto.Medias = await MapMediaListAsync(await _dbContext.Medias.Where(m => m.OwnerId == product.Id).ToListAsync());
+        await ApplyShopStockAsync([dto]);
         return dto;
     }
 
@@ -454,7 +473,22 @@ public class ProductService : IProductService
     {
         _logger.LogDebug("CALLED: DeleteProductAsync(id={Id})", id);
         var product = await _dbContext.Products.SingleOrDefaultAsync(p => p.Id == id && p.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Product not found.");
+        _dbContext.ShopStocks.RemoveRange(await _dbContext.ShopStocks.Where(stock => stock.ProductId == id).ToListAsync());
         _dbContext.Products.Remove(product);
         await _dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>Replaces each product's stock with the quantity held in the currently selected shop (0 when no shop is selected).</summary>
+    private async Task ApplyShopStockAsync(IReadOnlyCollection<ProductDto> dtos)
+    {
+        if (dtos.Count == 0) return;
+        if (_currentUserService.ShopId is not { } shopId)
+        {
+            foreach (var dto in dtos) dto.CurrentStock = 0;
+            return;
+        }
+
+        var quantities = await _shopStock.GetQuantitiesAsync(shopId, dtos.Select(dto => dto.Id).ToList());
+        foreach (var dto in dtos) dto.CurrentStock = quantities.GetValueOrDefault(dto.Id);
     }
 }

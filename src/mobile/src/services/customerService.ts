@@ -11,6 +11,7 @@ export interface ICustomerService {
   getCustomerById(id: string): Promise<CustomerItem>;
   createCustomer(request: CreateCustomerRequest): Promise<CustomerItem>;
   updateCustomer(request: UpdateCustomerRequest): Promise<CustomerItem>;
+  uploadCustomerProfilePicture(id: string, file: { uri: string; name: string; type: string }): Promise<CustomerItem>;
   deleteCustomer(id: string): Promise<void>;
 }
 
@@ -55,6 +56,18 @@ export class CustomerServiceClient implements ICustomerService {
     const response = await authenticatedFetchApi(`/customers/${request.id}`, {
       method: 'PUT',
       body: JSON.stringify(request),
+    });
+
+    return response.data as CustomerItem;
+  }
+
+  async uploadCustomerProfilePicture(id: string, file: { uri: string; name: string; type: string }): Promise<CustomerItem> {
+    const formData = new FormData();
+    formData.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+
+    const response = await authenticatedFetchApi(`/customers/${id}/profilePicture`, {
+      method: 'PATCH',
+      body: formData,
     });
 
     return response.data as CustomerItem;

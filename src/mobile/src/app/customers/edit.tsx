@@ -1,17 +1,20 @@
 'use client';
 
 import * as React from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
-  ScrollView,
+  Modal,
+  Pressable,
   StatusBar,
   StyleSheet,
   View,
   useColorScheme,
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, User } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +27,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import LoadingOverlay from '@/components/loadingOverlay';
+import { normalizeMediaFile } from '@/lib/mediaFile';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
@@ -60,6 +64,8 @@ export default function EditCustomerScreen() {
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(true);
   const [isActive, setIsActive] = React.useState(true);
+  const [profileImageUri, setProfileImageUri] = React.useState<string | null>(null);
+  const [showPhotoModal, setShowPhotoModal] = React.useState(false);
   const [formData, setFormData] = React.useState<CustomerFormState>(emptyFormState);
 
   React.useEffect(() => {
@@ -87,6 +93,9 @@ export default function EditCustomerScreen() {
           postalCode: customer.postalCode ?? '',
           rowVersion: customer.rowVersion ?? '',
         });
+        if (customer.profilePictureUrl) {
+          setProfileImageUri(customer.profilePictureUrl);
+        }
         setIsActive(customer.isActive ?? true);
       } catch (error) {
         if (isActiveRequest) {
@@ -112,6 +121,34 @@ export default function EditCustomerScreen() {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handlePickProfileImage = async (source: 'library' | 'camera') => {
+    setShowPhotoModal(false);
+
+    const permissionResult = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.status !== 'granted') {
+      return;
+    }
+
+    const pickerResult = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          quality: 0.8,
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          quality: 0.8,
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        });
+
+    if (!pickerResult.canceled && pickerResult.assets?.[0]) {
+      setProfileImageUri(pickerResult.assets[0].uri);
+    }
   };
 
   const handleSubmit = async () => {
@@ -140,6 +177,19 @@ export default function EditCustomerScreen() {
       };
 
       await customerService.updateCustomer(updateRequest);
+
+      if (profileImageUri) {
+        const imageFile = normalizeMediaFile({
+          uri: profileImageUri,
+          fileName: profileImageUri.split('/').pop() || undefined,
+          mimeType: undefined,
+          assetType: 'image',
+          fallbackName: 'customer-profile',
+        });
+
+        await customerService.uploadCustomerProfilePicture(customerId, imageFile);
+      }
+
       SnackBar.Success('Customer updated successfully');
       router.back();
     } catch (error) {
@@ -183,6 +233,45 @@ export default function EditCustomerScreen() {
           enableOnAndroid={true}
           extraScrollHeight={40}
           keyboardShouldPersistTaps="handled" className="bg-background">
+          <View style={styles.photoSection}>
+            <Pressable onPress={() => setShowPhotoModal(true)} disabled={loading}>
+              <View style={styles.avatarWrapper}>
+                {profileImageUri ? (
+                  <Avatar alt={formData.name || 'Customer'} style={styles.avatar}>
+                    <AvatarImage source={{ uri: profileImageUri }} style={styles.avatarImage} />
+                  </Avatar>
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Icon className="text-muted-foreground" as={User} size={34} />
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          </View>
+
+          <Modal
+            transparent
+            visible={showPhotoModal}
+            animationType="slide"
+            onRequestClose={() => setShowPhotoModal(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setShowPhotoModal(false)}>
+              <Pressable style={styles.modalSheet} onPress={() => undefined}>
+                <View style={styles.sheetHandle} />
+                <Text className="text-foreground" style={styles.sheetTitle}>Choose photo</Text>
+                <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('library')} disabled={loading}>
+                  <Text>Choose from gallery</Text>
+                </Button>
+                <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('camera')} disabled={loading}>
+                  <Text>Take photo</Text>
+                </Button>
+                <Button variant="ghost" style={styles.sheetButton} onPress={() => setShowPhotoModal(false)}>
+                  <Text>Cancel</Text>
+                </Button>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
           <View style={styles.field}>
             <Label className="text-foreground">
               Name <Text className="text-red-500">*</Text>
@@ -327,6 +416,65 @@ const styles = StyleSheet.create({
   },
   field: {
     marginBottom: 20,
+  },
+  photoSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  avatarWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F3F4F6',
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 48,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 28,
+  },
+  sheetHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  sheetButton: {
+    marginBottom: 10,
   },
   checkboxField: {
     flexDirection: 'row',

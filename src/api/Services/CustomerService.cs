@@ -17,6 +17,7 @@ public interface ICustomerService
     Task<CustomerDto?> GetCustomerByIdAsync(Guid id);
     Task<CustomerDto> CreateCustomerAsync(CreateCustomerRequestDto request);
     Task<CustomerDto?> UpdateCustomerAsync(Guid id, UpdateCustomerRequestDto request);
+    Task<CustomerDto?> UploadProfilePictureAsync(Guid id, IFormFile file);
     Task DeleteCustomerAsync(Guid id);
 }
 
@@ -26,13 +27,15 @@ public class CustomerService : ICustomerService
     private readonly IStringLocalizer<LocalizedStrings> _localizer;
     private readonly ILogger<CustomerService> _logger;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IStorageService _storageService;
 
-    public CustomerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<CustomerService> logger, ICurrentUserService currentUserService)
+    public CustomerService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<CustomerService> logger, ICurrentUserService currentUserService, IStorageService storageService)
     {
         _dbContext = dbContext;
         _localizer = localizer;
         _logger = logger;
         _currentUserService = currentUserService;
+        _storageService = storageService;
     }
 
     public async Task<PaginatedResultDto<CustomerDto>> GetCustomersAsync(int page, int pageSize, string? name = null, bool? isActive = null)
@@ -69,6 +72,11 @@ public class CustomerService : ICustomerService
             .ToListAsync();
 
         var customerDtos = customers.MapToDtoList();
+        foreach (var dto in customerDtos)
+        {
+            dto.ProfilePictureUrl = ResolvePictureUrl(dto.ProfilePictureUrl);
+        }
+
         return new PaginatedResultDto<CustomerDto>(customerDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
@@ -83,7 +91,13 @@ public class CustomerService : ICustomerService
             query = query.Where(b => b.MainTenantId == tenantId);
         }
         var customer = await query.SingleOrDefaultAsync(c => c.Id == id);
-        return customer?.MapToDto();
+        var dto = customer?.MapToDto();
+        if (dto != null)
+        {
+            dto.ProfilePictureUrl = ResolvePictureUrl(dto.ProfilePictureUrl);
+        }
+
+        return dto;
     }
 
     public async Task<CustomerDto> CreateCustomerAsync(CreateCustomerRequestDto request)
@@ -101,6 +115,7 @@ public class CustomerService : ICustomerService
         var customer = new CustomerEntity
         {
             Name = normalizedName,
+            ProfilePictureUrl = !string.IsNullOrWhiteSpace(request.ProfilePictureUrl) ? request.ProfilePictureUrl.Trim() : null,
             NationalIdNumber = !string.IsNullOrWhiteSpace(request.NationalIdNumber) ? request.NationalIdNumber.Trim() : null,
             Phone = !string.IsNullOrWhiteSpace(request.Phone) ? request.Phone.Trim() : null,
             Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : null,
@@ -132,6 +147,7 @@ public class CustomerService : ICustomerService
 
             var customer = await _dbContext.Customers.SingleOrDefaultAsync(c => c.Id == id && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Customer not found.");
             customer.Name = request.Name!.Trim();
+            customer.ProfilePictureUrl = !string.IsNullOrWhiteSpace(request.ProfilePictureUrl) ? request.ProfilePictureUrl.Trim() : customer.ProfilePictureUrl;
             customer.NationalIdNumber = !string.IsNullOrWhiteSpace(request.NationalIdNumber) ? request.NationalIdNumber.Trim() : null;
             customer.Phone = !string.IsNullOrWhiteSpace(request.Phone) ? request.Phone.Trim() : null;
             customer.Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : null;
@@ -156,6 +172,54 @@ public class CustomerService : ICustomerService
         {
             throw new CustomException(_localizer["Error.Concurrency"]);
         }
+    }
+
+    public async Task<CustomerDto?> UploadProfilePictureAsync(Guid id, IFormFile file)
+    {
+        _logger.LogDebug("CALLED: UploadProfilePictureAsync(id={Id}, file={FileName})", id, file?.FileName);
+        if (file == null || file.Length == 0)
+        {
+            throw new CustomException(_localizer[$"Template.Required", "customer profile picture"]);
+        }
+
+        var customer = await _dbContext.Customers.SingleOrDefaultAsync(c => c.Id == id && c.MainTenantId == Guid.Parse(_currentUserService.TenantId!)) ?? throw new CustomException("Customer not found.");
+
+        if (!string.IsNullOrWhiteSpace(customer.ProfilePictureUrl) && !customer.ProfilePictureUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _storageService.DeleteObjectAsync(customer.ProfilePictureUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete previous customer profile picture for customer {CustomerId}", customer.Id);
+            }
+        }
+
+        var objectName = await _storageService.UploadFileAsync(file);
+        customer.ProfilePictureUrl = objectName;
+        customer.UpdatedAtUtc = DateTime.UtcNow;
+        customer.UpdatedById = Guid.Parse(_currentUserService.UserId!);
+        await _dbContext.SaveChangesAsync();
+
+        var dto = customer.MapToDto();
+        dto.ProfilePictureUrl = ResolvePictureUrl(dto.ProfilePictureUrl);
+        return dto;
+    }
+
+    private string? ResolvePictureUrl(string? objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        if (objectName.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || objectName.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return objectName;
+        }
+
+        return _storageService.BuildObjectUrl(objectName);
     }
 
     public async Task DeleteCustomerAsync(Guid id)

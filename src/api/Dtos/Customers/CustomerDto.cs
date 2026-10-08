@@ -4,6 +4,7 @@ public sealed record CustomerDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? ProfilePictureUrl { get; set; }
     public string? NationalIdNumber { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }

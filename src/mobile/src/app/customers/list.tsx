@@ -3,6 +3,7 @@
 import * as React from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,7 +13,7 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import { ChevronLeft, Phone, MapPin, Plus, Search } from 'lucide-react-native';
+import { ChevronLeft, Phone, MapPin, Plus, Search, User } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -213,6 +214,16 @@ export default function CustomerListScreen() {
               style={styles.card}
               onPress={() => router.push({ pathname: '/customers/view', params: { id: customer.id } })}
             >
+              <View style={styles.avatarWrap}>
+                {customer.profilePictureUrl ? (
+                  <Image source={{ uri: customer.profilePictureUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Icon className="text-muted-foreground" as={User} size={20} />
+                  </View>
+                )}
+              </View>
+
               <View style={styles.leftSection}>
                 <Text className="text-foreground" style={styles.customerName}>
                   {customer.name}
@@ -323,19 +334,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   content: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingHorizontal: 0,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+  },
+  avatarWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    overflow: 'hidden',
+    marginRight: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 21,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E5E7EB',
   },
   leftSection: {
     flex: 1,

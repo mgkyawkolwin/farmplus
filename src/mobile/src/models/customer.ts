@@ -1,6 +1,7 @@
 export interface CustomerItem {
   id: string;
   name: string;
+  profilePictureUrl?: string;
   nationalIdNumber?: string;
   phone?: string;
   email?: string;
@@ -26,6 +27,7 @@ export interface CustomerListPayload {
 
 export interface CreateCustomerRequest {
   name: string;
+  profilePictureUrl?: string;
   nationalIdNumber?: string;
   phone?: string;
   email?: string;
@@ -39,6 +41,7 @@ export interface CreateCustomerRequest {
 export interface UpdateCustomerRequest {
   id: string;
   name: string;
+  profilePictureUrl?: string;
   nationalIdNumber?: string;
   phone?: string;
   email?: string;

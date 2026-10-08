@@ -10,7 +10,7 @@ export default function CustomersDashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <CustomerDashboardContent showHeader title="Customers" onBack={() => router.back()} />
+      <CustomerDashboardContent showHeader title="Customer Dashboard" onBack={() => router.back()} />
     </SafeAreaView>
   );
 }

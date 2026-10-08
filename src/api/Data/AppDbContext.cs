@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<UnitEntity> Units => Set<UnitEntity>();
     public DbSet<DealerEntity> Dealers => Set<DealerEntity>();
     public DbSet<SupplierEntity> Suppliers => Set<SupplierEntity>();
+    public DbSet<ShopEntity> Shops => Set<ShopEntity>();
+    public DbSet<ShopStockEntity> ShopStocks => Set<ShopStockEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
     public DbSet<MediaEntity> Medias => Set<MediaEntity>();
@@ -25,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<PurchaseItemEntity> PurchaseItems => Set<PurchaseItemEntity>();
     public DbSet<SaleEntity> Sales => Set<SaleEntity>();
     public DbSet<SaleItemEntity> SaleItems => Set<SaleItemEntity>();
+    public DbSet<SalePaymentEntity> SalePayments => Set<SalePaymentEntity>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,5 +42,13 @@ public class AppDbContext : DbContext
             .WithOne()
             .HasForeignKey(item => item.SaleId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SaleEntity>()
+            .HasMany(sale => sale.Payments)
+            .WithOne()
+            .HasForeignKey(payment => payment.SaleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ShopStockEntity>()
+            .HasIndex(stock => new { stock.ShopId, stock.ProductId })
+            .IsUnique();
     }
 }

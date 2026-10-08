@@ -6,6 +6,7 @@ export interface IUserService {
   getUserById(id: string): Promise<User>;
   createUser(request: CreateUserRequest): Promise<User>;
   updateUser(id: string, request: UpdateUserRequest): Promise<User>;
+  uploadProfilePicture(id: string, file: { uri: string; name: string; type: string }): Promise<User>;
   deleteUser(id: string): Promise<void>;
 }
 
@@ -37,6 +38,18 @@ export class UserServiceClient implements IUserService {
       method: 'PUT',
       body: JSON.stringify(request),
     });
+    return response.data as User;
+  }
+
+  async uploadProfilePicture(id: string, file: { uri: string; name: string; type: string }): Promise<User> {
+    const formData = new FormData();
+    formData.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+
+    const response = await authenticatedFetchApi(`/users/${id}/profilePicture`, {
+      method: 'PATCH',
+      body: formData,
+    });
+
     return response.data as User;
   }
 

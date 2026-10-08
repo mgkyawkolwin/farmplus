@@ -20,4 +20,11 @@ public class CurrentUserService : ICurrentUserService
     public string? TenantId => User?.FindFirst(CustomClaimTypes.TenantId)?.Value;
 
     public bool IsAdmin => bool.TryParse(User?.FindFirst(CustomClaimTypes.IsAdmin)?.Value, out var isAdmin) && isAdmin;
+
+    public const string ShopIdHeader = "X-Shop-Id";
+
+    public Guid? ShopId =>
+        Guid.TryParse(_httpContextAccessor.HttpContext?.Request.Headers[ShopIdHeader].ToString(), out var shopId) && shopId != Guid.Empty
+            ? shopId
+            : null;
 }

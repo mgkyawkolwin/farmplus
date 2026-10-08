@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import {
   AlertTriangle,
@@ -9,8 +9,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  CirclePlus,
   Package,
-  Plus,
   TrendingUp,
   XCircle,
 } from 'lucide-react-native';
@@ -18,12 +19,19 @@ import {
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { container, DI_TOKENS } from '@/di';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
+import { useSelectedShopChanged } from '@/lib/selectedShop';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
+
+const TONE_COLORS = {
+  green: '#16794B',
+  blue: '#2367A8',
+  amber: '#9A6700',
+  red: '#B42318',
+};
 
 function MetricTile({
   label,
@@ -46,11 +54,13 @@ function MetricTile({
         : styles.metricRed;
 
   return (
-    <View style={[styles.metricCard, toneStyle]}>
-      <View style={styles.metricIconWrap}>
-        <MetricIcon size={18} color={tone === 'green' ? '#16794B' : tone === 'blue' ? '#2367A8' : tone === 'amber' ? '#9A6700' : '#B42318'} />
+    <View style={[styles.metricCard, toneStyle, { borderTopColor: TONE_COLORS[tone] }]}>
+      <View style={styles.metricHeader}>
+        <View style={styles.metricIconWrap}>
+          <MetricIcon size={16} color={TONE_COLORS[tone]} />
+        </View>
+        <Text className="text-muted-foreground" style={styles.metricLabel} numberOfLines={1}>{label}</Text>
       </View>
-      <Text className="text-muted-foreground" style={styles.metricLabel}>{label}</Text>
       <Text className="text-foreground" style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     </View>
   );
@@ -68,9 +78,9 @@ export function ProductsDashboardContent({
   const router = useRouter();
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const loadProducts = React.useCallback(async () => {
-    setLoading(true);
     try {
       const result = await productService.getProducts(1, 200);
       setProducts(result);
@@ -78,15 +88,21 @@ export function ProductsDashboardContent({
       setProducts([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
+      setLoading(true);
       void loadProducts();
       return undefined;
     }, [loadProducts])
   );
+
+  useSelectedShopChanged(() => {
+    void loadProducts();
+  });
 
   const metrics = React.useMemo(() => {
     const totalProducts = products.length;
@@ -109,11 +125,6 @@ export function ProductsDashboardContent({
     ];
   }, [products]);
 
-  const quickActions = [
-    { label: 'New Product', icon: Plus, route: '/products/new' as const },
-    { label: 'Products', icon: Package, route: '/products/dashboard' as const },
-  ];
-
   const recentProducts = React.useMemo(
     () =>
       [...products]
@@ -122,7 +133,7 @@ export function ProductsDashboardContent({
           const bDate = new Date(b.updatedAtUtc ?? b.createdAtUtc ?? 0).getTime();
           return bDate - aDate;
         })
-        .slice(0, 4),
+        .slice(0, 5),
     [products]
   );
 
@@ -138,217 +149,167 @@ export function ProductsDashboardContent({
         </View>
       ) : null}
 
-      <KeyboardAwareScrollView className="bg-background" style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.headerRow}>
-          <Text variant="h3" className="text-foreground">Overview</Text>
+      {loading && products.length === 0 ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Loading products...</Text>
         </View>
-
-        <View style={styles.metricsGrid}>
-          {metrics.map((metric) => (
-            <MetricTile
-              key={metric.label}
-              label={metric.label}
-              value={metric.value}
-              icon={metric.icon}
-              tone={metric.tone}
-            />
-          ))}
-        </View>
-
-        <View style={styles.quickActionsContainer}>
-          <Text variant="h3" className="text-foreground" style={styles.quickActionsTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, index) => {
-              const IconComponent = action.icon;
-              return (
-                <Pressable key={`${action.label}-${index}`} style={styles.actionButton} onPress={() => router.push(action.route)}>
-                  <IconComponent size={28} color="#1F2937" />
-                  <Text className="text-foreground text-xs" style={styles.actionLabel}>{action.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.tableCard}>
-          <View style={styles.tableHeader}>
-            <Text variant="h4" className="text-foreground">Recent Products</Text>
-            <Pressable onPress={() => router.push('/products/list')}>
-              <ChevronRight size={18} color="#4f46e5" />
-            </Pressable>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {
+            setRefreshing(true);
+            void loadProducts();
+          }} />}
+        >
+          <View style={styles.metricsGrid}>
+            {metrics.map((metric) => (
+              <MetricTile
+                key={metric.label}
+                label={metric.label}
+                value={metric.value}
+                icon={metric.icon}
+                tone={metric.tone}
+              />
+            ))}
           </View>
 
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, { flex: 2 }]} className="text-muted-foreground text-xs font-semibold">Product</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.4 }]} className="text-muted-foreground text-xs font-semibold">Category</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1 }]} className="text-muted-foreground text-xs font-semibold text-right">Stock</Text>
+          <View style={styles.actionRow}>
+            <Button
+              style={[styles.actionButton, styles.actionPrimary]}
+              onPress={() => router.push('/products/new' as Parameters<typeof router.push>[0])}
+            >
+              <CirclePlus size={18} color="#FFFFFF" />
+              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>New Product</Text>
+            </Button>
+            <Button
+              variant="outline"
+              style={[styles.actionButton, styles.actionSecondary]}
+              onPress={() => router.push('/products/list' as Parameters<typeof router.push>[0])}
+            >
+              <ClipboardList size={18} color="#16794B" />
+              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>View Products</Text>
+            </Button>
           </View>
 
-          {loading ? (
-            <Text className="text-muted-foreground" style={styles.emptyText}>Loading products...</Text>
-          ) : recentProducts.length === 0 ? (
-            <Text className="text-muted-foreground" style={styles.emptyText}>No products available.</Text>
-          ) : (
-            recentProducts.map((product) => (
-              <Pressable
-                key={product.id}
-                style={styles.tableRow}
-                onPress={() => router.push({ pathname: '/products/view', params: { id: product.id } })}
+          <View style={styles.recentSection}>
+            <View style={styles.sectionHeading}>
+              <View>
+                <Text className="text-foreground" style={styles.sectionTitle}>Recent Products</Text>
+              </View>
+              <Button
+                variant="ghost"
+                style={styles.seeAllButton}
+                onPress={() => router.push('/products/list' as Parameters<typeof router.push>[0])}
               >
-                <View style={[styles.tableCell, { flex: 2 }]}> 
-                  <Text className="text-foreground text-sm font-medium">{product.name}</Text>
-                </View>
-                <View style={[styles.tableCell, { flex: 1.4 }]}> 
-                  <Text className="text-muted-foreground text-sm">{product.category || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, { flex: 1, alignItems: 'flex-end' }]}> 
-                  <Text className={((product.currentStock ?? 0) === 0 ? 'text-red-500' : 'text-foreground')} style={styles.stockText}>
-                    {product.currentStock ?? 0}
-                  </Text>
-                </View>
-              </Pressable>
-            ))
-          )}
-        </View>
-      </KeyboardAwareScrollView>
+                <Text style={styles.seeAllText}>View all</Text>
+                <ChevronRight size={14} color="#16794B" />
+              </Button>
+            </View>
+
+            <View style={styles.tableHeader}>
+              <View style={styles.photoColumn} />
+              <View style={styles.productColumn}>
+                <Text className="text-muted-foreground" style={styles.headerCell}>Product</Text>
+              </View>
+              <View style={styles.categoryColumn}>
+                <Text className="text-muted-foreground" style={styles.headerCell}>Category</Text>
+              </View>
+              <View style={styles.stockColumn}>
+                <Text className="text-muted-foreground" style={styles.headerCell}>Stock</Text>
+              </View>
+            </View>
+            {recentProducts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text className="text-muted-foreground">No products available.</Text>
+              </View>
+            ) : (
+              recentProducts.map((product) => {
+                const stock = product.currentStock ?? 0;
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => router.push({ pathname: '/products/view', params: { id: product.id } })}
+                  >
+                    <View style={styles.productRow}>
+                      <View style={styles.photoColumn}>
+                        {product.coverImageUrl ? (
+                          <Image source={{ uri: product.coverImageUrl }} style={styles.photo} />
+                        ) : (
+                          <View style={[styles.photo, styles.photoFallback]}>
+                            <Icon className="text-muted-foreground" as={Package} size={16} />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.productColumn}>
+                        <Text className="text-foreground" style={styles.productName} numberOfLines={1}>
+                          {product.name}
+                        </Text>
+                      </View>
+                      <View style={styles.categoryColumn}>
+                        <Text className="text-muted-foreground" style={styles.categoryText} numberOfLines={1}>
+                          {product.category || '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.stockColumn}>
+                        <Text style={[styles.stockText, stock <= 0 && styles.stockOut]} numberOfLines={1}>
+                          {stock.toLocaleString('en-US')}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  headerButton: {
-    minWidth: 44,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  metricCard: {
-    width: '48%',
-    minHeight: 126,
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 13,
-    justifyContent: 'space-between',
-  },
-  metricGreen: { backgroundColor: '#EFF8F2', borderColor: '#CDE8D6' },
-  metricBlue: { backgroundColor: '#EEF6FC', borderColor: '#D1E5F5' },
-  metricAmber: { backgroundColor: '#FFF8E8', borderColor: '#F0E0B7' },
-  metricRed: { backgroundColor: '#FFF1F0', borderColor: '#F2D4D0' },
-  metricIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFFAA',
-  },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  metricValue: {
-    fontSize: 19,
-    fontWeight: '700',
-  },
-  quickActionsContainer: {
-    marginTop: 16,
-    gap: 10,
-  },
-  quickActionsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  actionButton: {
-    width: '31%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    gap: 6,
-  },
-  actionLabel: {
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  tableCard: {
-    marginTop: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    gap: 8,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingBottom: 8,
-    marginBottom: 4,
-  },
-  tableHeaderCell: {
-    fontWeight: '700',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E7EB',
-    paddingVertical: 10,
-  },
-  tableCell: {
-    justifyContent: 'center',
-  },
-  emptyText: {
-    paddingVertical: 16,
-  },
-  stockText: {
-    fontWeight: '600',
-  },
+  page: { flex: 1 },
+  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
+  headerButton: { minWidth: 44 },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
+  content: { padding: 16, paddingBottom: 28, gap: 20 },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  metricCard: { width: '48%', minHeight: 88, borderRadius: 6, borderWidth: 1, borderTopWidth: 3, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'space-between', gap: 10 },
+  metricGreen: { backgroundColor: '#F4FAF6', borderColor: '#D5E9DC' },
+  metricBlue: { backgroundColor: '#F3F8FC', borderColor: '#D6E6F3' },
+  metricAmber: { backgroundColor: '#FFFAEE', borderColor: '#EFE2BF' },
+  metricRed: { backgroundColor: '#FFF5F4', borderColor: '#F0D8D5' },
+  metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metricIconWrap: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFFAA' },
+  metricLabel: { flex: 1, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  metricValue: { fontSize: 18, fontWeight: '800' },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionButton: { flex: 1, minHeight: 46, gap: 8, borderRadius: 6 },
+  actionPrimary: { backgroundColor: '#16794B', borderWidth: 1, borderColor: '#16794B' },
+  actionSecondary: { backgroundColor: '#F4FAF6', borderWidth: 1, borderColor: '#16794B' },
+  actionLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
+  actionPrimaryLabel: { color: '#FFFFFF' },
+  actionSecondaryLabel: { color: '#16794B' },
+  recentSection: { gap: 0 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  seeAllButton: { minHeight: 30, paddingHorizontal: 10, paddingVertical: 0, flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 999, borderWidth: 1, borderColor: '#CDE8D6', backgroundColor: '#F4FAF6' },
+  seeAllText: { fontSize: 11, fontWeight: '700', color: '#16794B', letterSpacing: 0.2 },
+  tableHeader: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, backgroundColor: '#F1F5F9', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#D9DEE5' },
+  headerCell: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  productColumn: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  photoColumn: { width: 36 },
+  categoryColumn: { width: 92, justifyContent: 'center' },
+  stockColumn: { width: 48, alignItems: 'flex-end', justifyContent: 'center' },
+  productRow: { height: 52, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
+  photo: { width: 36, height: 36, borderRadius: 6 },
+  photoFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#E5E7EB' },
+  productName: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  categoryText: { fontSize: 11 },
+  stockText: { fontSize: 12, fontWeight: '800', color: '#0F172A' },
+  stockOut: { color: '#B91C1C' },
+  emptyState: { paddingVertical: 26, alignItems: 'center' },
+  centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  stateText: { marginTop: 8 },
 });

@@ -191,6 +191,8 @@ builder.Services.AddScoped<IPasswordHasher<AdminUserEntity>, PasswordHasher<Admi
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IAiApiClient, GeminiApiClient>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IShopService, ShopService>();
+builder.Services.AddScoped<IShopStockService, ShopStockService>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

@@ -5,6 +5,7 @@ namespace FarmPlus.Api.Dtos.Customers;
 public sealed record UpdateCustomerRequestDto : UpdateRequestBase<Guid>
 {
     public string? Name { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public string? NationalIdNumber { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }

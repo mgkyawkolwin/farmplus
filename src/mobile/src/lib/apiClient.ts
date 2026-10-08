@@ -2,10 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import CustomError from './customError';
 import ApiResponse from '@/models/apiResponse'
-import { clearTokens, getToken } from '@/lib/authStorage';
+import { clearTokens, getSelectedShopId, getToken } from '@/lib/authStorage';
 
-// const DEFAULT_API_BASE_URL = 'http://192.168.15.212:5555/api';
-const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
+const DEFAULT_API_BASE_URL = 'http://10.104.165.213:5555/api';
+// const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
 // const DEFAULT_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 export const API_BASE_URL = DEFAULT_API_BASE_URL;
 const AUTH_USER_STORAGE_KEY = 'auth_user';
@@ -49,6 +49,7 @@ export async function fetchJson(path: string, options: RequestInit = {}): Promis
 
 export async function authenticatedFetchJson(path: string, options: RequestInit = {}): Promise<ApiResponse<any>> {
   const token = await getToken();
+  const shopId = await getSelectedShopId();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -59,6 +60,11 @@ export async function authenticatedFetchJson(path: string, options: RequestInit 
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+  }
+
+  // Stock, purchases and sales are scoped to the shop chosen in the top bar.
+  if (shopId) {
+    headers['X-Shop-Id'] = shopId;
   }
 
   const response = await fetchJson(path, { ...options, headers });

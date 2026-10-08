@@ -11,6 +11,9 @@ public class CustomerEntity : EntityBase<Guid>
     [MaxLength(50)]
     public required string Name { get; set; }
 
+    [MaxLength(500)]
+    public string? ProfilePictureUrl { get; set; }
+
     [MaxLength(50)]
     public string? NationalIdNumber { get; set; }
 

@@ -3,6 +3,7 @@ import { DealerItem, DealerListPayload } from '@/models/dealer';
 
 export interface IDealerService {
   getDealers(page?: number, pageSize?: number): Promise<DealerItem[]>;
+  getDealerById(id: string): Promise<DealerItem>;
   createDealer(request: Partial<DealerItem>): Promise<DealerItem>;
   updateDealer(request: DealerItem): Promise<DealerItem>;
   uploadDealerLogo(id: string, file: { uri: string; name: string; type: string }): Promise<DealerItem>;
@@ -17,6 +18,14 @@ export class DealerServiceClient implements IDealerService {
 
     const payload = response.data as DealerListPayload | undefined;
     return Array.isArray(payload?.items) ? payload.items.map(mapDealer) : [];
+  }
+
+  async getDealerById(id: string): Promise<DealerItem> {
+    const response = await authenticatedFetchApi(`/dealers/${id}`, {
+      method: 'GET',
+    });
+
+    return mapDealer(response.data as DealerItem | undefined);
   }
 
   async createDealer(request: Partial<DealerItem>): Promise<DealerItem> {

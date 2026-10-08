@@ -1,17 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Package, Plus, Search, Trash2, X } from 'lucide-react-native';
+import { ChevronLeft, Package, Plus, Search, Trash2, User, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
@@ -39,7 +38,13 @@ export default function NewSaleScreen() {
   const [customerId, setCustomerId] = React.useState(WALK_IN);
   const [selectedProducts, setSelectedProducts] = React.useState<SelectedProduct[]>([]);
   const [pickerVisible, setPickerVisible] = React.useState(false);
+  const [customerPickerVisible, setCustomerPickerVisible] = React.useState(false);
+  const [customerPickerStage, setCustomerPickerStage] = React.useState<'choice' | 'list'>('choice');
   const [search, setSearch] = React.useState('');
+  const [customerSearch, setCustomerSearch] = React.useState('');
+  const [taxRate, setTaxRate] = React.useState('0');
+  const [discount, setDiscount] = React.useState('0');
+  const [paidAmount, setPaidAmount] = React.useState('0');
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 
@@ -64,9 +69,24 @@ export default function NewSaleScreen() {
   const subtotal = selectedProducts.reduce((sum, line) =>
     sum + (Number(line.quantity) || 0) * (line.product.salePrice ?? 0), 0,
   );
+  const numericTaxRate = Number(taxRate) || 0;
+  const numericDiscount = Number(discount) || 0;
+  const numericPaidAmount = Number(paidAmount) || 0;
+  const taxAmount = subtotal > 0 ? (subtotal - numericDiscount) * (numericTaxRate / 100) : 0;
+  const netTotal = subtotal - numericDiscount + taxAmount;
+  const balance = netTotal - numericPaidAmount;
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(customerSearch.trim().toLowerCase()),
+  );
+
+  const closeCustomerPicker = () => {
+    setCustomerPickerVisible(false);
+    setCustomerPickerStage('choice');
+    setCustomerSearch('');
+  };
 
   const addProduct = (product: ProductItem) => {
     if ((product.currentStock ?? 0) <= 0) {
@@ -99,11 +119,18 @@ export default function NewSaleScreen() {
       SnackBar.Error('Enter valid quantities within available stock');
       return;
     }
+    if (numericDiscount > subtotal) {
+      SnackBar.Error('Discount cannot be greater than the subtotal.');
+      return;
+    }
 
     setSaving(true);
     try {
       await saleService.createSale({
         customerId: customerId === WALK_IN ? undefined : customerId,
+        taxRate: numericTaxRate,
+        discount: numericDiscount,
+        paidAmount: numericPaidAmount,
         items: selectedProducts.map((line) => ({
           productId: line.product.id,
           quantity: Number(line.quantity),
@@ -138,20 +165,17 @@ export default function NewSaleScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.field}>
             <Label className="text-foreground">Customer</Label>
-            <Select
-              value={selectedCustomer ? { value: selectedCustomer.id, label: selectedCustomer.name } : { value: WALK_IN, label: 'Walk-in Customer' }}
-              onValueChange={(option) => setCustomerId(option?.value ?? WALK_IN)}
+            <Pressable
+              onPress={() => setCustomerPickerVisible(true)}
+              style={styles.customerSelector}
+              accessibilityRole="button"
+              accessibilityLabel="Choose customer"
             >
-              <SelectTrigger className="mt-1 w-full">
-                <SelectValue placeholder="Walk-in Customer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={WALK_IN} label="Walk-in Customer" />
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id} label={customer.name} />
-                ))}
-              </SelectContent>
-            </Select>
+              <Text className="text-foreground" style={styles.customerSelectorText}>
+                {selectedCustomer ? selectedCustomer.name : 'Walk-in Customer'}
+              </Text>
+              <Icon className="text-muted-foreground" as={ChevronLeft} size={16} style={styles.customerSelectorChevron} />
+            </Pressable>
           </View>
 
           <View style={styles.sectionHeader}>
@@ -203,15 +227,165 @@ export default function NewSaleScreen() {
             </View>
           ))}
 
-          <View style={styles.totalRow}>
-            <Text className="text-foreground" style={styles.totalLabel}>Subtotal before tax</Text>
-            <Text className="text-foreground" style={styles.totalAmount}>{money(subtotal)}</Text>
+          <View style={styles.totalsCard}>
+            <View style={styles.totalRow}>
+              <Text className="text-foreground" style={styles.totalLabel}>Subtotal</Text>
+              <Text className="text-foreground" style={styles.totalAmount}>{money(subtotal)}</Text>
+            </View>
+
+            <View style={styles.inlineFieldRow}>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Tax %</Label>
+                <Input
+                  value={taxRate}
+                  onChangeText={setTaxRate}
+                  keyboardType="decimal-pad"
+                  editable={!saving}
+                  style={styles.totalInput}
+                />
+              </View>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Tax Amount</Label>
+                <Text className="text-foreground" style={styles.readOnlyTotal}>{money(taxAmount)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inlineFieldRow}>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Discount</Label>
+                <Input
+                  value={discount}
+                  onChangeText={setDiscount}
+                  keyboardType="decimal-pad"
+                  editable={!saving}
+                  style={styles.totalInput}
+                />
+              </View>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Net Total</Label>
+                <Text className="text-foreground" style={styles.readOnlyTotal}>{money(netTotal)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inlineFieldRow}>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Paid</Label>
+                <Input
+                  value={paidAmount}
+                  onChangeText={setPaidAmount}
+                  keyboardType="decimal-pad"
+                  editable={!saving}
+                  style={styles.totalInput}
+                />
+              </View>
+              <View style={styles.inlineField}>
+                <Label className="text-muted-foreground">Balance</Label>
+                <Text style={[styles.readOnlyTotal, balance < 0 ? styles.balancePositive : styles.balanceNegative]}>
+                  {money(balance)}
+                </Text>
+              </View>
+            </View>
           </View>
           <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={styles.saveButton}>
             {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Complete Sale</Text>}
           </Button>
         </ScrollView>
       )}
+
+      <Modal visible={customerPickerVisible} transparent animationType="slide" onRequestClose={closeCustomerPicker}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeCustomerPicker} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
+            <View className="bg-background" style={styles.customerSheet}>
+              {customerPickerStage === 'choice' ? (
+                <>
+                  <View style={styles.sheetHeader}>
+                    <Text className="text-foreground" style={styles.sheetTitle}>Customer</Text>
+                    <Button variant="ghost" onPress={closeCustomerPicker} style={styles.closeButton}>
+                      <Icon className="text-foreground" as={X} size={20} />
+                    </Button>
+                  </View>
+
+                  <Pressable
+                    onPress={() => {
+                      setCustomerId(WALK_IN);
+                      closeCustomerPicker();
+                    }}
+                    style={styles.customerChoiceRow}
+                  >
+                    <Text className="text-foreground" style={styles.customerChoiceText}>Walk-in Customer</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setCustomerPickerStage('list')}
+                    style={styles.customerChoiceRow}
+                  >
+                    <Text className="text-foreground" style={styles.customerChoiceText}>Choose Customer</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <View style={styles.sheetHeader}>
+                    <Button variant="ghost" onPress={() => setCustomerPickerStage('choice')} style={styles.closeButton}>
+                      <Icon className="text-foreground" as={ChevronLeft} size={20} />
+                    </Button>
+                    <Text className="text-foreground" style={styles.sheetTitle}>Choose Customer</Text>
+                    <Button variant="ghost" onPress={closeCustomerPicker} style={styles.closeButton}>
+                      <Icon className="text-foreground" as={X} size={20} />
+                    </Button>
+                  </View>
+
+                  <View style={styles.searchBox}>
+                    <Icon className="text-muted-foreground" as={Search} size={16} />
+                    <TextInput
+                      value={customerSearch}
+                      onChangeText={setCustomerSearch}
+                      placeholder="Search customers"
+                      placeholderTextColor="#9CA3AF"
+                      style={styles.searchInput}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  <FlatList
+                    data={filteredCustomers}
+                    keyExtractor={(item) => item.id}
+                    keyboardShouldPersistTaps="handled"
+                    ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>No customers found.</Text>}
+                    renderItem={({ item: customer }) => (
+                      <Pressable
+                        onPress={() => {
+                          setCustomerId(customer.id);
+                          closeCustomerPicker();
+                        }}
+                        style={styles.customerOption}
+                      >
+                        <View style={styles.customerAvatarWrap}>
+                          {customer.profilePictureUrl ? (
+                            <Image source={{ uri: customer.profilePictureUrl }} style={styles.customerAvatarImage} />
+                          ) : (
+                            <View style={styles.customerAvatarFallback}>
+                              <Icon className="text-muted-foreground" as={User} size={18} />
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={styles.customerOptionInfo}>
+                          <Text className="text-foreground" style={styles.customerNameText} numberOfLines={1}>{customer.name}</Text>
+                          <Text className="text-muted-foreground" style={styles.helperText}>
+                            {customer.phone || 'No phone'}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    )}
+                  />
+                </>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
         <View style={styles.modalBackdrop}>
@@ -291,20 +465,72 @@ const styles = StyleSheet.create({
   quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   quantityInput: { width: 76, textAlign: 'center' },
   lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '600' },
+  totalsCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, gap: 12, backgroundColor: '#F9FAFB' },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', paddingVertical: 14 },
   totalLabel: { fontWeight: '600' },
   totalAmount: { fontSize: 17, fontWeight: '700' },
+  inlineFieldRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  inlineField: { flex: 1, gap: 4 },
+  totalInput: { width: '100%', minWidth: 0 },
+  readOnlyTotal: { fontSize: 14, fontWeight: '600', minHeight: 42, textAlignVertical: 'center' },
+  balancePositive: { color: '#059669' },
+  balanceNegative: { color: '#DC2626' },
   saveButton: { marginTop: 2 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 8 },
+  customerSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  customerSelectorText: { fontSize: 14, fontWeight: '500' },
+  customerSelectorChevron: { transform: [{ rotate: '180deg' }] },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.38)' },
-  sheetWrap: { justifyContent: 'flex-end', maxHeight: '82%' },
+  sheetWrap: { justifyContent: 'flex-end', maxHeight: '90%' },
+  customerSheet: { height: '90%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   productSheet: { height: '82%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sheetTitle: { fontSize: 18, fontWeight: '700' },
   closeButton: { minWidth: 40 },
+  customerChoiceRow: {
+    minHeight: 56,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  customerChoiceText: { fontSize: 16, fontWeight: '600' },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, marginBottom: 8 },
   searchInput: { flex: 1, height: '100%', color: '#111827', fontSize: 14 },
+  customerOption: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#D1D5DB',
+    paddingVertical: 10,
+  },
+  customerAvatarWrap: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden' },
+  customerAvatarImage: { width: '100%', height: '100%' },
+  customerAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5E7EB',
+  },
+  customerOptionInfo: { flex: 1, gap: 3 },
+  customerNameText: { fontSize: 15, fontWeight: '600' },
   productOption: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D1D5DB', paddingVertical: 9 },
   productOptionDisabled: { opacity: 0.5 },
   productOptionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F4' },

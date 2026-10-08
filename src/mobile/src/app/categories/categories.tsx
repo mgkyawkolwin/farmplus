@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { Badge } from '@/components/ui/badge';
 import { CategoryServiceClient } from '@/services/categoryService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -154,9 +153,9 @@ export default function CategoriesScreen() {
                     <Icon as={ChevronLeft} size={22} className='text-foreground' />
                 </Button>
                 <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
-                <Button variant='default' size='sm' onPress={openCreateModal} >
-                    <Icon as={Plus} size={14} className='text-primary-foreground' />
-                    <Text className='text-primary-foreground'>Add</Text>
+                <Button variant='outline' size='sm' onPress={openCreateModal} style={styles.addButton}>
+                    <Icon as={Plus} size={14} color='#0F172A' />
+                    <Text style={styles.addButtonText}>New</Text>
                 </Button>
             </View>
 
@@ -178,27 +177,69 @@ export default function CategoriesScreen() {
                         <Text className='text-muted-foreground' style={styles.emptyText}>No categories yet.</Text>
                     </View>
                 ) : (
-                    <View style={styles.listContainer}>
-                        {categories.map((category) => (
-                            <View className='bg-card border-border' key={category.id} style={styles.card}>
-                                <View style={styles.categoryInfo}>
-                                    <Text className='text-foreground' style={styles.categoryName}>
-                                        {category.category}
-                                    </Text>
-                                    <Badge variant={category.isActive ? 'active' : 'muted'}>
-                                        <Text
-                                        >
-                                            {category.isActive ? 'Active' : 'Inactive'}
-                                        </Text>
-                                    </Badge>
-                                </View>
-
-                                <View style={styles.actions}>
-                                    <Icon as={Pencil} size={18} className='text-primary' style={{ marginLeft: 8 }} onPress={() => openEditModal(category)} />
-                                    <Icon as={Trash2} size={18} className='text-destructive' style={{ marginLeft: 8 }} onPress={() => confirmDelete(category)} />
-                                </View>
+                    <View>
+                        <View style={styles.summaryBar}>
+                            <View style={styles.summaryCell}>
+                                <Text style={styles.summaryLabel}>Total</Text>
+                                <Text style={styles.summaryValue}>{categories.length}</Text>
                             </View>
-                        ))}
+                            <View style={styles.summaryDivider} />
+                            <View style={styles.summaryCell}>
+                                <Text style={styles.summaryLabel}>Active</Text>
+                                <Text style={[styles.summaryValue, styles.summaryActive]}>{categories.filter((item) => item.isActive).length}</Text>
+                            </View>
+                            <View style={styles.summaryDivider} />
+                            <View style={styles.summaryCell}>
+                                <Text style={styles.summaryLabel}>Inactive</Text>
+                                <Text style={[styles.summaryValue, styles.summaryInactive]}>{categories.filter((item) => !item.isActive).length}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.listContainer}>
+                            {categories.map((category) => (
+                                <View key={category.id} style={[styles.card, category.isActive ? styles.cardActive : styles.cardInactive]}>
+                                    <View style={styles.cardBody}>
+                                        <View style={[styles.tile, category.isActive ? styles.tileActive : styles.tileInactive]}>
+                                            <Text style={[styles.tileText, category.isActive ? styles.tileTextActive : styles.tileTextInactive]}>
+                                                {(category.category?.trim().charAt(0) || '?').toUpperCase()}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.cardInfo}>
+                                            <Text className='text-foreground' style={styles.categoryName} numberOfLines={1}>
+                                                {category.category}
+                                            </Text>
+                                            <View style={styles.statusRow}>
+                                                <View style={[styles.statusDot, category.isActive ? styles.dotActive : styles.dotInactive]} />
+                                                <Text style={[styles.statusLabel, category.isActive ? styles.statusLabelActive : styles.statusLabelInactive]}>
+                                                    {category.isActive ? 'Active' : 'Inactive'}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.actions}>
+                                        <Pressable
+                                            onPress={() => openEditModal(category)}
+                                            hitSlop={6}
+                                            style={styles.actionButton}
+                                            accessibilityRole='button'
+                                            accessibilityLabel={`Edit ${category.category}`}
+                                        >
+                                            <Pencil size={15} color='#2367A8' />
+                                        </Pressable>
+                                        <Pressable
+                                            onPress={() => confirmDelete(category)}
+                                            hitSlop={6}
+                                            style={[styles.actionButton, styles.actionButtonDanger]}
+                                            accessibilityRole='button'
+                                            accessibilityLabel={`Delete ${category.category}`}
+                                        >
+                                            <Trash2 size={15} color='#B42318' />
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
                     </View>
                 )}
                 {loadingMore ? (
@@ -244,7 +285,7 @@ export default function CategoriesScreen() {
                             <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
                                 <Text className='text-foreground'>Cancel</Text>
                             </Button>
-                            <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={styles.modalButton}>
+                            <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
                                 {saving ? <ActivityIndicator size='small' color="#fff" /> : <Text className='text-primary-foreground'>Save</Text>}
                             </Button>
                         </View>
@@ -277,7 +318,19 @@ const styles = StyleSheet.create({
     },
     addButton: {
         flexDirection: 'row',
+        alignItems: 'center',
         gap: 4,
+        minWidth: 64,
+        borderRadius: 6,
+        borderWidth: 1.5,
+        borderColor: '#0F172A',
+        backgroundColor: '#FFFFFF',
+    },
+    addButtonText: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#0F172A',
+        letterSpacing: 0.3,
     },
     headerSpacer: {
         width: 40,
@@ -286,40 +339,114 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     contentContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 12,
+        paddingHorizontal: 16,
+        paddingTop: 14,
         paddingBottom: 24,
     },
+    summaryBar: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        marginBottom: 14,
+        paddingVertical: 12,
+        backgroundColor: '#0F172A',
+        borderRadius: 8,
+    },
+    summaryCell: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    summaryDivider: {
+        width: StyleSheet.hairlineWidth,
+        backgroundColor: '#475569',
+    },
+    summaryLabel: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: '#94A3B8',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    summaryValue: {
+        marginTop: 3,
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#FFFFFF',
+    },
+    summaryActive: { color: '#6EE7B7' },
+    summaryInactive: { color: '#FCA5A5' },
     listContainer: {
-        gap: 4,
+        gap: 8,
     },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 14,
+        gap: 10,
+        borderRadius: 8,
         borderWidth: 1,
+        borderLeftWidth: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#FFFFFF',
     },
-    categoryName: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    categoryInfo: {
+    cardActive: { borderColor: '#D9DEE5', borderLeftColor: '#16794B' },
+    cardInactive: { borderColor: '#D9DEE5', borderLeftColor: '#94A3B8', backgroundColor: '#F8FAFC' },
+    cardBody: {
+        flex: 1,
+        minWidth: 0,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        flex: 1,
-        marginRight: 8,
+        gap: 10,
     },
+    tile: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tileActive: { backgroundColor: '#E6F4EC' },
+    tileInactive: { backgroundColor: '#E2E8F0' },
+    tileText: { fontSize: 15, fontWeight: '800' },
+    tileTextActive: { color: '#16794B' },
+    tileTextInactive: { color: '#64748B' },
+    cardInfo: {
+        flex: 1,
+        minWidth: 0,
+        gap: 3,
+    },
+    categoryName: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
+    dotActive: { backgroundColor: '#16794B' },
+    dotInactive: { backgroundColor: '#94A3B8' },
+    statusLabel: { fontSize: 11, fontWeight: '600' },
+    statusLabelActive: { color: '#047857' },
+    statusLabelInactive: { color: '#64748B' },
     actions: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
     },
-    iconButton: {
-        padding: 8,
+    actionButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#BFD4EA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+    actionButtonDanger: {
+        borderColor: '#F0C4BF',
     },
     emptyState: {
         paddingVertical: 24,
@@ -335,8 +462,8 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalSheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
         paddingHorizontal: 20,
         paddingTop: 18,
         paddingBottom: 24,
@@ -382,5 +509,9 @@ const styles = StyleSheet.create({
     },
     modalButton: {
         minWidth: 96,
+        borderRadius: 6,
+    },
+    saveButton: {
+        backgroundColor: '#0F172A',
     },
 });

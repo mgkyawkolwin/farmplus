@@ -8,6 +8,8 @@ public sealed record PurchaseDto : DtoBase
     public Guid Id { get; set; }
     public Guid SupplierId { get; set; }
     public string SupplierName { get; set; } = string.Empty;
+    public Guid? ShopId { get; set; }
+    public string? ShopName { get; set; }
     public DateTimeOffset PurchaseDate { get; set; }
     public int TotalProducts { get; set; }
     public decimal SubTotal { get; set; }

@@ -11,6 +11,7 @@ public static class CustomerMappings
         {
             Id = entity.Id,
             Name = entity.Name,
+            ProfilePictureUrl = entity.ProfilePictureUrl,
             NationalIdNumber = entity.NationalIdNumber,
             Phone = entity.Phone,
             Email = entity.Email,

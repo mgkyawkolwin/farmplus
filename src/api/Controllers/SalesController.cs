@@ -108,4 +108,33 @@ public class SalesController : BaseController
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
         }
     }
+
+    [HttpPut("{id:guid}")]
+    public Task<IActionResult> UpdateSale(Guid id, [FromBody] UpdateSaleRequestDto request) =>
+        ExecuteSaleActionAsync(() => _saleService.UpdateSaleAsync(id, request), "update", id);
+
+    [HttpPost("{id:guid}/void")]
+    public Task<IActionResult> VoidSale(Guid id, [FromBody] VoidSaleRequestDto request) =>
+        ExecuteSaleActionAsync(() => _saleService.VoidSaleAsync(id, request), "void", id);
+
+    [HttpPost("{id:guid}/payments")]
+    public Task<IActionResult> AddPayment(Guid id, [FromBody] AddSalePaymentRequestDto request) =>
+        ExecuteSaleActionAsync(() => _saleService.AddPaymentAsync(id, request), "add a payment to", id);
+
+    private async Task<IActionResult> ExecuteSaleActionAsync(Func<Task<SaleDto>> action, string description, Guid id)
+    {
+        try
+        {
+            return Ok(new { Success = true, Data = await action() });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to {Action} sale {SaleId}.", description, id);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
 }

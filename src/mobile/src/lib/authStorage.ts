@@ -5,6 +5,7 @@ const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USERNAME_KEY = 'auth_username';
 const PERMISSIONS_KEY = 'auth_permissions';
 const AUTH_USER_STORAGE_KEY = 'auth_user';
+const SELECTED_SHOP_ID_KEY = 'selected_shop_id';
 
 export async function storeToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -29,7 +30,20 @@ export async function clearTokens(): Promise<void> {
     SecureStore.deleteItemAsync(USERNAME_KEY),
     SecureStore.deleteItemAsync(PERMISSIONS_KEY),
     SecureStore.deleteItemAsync(AUTH_USER_STORAGE_KEY),
+    SecureStore.deleteItemAsync(SELECTED_SHOP_ID_KEY),
   ]);
+}
+
+export async function storeSelectedShopId(shopId: string): Promise<void> {
+  await SecureStore.setItemAsync(SELECTED_SHOP_ID_KEY, shopId);
+}
+
+export async function getSelectedShopId(): Promise<string | null> {
+  return SecureStore.getItemAsync(SELECTED_SHOP_ID_KEY);
+}
+
+export async function clearSelectedShopId(): Promise<void> {
+  await SecureStore.deleteItemAsync(SELECTED_SHOP_ID_KEY);
 }
 
 export async function storeUsername(username: string): Promise<void> {

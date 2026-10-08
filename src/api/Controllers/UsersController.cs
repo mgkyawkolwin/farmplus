@@ -165,7 +165,7 @@ public class UsersController : BaseController
     [HttpPatch("{id:guid}/profilePicture")]
     [Consumes("multipart/form-data")]
     [Route("api/users/{id:guid}/profilePicture")]
-    public async Task<IActionResult> UploadProfilePicture(Guid id, IFormFile file)
+    public async Task<IActionResult> UploadProfilePicture(Guid id, [FromForm] IFormFile file)
     {
         try
         {

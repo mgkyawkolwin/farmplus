@@ -26,6 +26,8 @@ export interface Purchase {
   id: string;
   supplierId: string;
   supplierName: string;
+  shopId?: string;
+  shopName?: string;
   purchaseDate: string;
   totalProducts: number;
   subTotal: number;

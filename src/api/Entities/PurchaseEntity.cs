@@ -17,6 +17,12 @@ public class PurchaseEntity : EntityBase<Guid>
     [Required]
     public DateTime PurchaseDate { get; set; }
 
+    /// <summary>Shop that received the stock. Null for purchases recorded before shops existed.</summary>
+    public Guid? ShopId { get; set; }
+
+    [MaxLength(100)]
+    public string? ShopName { get; set; }
+
     [Required]
     public int TotalProducts { get; set; }
 

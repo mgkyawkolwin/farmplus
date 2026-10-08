@@ -81,6 +81,28 @@ public class CustomersController : BaseController
         }
     }
 
+    [HttpPatch("{id:guid}/profilePicture")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadProfilePicture(Guid id, [FromForm] IFormFile file)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UploadProfilePicture(id={Id})", id);
+            var customer = await _customerService.UploadProfilePictureAsync(id, file);
+            return Ok(new { Success = true, Data = customer });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerRequestDto request)
     {

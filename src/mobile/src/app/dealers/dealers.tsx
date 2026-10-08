@@ -235,7 +235,7 @@ export default function DealersScreen() {
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
         <Text className='text-foreground' style={styles.headerTitle}>Dealers</Text>
-        <Button variant='default' size='sm' onPress={openCreateModal}>
+        <Button variant='default' size='sm' onPress={() => router.push('/dealers/new')}>
           <Icon as={Plus} size={14} className='text-primary-foreground' />
           <Text className='text-primary-foreground'>Add</Text>
         </Button>
@@ -261,7 +261,12 @@ export default function DealersScreen() {
         ) : (
           <View style={styles.listContainer}>
             {dealers.map((dealer) => (
-              <View className='bg-card border-border' key={dealer.id} style={styles.card}>
+              <Pressable
+                className='bg-card border-border'
+                key={dealer.id}
+                style={styles.card}
+                onPress={() => router.push({ pathname: '/dealers/view', params: { id: dealer.id } })}
+              >
                 <View style={styles.categoryInfo}>
                   <View style={styles.logoWrapper}>
                     {dealer.logoUrl ? (
@@ -279,12 +284,7 @@ export default function DealersScreen() {
                     </Badge>
                   </View>
                 </View>
-
-                <View style={styles.actions}>
-                  <Icon as={Pencil} size={18} className='text-primary' style={{ marginLeft: 8 }} onPress={() => openEditModal(dealer)} />
-                  <Icon as={Trash2} size={18} className='text-destructive' style={{ marginLeft: 8 }} onPress={() => confirmDelete(dealer)} />
-                </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}

@@ -1,15 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, RefreshControl, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
-import { Plus, Pencil, Trash2, X, ChevronLeft } from 'lucide-react-native';
+import { ActivityIndicator, Alert as RNAlert, Modal, Pressable, RefreshControl, StyleSheet, TextInput, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { Plus, Search, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { Badge } from '@/components/ui/badge';
 import { BrandServiceClient } from '@/services/brandService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,11 +17,21 @@ import { Icon } from '@/components/ui/icon';
 import { BrandItem } from '@/models/brand';
 import SnackBar from '@/components/ui/snack-bar';
 
+function formatDate(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? '-'
+    : date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export default function BrandsScreen() {
   const router = useRouter();
   const service = React.useMemo(() => new BrandServiceClient(), []);
 
   const [brands, setBrands] = React.useState<BrandItem[]>([]);
+  const [query, setQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -81,6 +90,15 @@ export default function BrandsScreen() {
       handleLoadMore();
     }
   }, [handleLoadMore]);
+
+  const visibleBrands = React.useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return brands.filter((brand) => {
+      if (statusFilter === 'active' && !brand.isActive) return false;
+      if (statusFilter === 'inactive' && brand.isActive) return false;
+      return !term || (brand.brand ?? '').toLowerCase().includes(term);
+    });
+  }, [brands, query, statusFilter]);
 
   const openCreateModal = () => {
     setEditingBrand({ id: '', brand: '', isActive: true, rowVersion: '', createdAtUtc: '', updatedAtUtc: '' });
@@ -154,10 +172,47 @@ export default function BrandsScreen() {
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
         <Text className='text-foreground' style={styles.headerTitle}>Brand</Text>
-        <Button variant='default' size='sm' onPress={openCreateModal} >
-          <Icon as={Plus} size={14} className='text-primary-foreground' />
-          <Text className='text-primary-foreground'>Add</Text>
-        </Button>
+        <View style={styles.headerCount}>
+          <Text style={styles.headerCountText}>{brands.length}</Text>
+        </View>
+      </View>
+
+      <View style={styles.toolbar}>
+        <View style={styles.searchBox}>
+          <Search size={15} color='#64748B' />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder='Search brands'
+            placeholderTextColor='#94A3B8'
+            style={styles.searchInput}
+            autoCapitalize='none'
+            autoCorrect={false}
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel='Clear search'>
+              <X size={14} color='#64748B' />
+            </Pressable>
+          ) : null}
+        </View>
+        <View style={styles.segmented}>
+          {(['all', 'active', 'inactive'] as const).map((option) => {
+            const selected = statusFilter === option;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => setStatusFilter(option)}
+                style={[styles.segment, selected && styles.segmentSelected]}
+                accessibilityRole='button'
+                accessibilityState={{ selected }}
+              >
+                <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                  {option === 'all' ? 'All' : option === 'active' ? 'Active' : 'Inactive'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <KeyboardAwareScrollView
@@ -177,24 +232,46 @@ export default function BrandsScreen() {
           <View style={styles.emptyState}>
             <Text className='text-muted-foreground' style={styles.emptyText}>No brands yet.</Text>
           </View>
+        ) : visibleBrands.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text className='text-muted-foreground' style={styles.emptyText}>No brands match your search.</Text>
+          </View>
         ) : (
-          <View style={styles.listContainer}>
-            {brands.map((brand) => (
-              <View className='bg-card border-border' key={brand.id} style={styles.card}>
-                <View style={styles.categoryInfo}>
-                  <Text className='text-foreground' style={styles.categoryName}>
-                    {brand.brand}
-                  </Text>
-                  <Badge variant={brand.isActive ? 'active' : 'muted'}>
-                    <Text>{brand.isActive ? 'Active' : 'Inactive'}</Text>
-                  </Badge>
+          <View style={styles.surface}>
+            {visibleBrands.map((brand, index) => (
+              <Pressable
+                key={brand.id}
+                onPress={() => openEditModal(brand)}
+                accessibilityRole='button'
+                accessibilityLabel={`Edit ${brand.brand}`}
+              >
+                <View style={[styles.row, index === visibleBrands.length - 1 && styles.rowLast]}>
+                  <Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text>
+                  <View style={styles.rowInfo}>
+                    <Text className='text-foreground' style={styles.brandName} numberOfLines={1}>
+                      {brand.brand}
+                    </Text>
+                    <Text style={styles.brandMeta} numberOfLines={1}>
+                      Updated {formatDate(brand.updatedAtUtc || brand.createdAtUtc)}
+                    </Text>
+                  </View>
+                  <View style={[styles.chip, brand.isActive ? styles.chipActive : styles.chipInactive]}>
+                    <Text style={[styles.chipText, brand.isActive ? styles.chipTextActive : styles.chipTextInactive]}>
+                      {brand.isActive ? 'Active' : 'Inactive'}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => confirmDelete(brand)}
+                    hitSlop={8}
+                    style={styles.deleteButton}
+                    accessibilityRole='button'
+                    accessibilityLabel={`Delete ${brand.brand}`}
+                  >
+                    <Trash2 size={16} color='#B42318' />
+                  </Pressable>
+                  <ChevronRight size={16} color='#94A3B8' />
                 </View>
-
-                <View style={styles.actions}>
-                  <Icon as={Pencil} size={18} className='text-primary' style={{ marginLeft: 8 }} onPress={() => openEditModal(brand)} />
-                  <Icon as={Trash2} size={18} className='text-destructive' style={{ marginLeft: 8 }} onPress={() => confirmDelete(brand)} />
-                </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
@@ -204,7 +281,22 @@ export default function BrandsScreen() {
             <Text className='text-muted-foreground'>Loading more...</Text>
           </View>
         ) : null}
+        {errorMessage ? (
+          <Alert variant='destructive' icon={X} className='mt-3'>
+            <AlertTitle>Unable to continue</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
       </KeyboardAwareScrollView>
+
+      <Pressable
+        onPress={openCreateModal}
+        style={styles.fab}
+        accessibilityRole='button'
+        accessibilityLabel='Add brand'
+      >
+        <Plus size={24} color='#FFFFFF' />
+      </Pressable>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
         <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
@@ -235,7 +327,7 @@ export default function BrandsScreen() {
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
                 <Text className='text-foreground'>Cancel</Text>
               </Button>
-              <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={styles.modalButton}>
+              <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
                 {saving ? <ActivityIndicator size='small' color="#fff" /> : <Text className='text-primary-foreground'>Save</Text>}
               </Button>
             </View>
@@ -270,6 +362,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
   },
+  headerCount: {
+    minWidth: 40,
+    height: 24,
+    paddingHorizontal: 8,
+    marginRight: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2E8F0',
+  },
+  headerCountText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  toolbar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    gap: 10,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 40,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  segmented: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+  },
+  segment: {
+    flex: 1,
+    height: 30,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentSelected: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  segmentText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  segmentTextSelected: {
+    color: '#0F172A',
+    fontWeight: '800',
+  },
   headerSpacer: {
     width: 40,
   },
@@ -277,40 +437,81 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 96,
   },
-  listContainer: {
-    gap: 4,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+  surface: {
     borderWidth: 1,
+    borderColor: '#D9DEE5',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
-  categoryName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  categoryInfo: {
+  row: {
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#CBD5E1',
+  },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  indexText: {
+    width: 22,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    fontVariant: ['tabular-nums'],
+  },
+  rowInfo: {
     flex: 1,
-    marginRight: 8,
+    minWidth: 0,
+    gap: 2,
   },
-  actions: {
-    flexDirection: 'row',
+  brandName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  brandMeta: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  chip: {
+    borderRadius: 4,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  chipActive: { borderColor: '#34D399', backgroundColor: '#FFFFFF' },
+  chipInactive: { borderColor: '#CBD5E1', backgroundColor: '#FFFFFF' },
+  chipText: { fontSize: 10, fontWeight: '700' },
+  chipTextActive: { color: '#047857' },
+  chipTextInactive: { color: '#64748B' },
+  deleteButton: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  iconButton: {
-    padding: 8,
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2367A8',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   emptyState: {
     paddingVertical: 24,
@@ -326,8 +527,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderTopWidth: 3,
+    borderTopColor: '#2367A8',
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 24,
@@ -373,5 +576,9 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     minWidth: 96,
+    borderRadius: 6,
+  },
+  saveButton: {
+    backgroundColor: '#2367A8',
   },
 });
