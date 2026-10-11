@@ -89,7 +89,7 @@ function RecentSaleRow({ sale }: { sale: Sale }) {
 
 export function SalesDashboardContent({
   showHeader = true,
-  title = 'Sales',
+  title = 'Sales Dashboard',
   onBack,
 }: {
   showHeader?: boolean;

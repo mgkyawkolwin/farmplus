@@ -185,7 +185,7 @@ export function SupplierDashboardContent({
           <View style={styles.actionRow}>
             <Button
               style={[styles.actionButton, styles.actionPrimary]}
-              onPress={() => router.push('/suppliers/suppliers' as Parameters<typeof router.push>[0])}
+              onPress={() => router.push('/suppliers/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color="#FFFFFF" />
               <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>New Supplier</Text>
@@ -193,7 +193,7 @@ export function SupplierDashboardContent({
             <Button
               variant="outline"
               style={[styles.actionButton, styles.actionSecondary]}
-              onPress={() => router.push('/suppliers/suppliers' as Parameters<typeof router.push>[0])}
+              onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color="#16794B" />
               <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>View Suppliers</Text>
@@ -208,7 +208,7 @@ export function SupplierDashboardContent({
               <Button
                 variant="ghost"
                 style={styles.seeAllButton}
-                onPress={() => router.push('/suppliers/suppliers' as Parameters<typeof router.push>[0])}
+                onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
               >
                 <Text style={styles.seeAllText}>View all</Text>
                 <ChevronRight size={14} color="#16794B" />

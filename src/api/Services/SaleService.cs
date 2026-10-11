@@ -12,7 +12,7 @@ namespace FarmPlus.Api.Services;
 public interface ISaleService
 {
     Task<SaleDashboardDto> GetDashboardAsync();
-    Task<PaginatedResultDto<SaleDto>> GetSalesAsync(int page, int pageSize);
+    Task<PaginatedResultDto<SaleDto>> GetSalesAsync(int page, int pageSize, Guid? customerId = null);
     Task<SaleDto?> GetSaleByIdAsync(Guid id);
     Task<SaleDto> CreateSaleAsync(CreateSaleRequestDto request);
     Task<SaleDto> UpdateSaleAsync(Guid id, UpdateSaleRequestDto request);
@@ -27,13 +27,15 @@ public class SaleService : ISaleService
     private readonly ICurrentUserService _currentUserService;
     private readonly IStorageService _storageService;
     private readonly IShopStockService _shopStock;
+    private readonly IStockMovementService _stockMovement;
 
-    public SaleService(AppDbContext dbContext, ICurrentUserService currentUserService, IStorageService storageService, IShopStockService shopStock)
+    public SaleService(AppDbContext dbContext, ICurrentUserService currentUserService, IStorageService storageService, IShopStockService shopStock, IStockMovementService stockMovement)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _storageService = storageService;
         _shopStock = shopStock;
+        _stockMovement = stockMovement;
     }
 
     public async Task<SaleDashboardDto> GetDashboardAsync()
@@ -83,11 +85,12 @@ public class SaleService : ISaleService
         };
     }
 
-    public async Task<PaginatedResultDto<SaleDto>> GetSalesAsync(int page, int pageSize)
+    public async Task<PaginatedResultDto<SaleDto>> GetSalesAsync(int page, int pageSize, Guid? customerId = null)
     {
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
         var query = FilterByCurrentShop(GetTenantSales()).AsNoTracking();
+        if (customerId.HasValue) query = query.Where(sale => sale.CustomerId == customerId.Value);
         var total = await query.CountAsync();
         var sales = await query
             .OrderByDescending(sale => sale.SaleDate)
@@ -193,7 +196,11 @@ public class SaleService : ISaleService
                 TaxTotal = taxTotal,
             });
 
-            if (!await _shopStock.TryAdjustAsync(shop.Id, product.Id, -requestItem.Quantity, userId, tenantId))
+            try
+            {
+                await _stockMovement.RecordAsync(shop.Id, product.Id, -requestItem.Quantity, "Sale", null, userId, tenantId);
+            }
+            catch (CustomException)
             {
                 throw new CustomException($"Insufficient stock for {product.Name} in {shop.Name}. Available: {onHand}.");
             }

@@ -10,11 +10,45 @@ export interface CustomerItem {
   country?: string;
   postalCode?: string;
   isActive: boolean;
+  totalOrders?: number;
+  totalSales?: number;
+  totalPaid?: number;
+  totalOutstanding?: number;
+  recentSales?: Array<{
+    id: string;
+    saleDate: string;
+    netTotal: number;
+    balance: number;
+    status: string;
+  }>;
+  recentPayments?: Array<{
+    id: string;
+    saleId: string;
+    amount: number;
+    balanceAfter: number;
+    paidAt: string;
+  }>;
   rowVersion?: string;
   createdAtUtc?: string;
   createdById?: string;
   updatedAtUtc?: string;
   updatedById?: string;
+}
+
+export interface CustomerPayment {
+  id: string;
+  saleId: string;
+  amount: number;
+  balanceAfter: number;
+  paidAt: string;
+}
+
+export interface CustomerPaymentListPayload {
+  items?: CustomerPayment[];
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
+  totalPages?: number;
 }
 
 export interface CustomerListPayload {

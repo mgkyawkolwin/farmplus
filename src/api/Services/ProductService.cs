@@ -24,6 +24,11 @@ public interface IProductService
     Task<ProductDto?> UploadProductCoverImageAsync(Guid id, IFormFile file);
     Task<ProductDto?> UploadProductMediaAsync(Guid id, IFormFile file);
     Task<ProductDto?> DeleteProductMediaAsync(Guid productId, Guid mediaId);
+    Task<int> GetShopStockAsync(Guid id, Guid shopId);
+    Task<ProductDto> AdjustStockAsync(Guid id, StockAdjustmentRequestDto request, bool isStockIn);
+    Task<ProductDto> RecordDamageAsync(Guid id, StockAdjustmentRequestDto request);
+    Task TransferStockAsync(Guid id, StockTransferRequestDto request);
+    Task<PaginatedResultDto<StockMovementDto>> GetStockMovementsAsync(Guid id, int page, int pageSize);
     Task DeleteProductAsync(Guid id);
 }
 
@@ -35,8 +40,9 @@ public class ProductService : IProductService
     private readonly ICurrentUserService _currentUserService;
     private readonly IStorageService _storageService;
     private readonly IShopStockService _shopStock;
+    private readonly IStockMovementService _stockMovement;
 
-    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService, IShopStockService shopStock)
+    public ProductService(AppDbContext dbContext, IStringLocalizer<LocalizedStrings> localizer, ILogger<ProductService> logger, ICurrentUserService currentUserService, IStorageService storageService, IShopStockService shopStock, IStockMovementService stockMovement)
     {
         _dbContext = dbContext;
         _localizer = localizer;
@@ -44,6 +50,7 @@ public class ProductService : IProductService
         _currentUserService = currentUserService;
         _storageService = storageService;
         _shopStock = shopStock;
+        _stockMovement = stockMovement;
     }
 
     public async Task<PaginatedResultDto<ProductDto>> GetProductsAsync(int page, int pageSize)
@@ -118,6 +125,66 @@ public class ProductService : IProductService
         return dto;
     }
 
+    public async Task<int> GetShopStockAsync(Guid id, Guid shopId)
+    {
+        await GetManagedProductAsync(id);
+        await GetManagedShopAsync(shopId);
+        return (await _shopStock.GetQuantitiesAsync(shopId, [id])).GetValueOrDefault(id);
+    }
+
+    public async Task<ProductDto> AdjustStockAsync(Guid id, StockAdjustmentRequestDto request, bool isStockIn)
+    {
+        if (request.Quantity <= 0) throw new CustomException("Quantity must be greater than zero.");
+        var product = await GetManagedProductAsync(id);
+        var shop = await _shopStock.RequireCurrentShopAsync();
+        var userId = Guid.Parse(_currentUserService.UserId!);
+        await _stockMovement.RecordAsync(shop.Id, id, isStockIn ? request.Quantity : -request.Quantity,
+            isStockIn ? "Stock In" : "Stock Out", request.Remark, userId, product.MainTenantId);
+        await _dbContext.SaveChangesAsync();
+        var dto = product.MapToDto();
+        dto.CurrentStock = await GetShopStockAsync(id, shop.Id);
+        return dto;
+    }
+
+    public async Task<ProductDto> RecordDamageAsync(Guid id, StockAdjustmentRequestDto request)
+    {
+        if (request.Quantity <= 0) throw new CustomException("Quantity must be greater than zero.");
+        var product = await GetManagedProductAsync(id);
+        var shop = await _shopStock.RequireCurrentShopAsync();
+        var userId = Guid.Parse(_currentUserService.UserId!);
+        await _stockMovement.RecordAsync(shop.Id, id, -request.Quantity, "Damage", request.Remark, userId, product.MainTenantId);
+        await _dbContext.SaveChangesAsync();
+        var dto = product.MapToDto();
+        dto.CurrentStock = await GetShopStockAsync(id, shop.Id);
+        return dto;
+    }
+
+    public async Task TransferStockAsync(Guid id, StockTransferRequestDto request)
+    {
+        if (request.Quantity <= 0) throw new CustomException("Quantity must be greater than zero.");
+        if (request.FromShopId == request.ToShopId) throw new CustomException("Select two different shops.");
+        var product = await GetManagedProductAsync(id);
+        await GetManagedShopAsync(request.FromShopId);
+        await GetManagedShopAsync(request.ToShopId);
+        var userId = Guid.Parse(_currentUserService.UserId!);
+        await _stockMovement.RecordAsync(request.FromShopId, id, -request.Quantity, "Transfer Out", request.Remark, userId, product.MainTenantId);
+        await _stockMovement.RecordAsync(request.ToShopId, id, request.Quantity, "Transfer In", request.Remark, userId, product.MainTenantId);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<PaginatedResultDto<StockMovementDto>> GetStockMovementsAsync(Guid id, int page, int pageSize)
+    {
+        await GetManagedProductAsync(id);
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        var query = _dbContext.StockMovements.AsNoTracking().Where(movement => movement.ProductId == id);
+        if (_currentUserService.ShopId is { } shopId) query = query.Where(movement => movement.ShopId == shopId);
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(movement => movement.CreatedAtUtc).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(movement => new StockMovementDto { Id = movement.Id, Quantity = movement.Quantity, Type = movement.Type, Remark = movement.Remark, CreatedAtUtc = movement.CreatedAtUtc }).ToListAsync();
+        return new PaginatedResultDto<StockMovementDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+    }
+
     public async Task<ProductDto> CreateProductAsync(CreateProductRequestDto request)
     {
         _logger.LogDebug("CALLED: CreateProductAsync(request={Request})", request);
@@ -127,7 +194,6 @@ public class ProductService : IProductService
         ValidationHelper.ValidateRequiredString(_localizer, "Brand", request.Brand);
         ValidationHelper.ValidateRequiredString(_localizer, "Category", request.Category);
         ValidationHelper.ValidateRequiredString(_localizer, "Unit", request.Unit);
-        ValidationHelper.ValidateNull(_localizer, "PurchasePrice", request.PurchasePrice);
         ValidationHelper.ValidateNull(_localizer, "SalePrice", request.SalePrice);
         ValidationHelper.ValidateNull(_localizer, "CurrentStock", request.CurrentStock);
         ValidationHelper.ValidateNull(_localizer, "MinimumStock", request.MinimumStock);
@@ -154,7 +220,6 @@ public class ProductService : IProductService
             Brand = normalizedBrand,
             Category = normalizedCategory,
             Unit = normalizedUnit,
-            PurchasePrice = request.PurchasePrice ?? throw new CustomException("PurchasePrice is required."),
             SalePrice = request.SalePrice ?? throw new CustomException("SalePrice is required."),
             CurrentStock = 0,
             MinimumStock = request.MinimumStock ?? throw new CustomException("MinimumStock is required."),
@@ -258,11 +323,6 @@ public class ProductService : IProductService
             if (request.Unit != null)
             {
                 product.Unit = request.Unit.Trim();
-            }
-
-            if (request.PurchasePrice.HasValue)
-            {
-                product.PurchasePrice = request.PurchasePrice.Value;
             }
 
             if (request.SalePrice.HasValue)
@@ -450,6 +510,28 @@ public class ProductService : IProductService
 
         return _storageService.BuildObjectUrl(objectName);
     }
+
+    private async Task<ProductEntity> GetManagedProductAsync(Guid id)
+        {
+            var query = _dbContext.Products.AsQueryable();
+            if (!_currentUserService.IsAdmin)
+            {
+                if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) throw new CustomException("Tenant ID is missing for the current user.");
+                query = query.Where(product => product.MainTenantId == tenantId);
+            }
+            return await query.SingleOrDefaultAsync(product => product.Id == id) ?? throw new CustomException("Product not found.");
+        }
+
+        private async Task GetManagedShopAsync(Guid shopId)
+        {
+            var query = _dbContext.Shops.AsQueryable();
+            if (!_currentUserService.IsAdmin)
+            {
+                if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId)) throw new CustomException("Tenant ID is missing for the current user.");
+                query = query.Where(shop => shop.MainTenantId == tenantId);
+            }
+            if (!await query.AnyAsync(shop => shop.Id == shopId)) throw new CustomException("Shop not found.");
+        }
 
     private async Task<List<ProductMediaDto>> MapMediaListAsync(IEnumerable<MediaEntity> medias)
     {

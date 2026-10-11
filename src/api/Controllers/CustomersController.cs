@@ -81,6 +81,66 @@ public class CustomersController : BaseController
         }
     }
 
+    [HttpGet("{id:guid}/sales")]
+    public async Task<IActionResult> GetCustomerSales(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var result = await _customerService.GetCustomerSalesAsync(id, page, pageSize);
+            return Ok(new
+            {
+                Success = true,
+                Data = new
+                {
+                    Items = result.Items,
+                    Page = result.Page,
+                    PageSize = result.PageSize,
+                    TotalCount = result.Total,
+                    TotalPages = result.TotalPages,
+                },
+            });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve sales for customer {CustomerId}.", id);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
+    [HttpGet("{id:guid}/payments")]
+    public async Task<IActionResult> GetCustomerPayments(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var result = await _customerService.GetCustomerPaymentsAsync(id, page, pageSize);
+            return Ok(new
+            {
+                Success = true,
+                Data = new
+                {
+                    Items = result.Items,
+                    Page = result.Page,
+                    PageSize = result.PageSize,
+                    TotalCount = result.Total,
+                    TotalPages = result.TotalPages,
+                },
+            });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve payments for customer {CustomerId}.", id);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpPatch("{id:guid}/profilePicture")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadProfilePicture(Guid id, [FromForm] IFormFile file)

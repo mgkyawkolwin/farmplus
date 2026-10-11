@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   ActivityIndicator,
   Image,
@@ -11,59 +11,105 @@ import {
   StyleSheet,
   TextInput,
   View,
-  useColorScheme,
-} from 'react-native';
-import { ChevronLeft, Phone, MapPin, Plus, Search, User } from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  MapPin,
+  Plus,
+  Search,
+  User,
+} from "lucide-react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
-import { container, DI_TOKENS } from '@/di';
-import { CustomerItem } from '@/models/customer';
-import { ICustomerService } from '@/services/customerService';
-import LoadingOverlay from '@/components/loadingOverlay';
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+import { container, DI_TOKENS } from "@/di";
+import { CustomerItem } from "@/models/customer";
+import { ICustomerService } from "@/services/customerService";
+import LoadingOverlay from "@/components/loadingOverlay";
 
-const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
+const customerService = container.resolve<ICustomerService>(
+  DI_TOKENS.ICustomerService,
+);
+
+const COLORS = {
+  ink: "#0F172A",
+  muted: "#64748B",
+  border: "#D9DEE5",
+  rowBorder: "#CBD5E1",
+  green: "#16794B",
+  greenTint: "#F4FAF6",
+  greenBorder: "#CDE8D6",
+  amber: "#9A6700",
+};
+
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "active", label: "Active" },
+  { key: "inactive", label: "Inactive" },
+] as const;
+
+function formatMoney(amount: number | undefined) {
+  return `${(amount ?? 0).toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  })} MMK`;
+}
 
 export default function CustomerListScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
-  const [searchText, setSearchText] = React.useState('');
-  const [activeFilter, setActiveFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
+  const [searchText, setSearchText] = React.useState("");
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive"
+  >("all");
   const pageSize = 20;
 
-  const loadCustomers = React.useCallback(async (nextPage = 1, reset = false, name?: string, isActiveFilter?: boolean) => {
-    if (nextPage === 1 && !reset) {
-      setLoading(true);
-    }
+  const loadCustomers = React.useCallback(
+    async (
+      nextPage = 1,
+      reset = false,
+      name?: string,
+      isActiveFilter?: boolean,
+    ) => {
+      if (nextPage === 1 && !reset) {
+        setLoading(true);
+      }
 
-    try {
-      const result = await customerService.getCustomers(nextPage, pageSize, name, isActiveFilter);
-      if (reset) {
-        setCustomers(result);
-      } else {
-        setCustomers((prev) => [...prev, ...result]);
+      try {
+        const result = await customerService.getCustomers(
+          nextPage,
+          pageSize,
+          name,
+          isActiveFilter,
+        );
+        if (reset) {
+          setCustomers(result);
+        } else {
+          setCustomers((prev) => [...prev, ...result]);
+        }
+        setHasMore(result.length === pageSize);
+        setPage(nextPage);
+      } catch (error) {
+        if (reset) {
+          setCustomers([]);
+        }
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
       }
-      setHasMore(result.length === pageSize);
-      setPage(nextPage);
-    } catch (error) {
-      if (reset) {
-        setCustomers([]);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const fetchCustomers = React.useCallback(async () => {
     setLoading(true);
@@ -73,7 +119,11 @@ export default function CustomerListScreen() {
         1,
         pageSize,
         searchText.trim(),
-        activeFilter === 'active' ? true : activeFilter === 'inactive' ? false : undefined,
+        activeFilter === "active"
+          ? true
+          : activeFilter === "inactive"
+            ? false
+            : undefined,
       );
       setCustomers(result);
       setHasMore(result.length === pageSize);
@@ -94,7 +144,7 @@ export default function CustomerListScreen() {
     React.useCallback(() => {
       fetchCustomers();
       return undefined;
-    }, [fetchCustomers])
+    }, [fetchCustomers]),
   );
 
   const onRefresh = React.useCallback(() => {
@@ -103,7 +153,11 @@ export default function CustomerListScreen() {
       1,
       true,
       searchText.trim(),
-      activeFilter === 'active' ? true : activeFilter === 'inactive' ? false : undefined,
+      activeFilter === "active"
+        ? true
+        : activeFilter === "inactive"
+          ? false
+          : undefined,
     );
   }, [loadCustomers, searchText, activeFilter]);
 
@@ -117,38 +171,59 @@ export default function CustomerListScreen() {
       page + 1,
       false,
       searchText.trim(),
-      activeFilter === 'active' ? true : activeFilter === 'inactive' ? false : undefined,
+      activeFilter === "active"
+        ? true
+        : activeFilter === "inactive"
+          ? false
+          : undefined,
     );
-  }, [loadingMore, hasMore, loading, loadCustomers, page, searchText, activeFilter]);
+  }, [
+    loadingMore,
+    hasMore,
+    loading,
+    loadCustomers,
+    page,
+    searchText,
+    activeFilter,
+  ]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar
-        className="bg-background"
-        barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
-      />
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
       <LoadingOverlay isLoading={loading} />
 
-      <View className="bg-background border-b border-border" style={styles.headerBar}>
-        <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
+      <View
+        className="bg-background border-b border-border"
+        style={styles.headerBar}
+      >
+        <Button
+          variant="ghost"
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
           Customers
         </Text>
-        <Button variant="ghost" onPress={() => router.push('/customers/new')} style={styles.addButton}>
-          <Icon className="text-foreground" as={Plus} size={20} />
-        </Button>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="New customer"
+          onPress={() => router.push("/customers/new")}
+          style={styles.addButton}
+        >
+          <Plus size={18} color="#FFFFFF" />
+        </Pressable>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
+      <View style={styles.toolbar}>
+        <View style={styles.searchBox}>
           <Icon className="text-muted-foreground" as={Search} size={16} />
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
             placeholder="Search by customer name"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             style={styles.searchInput}
             autoCapitalize="none"
             autoCorrect={false}
@@ -156,25 +231,28 @@ export default function CustomerListScreen() {
         </View>
 
         <View style={styles.filterRow}>
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'active', label: 'Active' },
-            { key: 'inactive', label: 'Inactive' },
-          ].map((filter) => {
+          {FILTERS.map((filter) => {
             const isSelected = activeFilter === filter.key;
             return (
-              <Button
+              <Pressable
                 key={filter.key}
-                variant={isSelected ? 'default' : 'outline'}
-                onPress={() => {
-                  setActiveFilter(filter.key as 'all' | 'active' | 'inactive');
-                }}
-                style={isSelected ? styles.filterButtonActive : styles.filterButton}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => setActiveFilter(filter.key)}
+                style={[
+                  styles.filterChip,
+                  isSelected && styles.filterChipActive,
+                ]}
               >
-                <Text className={isSelected ? 'text-background' : 'text-foreground'} style={styles.filterButtonText}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    isSelected && styles.filterTextActive,
+                  ]}
+                >
                   {filter.label}
                 </Text>
-              </Button>
+              </Pressable>
             );
           })}
         </View>
@@ -182,7 +260,7 @@ export default function CustomerListScreen() {
 
       {loading && customers.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={COLORS.green} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading customers...
           </Text>
@@ -197,232 +275,300 @@ export default function CustomerListScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          onMomentumScrollEnd={(event) => {
-            const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-            const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
-            if (isNearBottom) {
-              onLoadMore();
+        <>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, styles.headerInfo]}>
+              {`Customer · ${customers.length}${hasMore ? "+" : ""}`}
+            </Text>
+            <Text style={[styles.headerCell, styles.amountColumn]}>
+              Outstanding
+            </Text>
+            <View style={styles.headerChevronSpace} />
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
-          }}
-        >
-          {customers.map((customer) => (
-            <Pressable
-              key={customer.id}
-              style={styles.card}
-              onPress={() => router.push({ pathname: '/customers/view', params: { id: customer.id } })}
-            >
-              <View style={styles.avatarWrap}>
-                {customer.profilePictureUrl ? (
-                  <Image source={{ uri: customer.profilePictureUrl }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Icon className="text-muted-foreground" as={User} size={20} />
+            onMomentumScrollEnd={(event) => {
+              const { layoutMeasurement, contentOffset, contentSize } =
+                event.nativeEvent;
+              const isNearBottom =
+                layoutMeasurement.height + contentOffset.y >=
+                contentSize.height - 120;
+              if (isNearBottom) {
+                onLoadMore();
+              }
+            }}
+          >
+            {customers.map((customer) => {
+              const isActive = customer.isActive !== false;
+              const owes = (customer.totalOutstanding ?? 0) > 0;
+              return (
+                <Pressable
+                  key={customer.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Customer ${customer.name}`}
+                  style={[
+                    styles.row
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/customers/view",
+                      params: { id: customer.id },
+                    })
+                  }
+                >
+                  <View style={styles.avatarWrap}>
+                    {customer.profilePictureUrl ? (
+                      <Image
+                        source={{ uri: customer.profilePictureUrl }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <View style={styles.avatarFallback}>
+                        <Icon
+                          className="text-muted-foreground"
+                          as={User}
+                          size={18}
+                        />
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
 
-              <View style={styles.leftSection}>
-                <Text className="text-foreground" style={styles.customerName}>
-                  {customer.name}
-                </Text>
-                <View style={styles.detailRow}>
-                  <Icon className="text-muted-foreground" as={Phone} size={14} />
-                  <Text className="text-muted-foreground" style={styles.customerDetail}>
-                    {customer.phone ? customer.phone : '-'}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Icon className="text-muted-foreground" as={MapPin} size={14} />
-                  <Text className="text-muted-foreground" style={styles.customerDetail}>
-                    {customer.address ? customer.address : '-'}
-                  </Text>
-                </View>
-              </View>
+                  <View style={styles.infoColumn}>
+                    <View style={styles.nameRow}>
+                      <Text
+                        className="text-foreground"
+                        style={styles.customerName}
+                        numberOfLines={1}
+                      >
+                        {customer.name}
+                      </Text>
+                      <View
+                        style={[
+                          styles.statusPill,
+                          isActive
+                            ? styles.statusActive
+                            : styles.statusInactive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            isActive
+                              ? styles.statusTextActive
+                              : styles.statusTextInactive,
+                          ]}
+                        >
+                          {isActive ? "ACTIVE" : "INACTIVE"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Icon
+                        className="text-muted-foreground"
+                        as={Phone}
+                        size={12}
+                      />
+                      <Text
+                        className="text-muted-foreground"
+                        style={styles.customerDetail}
+                        numberOfLines={1}
+                      >
+                        {customer.phone ? customer.phone : "-"}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Icon
+                        className="text-muted-foreground"
+                        as={MapPin}
+                        size={12}
+                      />
+                      <Text
+                        className="text-muted-foreground"
+                        style={styles.customerDetail}
+                        numberOfLines={1}
+                      >
+                        {customer.address ? customer.address : "-"}
+                      </Text>
+                    </View>
+                  </View>
 
-              <View style={styles.rightSection}>
-                <Text className="text-muted-foreground" style={styles.outstandingLabel}>
-                  Outstanding
-                </Text>
-                <Text className="text-foreground" style={styles.outstandingValue}>
-                  0 MMK
+                  <View style={styles.amountColumn}>
+                    <Text
+                      style={[
+                        styles.outstandingValue,
+                        { color: owes ? COLORS.amber : COLORS.ink },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {formatMoney(customer.totalOutstanding)}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#94A3B8" />
+                </Pressable>
+              );
+            })}
+
+            {loadingMore ? (
+              <View style={styles.loadMoreContainer}>
+                <ActivityIndicator size="small" color={COLORS.green} />
+                <Text
+                  className="text-muted-foreground"
+                  style={styles.loadMoreText}
+                >
+                  Loading more...
                 </Text>
               </View>
-            </Pressable>
-          ))}
-
-          {loadingMore ? (
-            <View style={styles.loadMoreContainer}>
-              <ActivityIndicator size="small" color="#4f46e5" />
-              <Text className="text-muted-foreground" style={styles.loadMoreText}>
-                Loading more...
-              </Text>
-            </View>
-          ) : null}
-        </ScrollView>
+            ) : null}
+          </ScrollView>
+        </>
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
+  page: { flex: 1 },
   headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  backButton: {
-    minWidth: 44,
-  },
+  headerButton: { minWidth: 44 },
   headerTitle: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "700",
   },
   addButton: {
-    minWidth: 44,
+    width: 34,
+    height: 34,
+    marginHorizontal: 5,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.green,
   },
-  searchContainer: {
+  toolbar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    gap: 10,
+    backgroundColor: "#FFFFFF",
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     height: 42,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
+    borderColor: COLORS.border,
+    borderRadius: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F8FAFC",
   },
-  searchInput: {
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.ink },
+  filterRow: { flexDirection: "row", gap: 8 },
+  filterChip: {
     flex: 1,
-    fontSize: 14,
-    color: '#111827',
+    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "#FFFFFF",
   },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
+  filterChipActive: {
+    borderColor: COLORS.green,
+    backgroundColor: COLORS.greenTint,
   },
-  filterButton: {
-    flex: 1,
-    borderRadius: 999,
-    paddingVertical: 8,
-  },
-  filterButtonActive: {
-    flex: 1,
-    borderRadius: 999,
-    paddingVertical: 8,
-    backgroundColor: '#111827',
-  },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 0,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  avatarWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    overflow: 'hidden',
-    marginRight: 12,
-    backgroundColor: '#F3F4F6',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 21,
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#E5E7EB',
-  },
-  leftSection: {
-    flex: 1,
-    marginRight: 12,
-  },
-  rightSection: {
-    alignItems: 'flex-end',
-  },
-  customerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  customerDetail: {
-    fontSize: 13,
-  },
-  outstandingLabel: {
+  filterText: {
+    color: COLORS.muted,
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
-  outstandingValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 2,
+  filterTextActive: { color: COLORS.green },
+  tableHeader: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#F1F5F9",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
   },
-  loadMoreContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
+  headerCell: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  headerInfo: { flex: 1, paddingLeft: 56 },
+  headerChevronSpace: { width: 16 },
+  content: { paddingBottom: 24 },
+  row: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.rowBorder,
+    backgroundColor: "#FFFFFF",
   },
-  loadMoreText: {
-    fontSize: 13,
+  rowPressed: { backgroundColor: COLORS.greenTint },
+  avatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: "#E5E7EB",
   },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 22 },
+  avatarFallback: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#E5E7EB",
+  },
+  infoColumn: { flex: 1, minWidth: 0, gap: 4 },
+  amountColumn: { width: 104, alignItems: "flex-end" },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  customerName: { flexShrink: 1, fontSize: 15, fontWeight: "700" },
+  detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  customerDetail: { flex: 1, fontSize: 12 },
+  statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  statusActive: { backgroundColor: "#D1FAE5" },
+  statusInactive: { backgroundColor: "#FEE2E2" },
+  statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  statusTextActive: { color: "#047857" },
+  statusTextInactive: { color: "#B91C1C" },
+  outstandingValue: { fontSize: 14, fontWeight: "800" },
+  loadMoreContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 14,
+  },
+  loadMoreText: { fontSize: 12 },
   centeredState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 24,
   },
-  stateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  stateText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  stateTitle: { fontSize: 17, fontWeight: "700", marginBottom: 6 },
+  stateText: { fontSize: 13, textAlign: "center", marginTop: 6 },
 });

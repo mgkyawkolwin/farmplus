@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using FarmPlus.Api.Data;
 using FarmPlus.Api.Dtos;
 using FarmPlus.Api.Dtos.Suppliers;
+using FarmPlus.Api.Dtos.Purchases;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.I18N;
@@ -18,6 +19,7 @@ public interface ISupplierService
 {
     Task<PaginatedResultDto<SupplierDto>> GetSuppliersAsync(int page, int pageSize, string? supplierName = null);
     Task<SupplierDto?> GetSupplierByIdAsync(Guid id);
+    Task<PaginatedResultDto<PurchaseDto>> GetSupplierPurchasesAsync(Guid id, int page, int pageSize);
     Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request);
     Task<SupplierDto?> UpdateSupplierAsync(Guid id, UpdateSupplierRequestDto request);
     Task<SupplierDto?> UploadSupplierLogoAsync(Guid id, IFormFile file);
@@ -83,7 +85,62 @@ public class SupplierService : ISupplierService
             query = query.Where(b => b.MainTenantId == tenantId);
         }
         var supplier = await query.SingleOrDefaultAsync(s => s.Id == id);
-        return supplier == null ? null : await MapSupplierToDtoAsync(supplier);
+        if (supplier == null)
+        {
+            return null;
+        }
+
+        var dto = await MapSupplierToDtoAsync(supplier);
+        dto.RecentPurchases = await _dbContext.Purchases.AsNoTracking()
+            .Where(purchase => purchase.SupplierId == id)
+            .OrderByDescending(purchase => purchase.PurchaseDate)
+            .ThenByDescending(purchase => purchase.CreatedAtUtc)
+            .Take(5)
+            .Select(purchase => new SupplierRecentPurchaseDto
+            {
+                Id = purchase.Id,
+                PurchaseDate = purchase.PurchaseDate,
+                NetTotal = purchase.NetTotal,
+                TotalProducts = purchase.TotalProducts,
+            })
+            .ToListAsync();
+        return dto;
+    }
+
+    public async Task<PaginatedResultDto<PurchaseDto>> GetSupplierPurchasesAsync(Guid id, int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        if (await GetSupplierByIdAsync(id) is null)
+        {
+            throw new CustomException("Supplier not found.");
+        }
+
+        var purchases = _dbContext.Purchases.AsNoTracking()
+            .Where(purchase => purchase.SupplierId == id);
+        var total = await purchases.CountAsync();
+        var items = await purchases
+            .OrderByDescending(purchase => purchase.PurchaseDate)
+            .ThenByDescending(purchase => purchase.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(purchase => new PurchaseDto
+            {
+                Id = purchase.Id,
+                SupplierId = purchase.SupplierId,
+                SupplierName = purchase.SupplierName,
+                ShopId = purchase.ShopId,
+                ShopName = purchase.ShopName,
+                PurchaseDate = new DateTimeOffset(DateTime.SpecifyKind(purchase.PurchaseDate, DateTimeKind.Utc)),
+                TotalProducts = purchase.TotalProducts,
+                SubTotal = purchase.SubTotal,
+                Discount = purchase.Discount,
+                Tax = purchase.Tax,
+                NetTotal = purchase.NetTotal,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<PurchaseDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<SupplierDto> CreateSupplierAsync(CreateSupplierRequestDto request)
@@ -148,7 +205,10 @@ public class SupplierService : ISupplierService
             supplier.StateDivision = request.StateDivision;
             supplier.City = request.City;
             supplier.Country = request.Country;
-            supplier.LogoUrl = request.LogoUrl;
+            if (request.LogoUrl != null)
+            {
+                supplier.LogoUrl = request.LogoUrl;
+            }
             supplier.IsActive = request.IsActive ?? supplier.IsActive;
             _dbContext.Entry(supplier).Property(s => s.RowVersion).OriginalValue = request.RowVersion;
             supplier.UpdatedAtUtc = DateTime.UtcNow;

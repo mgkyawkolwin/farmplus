@@ -11,7 +11,6 @@ import {
   ClipboardPenLine,
   List,
   Package,
-  Wallet,
 } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
@@ -25,10 +24,6 @@ import { useSelectedShopChanged } from '@/lib/selectedShop';
 
 function stockOf(product: ProductItem) {
   return Math.max(0, product.currentStock ?? 0);
-}
-
-function money(value: number) {
-  return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
 }
 
 const TONE_COLORS = {
@@ -73,7 +68,7 @@ function Metric({
 
 export function InventoryDashboardContent({
   showHeader = true,
-  title = 'Inventory',
+  title = 'Inventory Dashboard',
   onBack,
 }: {
   showHeader?: boolean;
@@ -110,7 +105,6 @@ export function InventoryDashboardContent({
   });
 
   const totalStock = products.reduce((total, product) => total + stockOf(product), 0);
-  const totalValue = products.reduce((total, product) => total + stockOf(product) * (product.purchasePrice ?? 0), 0);
   const lowStockCount = products.filter((product) => {
     const stock = stockOf(product);
     return stock > 0 && (product.minimumStock ?? 0) > 0 && stock <= (product.minimumStock ?? 0);
@@ -157,7 +151,6 @@ export function InventoryDashboardContent({
         >
           <View style={styles.metricsGrid}>
             <Metric label="Total Stock Qty" value={totalStock.toLocaleString('en-US')} icon={Boxes} tone="green" />
-            <Metric label="Total Value" value={money(totalValue)} icon={Wallet} tone="blue" />
             <Metric label="Low Stock Items" value={lowStockCount.toLocaleString('en-US')} icon={AlertTriangle} tone="amber" />
             <Metric label="Out of Stock" value={outOfStockCount.toLocaleString('en-US')} icon={Package} tone="red" />
           </View>

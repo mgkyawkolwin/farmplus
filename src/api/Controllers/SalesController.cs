@@ -40,11 +40,11 @@ public class SalesController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetSales([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetSales([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] Guid? customerId = null)
     {
         try
         {
-            var result = await _saleService.GetSalesAsync(page, pageSize);
+            var result = await _saleService.GetSalesAsync(page, pageSize, customerId);
             return Ok(new
             {
                 Success = true,

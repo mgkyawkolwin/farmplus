@@ -185,7 +185,7 @@ export default function SaleViewScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Sale Details</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>Sale</Text>
         <View style={styles.headerButton} />
       </View>
 

@@ -3,11 +3,13 @@ using Microsoft.Extensions.Localization;
 using FarmPlus.Api.Data;
 using FarmPlus.Api.Dtos;
 using FarmPlus.Api.Dtos.Customers;
+using FarmPlus.Api.Dtos.Sales;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.I18N;
 using FarmPlus.Api.Mappings;
 using FarmPlus.Api.Utilities;
+using FarmPlus.Api.Constants;
 
 namespace FarmPlus.Api.Services;
 
@@ -15,6 +17,8 @@ public interface ICustomerService
 {
     Task<PaginatedResultDto<CustomerDto>> GetCustomersAsync(int page, int pageSize, string? name = null, bool? isActive = null);
     Task<CustomerDto?> GetCustomerByIdAsync(Guid id);
+    Task<PaginatedResultDto<SaleDto>> GetCustomerSalesAsync(Guid id, int page, int pageSize);
+    Task<PaginatedResultDto<CustomerRecentPaymentDto>> GetCustomerPaymentsAsync(Guid id, int page, int pageSize);
     Task<CustomerDto> CreateCustomerAsync(CreateCustomerRequestDto request);
     Task<CustomerDto?> UpdateCustomerAsync(Guid id, UpdateCustomerRequestDto request);
     Task<CustomerDto?> UploadProfilePictureAsync(Guid id, IFormFile file);
@@ -72,9 +76,24 @@ public class CustomerService : ICustomerService
             .ToListAsync();
 
         var customerDtos = customers.MapToDtoList();
+        var customerIds = customers.Select(customer => customer.Id).ToList();
+        var outstandingByCustomer = await _dbContext.Sales.AsNoTracking()
+            .Where(sale =>
+                sale.CustomerId.HasValue &&
+                customerIds.Contains(sale.CustomerId.Value) &&
+                sale.Status != SaleStatus.Voided)
+            .GroupBy(sale => sale.CustomerId!.Value)
+            .Select(group => new
+            {
+                CustomerId = group.Key,
+                Outstanding = group.Sum(sale => sale.Balance),
+            })
+            .ToDictionaryAsync(item => item.CustomerId, item => item.Outstanding);
+
         foreach (var dto in customerDtos)
         {
             dto.ProfilePictureUrl = ResolvePictureUrl(dto.ProfilePictureUrl);
+            dto.TotalOutstanding = outstandingByCustomer.GetValueOrDefault(dto.Id);
         }
 
         return new PaginatedResultDto<CustomerDto>(customerDtos, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
@@ -95,9 +114,94 @@ public class CustomerService : ICustomerService
         if (dto != null)
         {
             dto.ProfilePictureUrl = ResolvePictureUrl(dto.ProfilePictureUrl);
+            var sales = _dbContext.Sales.AsNoTracking()
+                .Where(sale => sale.CustomerId == id && sale.Status != SaleStatus.Voided);
+            dto.TotalOrders = await sales.CountAsync();
+            dto.TotalSales = await sales.SumAsync(sale => (decimal?)sale.NetTotal) ?? 0m;
+            dto.TotalPaid = await sales.SumAsync(sale => (decimal?)sale.PaidAmount) ?? 0m;
+            dto.TotalOutstanding = await sales.SumAsync(sale => (decimal?)sale.Balance) ?? 0m;
+            dto.RecentSales = await sales.OrderByDescending(sale => sale.SaleDate).ThenByDescending(sale => sale.CreatedAtUtc).Take(5)
+                .Select(sale => new CustomerRecentSaleDto { Id = sale.Id, SaleDate = sale.SaleDate, NetTotal = sale.NetTotal, Balance = sale.Balance, Status = sale.Status }).ToListAsync();
+            dto.RecentPayments = await _dbContext.SalePayments.AsNoTracking()
+                .Where(payment => sales.Any(sale => sale.Id == payment.SaleId))
+                .OrderByDescending(payment => payment.CreatedAtUtc)
+                .Take(5)
+                .Select(payment => new CustomerRecentPaymentDto
+                {
+                    Id = payment.Id,
+                    SaleId = payment.SaleId,
+                    Amount = payment.Amount,
+                    BalanceAfter = payment.BalanceAfter,
+                    PaidAt = payment.CreatedAtUtc,
+                })
+                .ToListAsync();
         }
 
         return dto;
+    }
+
+    public async Task<PaginatedResultDto<SaleDto>> GetCustomerSalesAsync(Guid id, int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        await EnsureCustomerExistsAsync(id);
+
+        var sales = _dbContext.Sales.AsNoTracking()
+            .Where(sale => sale.CustomerId == id);
+        var total = await sales.CountAsync();
+        var items = await sales
+            .OrderByDescending(sale => sale.SaleDate)
+            .ThenByDescending(sale => sale.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(sale => new SaleDto
+            {
+                Id = sale.Id,
+                CustomerId = sale.CustomerId,
+                CustomerName = sale.CustomerName,
+                SaleDate = new DateTimeOffset(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)),
+                TotalProducts = sale.TotalProducts,
+                SubTotal = sale.SubTotal,
+                TaxRate = sale.TaxRate,
+                Tax = sale.Tax,
+                Discount = sale.Discount,
+                NetTotal = sale.NetTotal,
+                PaidAmount = sale.PaidAmount,
+                Balance = sale.Balance,
+                Status = sale.Status,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<SaleDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+    }
+
+    public async Task<PaginatedResultDto<CustomerRecentPaymentDto>> GetCustomerPaymentsAsync(Guid id, int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        await EnsureCustomerExistsAsync(id);
+
+        var payments = _dbContext.SalePayments.AsNoTracking()
+            .Where(payment => _dbContext.Sales.Any(sale =>
+                sale.Id == payment.SaleId &&
+                sale.CustomerId == id &&
+                sale.Status != SaleStatus.Voided));
+        var total = await payments.CountAsync();
+        var items = await payments
+            .OrderByDescending(payment => payment.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(payment => new CustomerRecentPaymentDto
+            {
+                Id = payment.Id,
+                SaleId = payment.SaleId,
+                Amount = payment.Amount,
+                BalanceAfter = payment.BalanceAfter,
+                PaidAt = payment.CreatedAtUtc,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<CustomerRecentPaymentDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<CustomerDto> CreateCustomerAsync(CreateCustomerRequestDto request)
@@ -135,6 +239,25 @@ public class CustomerService : ICustomerService
         await _dbContext.SaveChangesAsync();
 
         return customer.MapToDto();
+    }
+
+    private async Task EnsureCustomerExistsAsync(Guid id)
+    {
+        var customers = _dbContext.Customers.AsNoTracking();
+        if (_currentUserService.IsAdmin == false)
+        {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+            {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+
+            customers = customers.Where(customer => customer.MainTenantId == tenantId);
+        }
+
+        if (!await customers.AnyAsync(customer => customer.Id == id))
+        {
+            throw new CustomException("Customer not found.");
+        }
     }
 
     public async Task<CustomerDto?> UpdateCustomerAsync(Guid id, UpdateCustomerRequestDto request)

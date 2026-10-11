@@ -23,13 +23,15 @@ public class PurchaseService : IPurchaseService
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<PurchaseService> _logger;
     private readonly IShopStockService _shopStock;
+    private readonly IStockMovementService _stockMovement;
 
-    public PurchaseService(AppDbContext dbContext, ICurrentUserService currentUserService, ILogger<PurchaseService> logger, IShopStockService shopStock)
+    public PurchaseService(AppDbContext dbContext, ICurrentUserService currentUserService, ILogger<PurchaseService> logger, IShopStockService shopStock, IStockMovementService stockMovement)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _logger = logger;
         _shopStock = shopStock;
+        _stockMovement = stockMovement;
     }
 
     public async Task<PaginatedResultDto<PurchaseDto>> GetPurchasesAsync(int page, int pageSize)
@@ -232,7 +234,8 @@ public class PurchaseService : IPurchaseService
             var stockDelta = newQuantities.GetValueOrDefault(productId) - oldQuantities.GetValueOrDefault(productId);
             if (stockDelta == 0) continue;
 
-            if (!await _shopStock.TryAdjustAsync(shopId.Value, productId, stockDelta, userId, tenantId))
+            try { await _stockMovement.RecordAsync(shopId.Value, productId, stockDelta, "Purchase", null, userId, tenantId); }
+            catch (CustomException)
             {
                 var name = products.TryGetValue(productId, out var product) ? product.Name : "this product";
                 throw new CustomException($"Purchase cannot be changed because {name} stock in this shop has already been used.");

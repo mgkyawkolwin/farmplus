@@ -9,6 +9,12 @@ export interface Supplier {
   country?: string;
   logoUrl?: string;
   isActive: boolean;
+  recentPurchases?: Array<{
+    id: string;
+    purchaseDate: string;
+    netTotal: number;
+    totalProducts: number;
+  }>;
   rowVersion?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;

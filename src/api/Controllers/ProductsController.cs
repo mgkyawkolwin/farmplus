@@ -112,6 +112,7 @@ public class ProductsController : BaseController
             _logger.LogTrace("Updated Product: {Product}", JsonSerializer.Serialize(product));
             return Ok(new { Success = true, Data = product });
         }
+
         catch (CustomException ex)
         {
             _logger.LogWarning("Custom exception occurred: {Message}", ex.Message);
@@ -123,6 +124,34 @@ public class ProductsController : BaseController
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
         }
     }
+
+    [HttpGet("{id:guid}/stock")]
+    public Task<IActionResult> GetShopStock(Guid id, [FromQuery] Guid shopId) =>
+        ExecuteAsync(async () => (object?)await _productService.GetShopStockAsync(id, shopId), "retrieve product stock");
+
+    [HttpGet("{id:guid}/stock-movements")]
+    public Task<IActionResult> GetStockMovements(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20) =>
+        ExecuteAsync(async () => (object?)await _productService.GetStockMovementsAsync(id, page, pageSize), "retrieve stock movements");
+
+    [HttpPost("{id:guid}/stock-in")]
+    public Task<IActionResult> StockIn(Guid id, [FromBody] StockAdjustmentRequestDto request) =>
+        ExecuteAsync(async () => await _productService.AdjustStockAsync(id, request, true), "record stock in");
+
+    [HttpPost("{id:guid}/stock-out")]
+    public Task<IActionResult> StockOut(Guid id, [FromBody] StockAdjustmentRequestDto request) =>
+        ExecuteAsync(async () => await _productService.AdjustStockAsync(id, request, false), "record stock out");
+
+    [HttpPost("{id:guid}/damage")]
+    public Task<IActionResult> Damage(Guid id, [FromBody] StockAdjustmentRequestDto request) =>
+        ExecuteAsync(async () => await _productService.RecordDamageAsync(id, request), "record damage");
+
+    [HttpPost("{id:guid}/transfer")]
+    public Task<IActionResult> Transfer(Guid id, [FromBody] StockTransferRequestDto request) =>
+        ExecuteAsync(async () =>
+        {
+            await _productService.TransferStockAsync(id, request);
+            return null;
+        }, "transfer stock");
 
     [HttpPatch("{id:guid}/cover-image")]
     [Consumes("multipart/form-data")]
@@ -211,5 +240,12 @@ public class ProductsController : BaseController
             _logger.LogError(ex, "Unexpected error occurred.");
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
         }
+    }
+
+    private async Task<IActionResult> ExecuteAsync(Func<Task<object?>> action, string description)
+    {
+        try { return Ok(new { Success = true, Data = await action() }); }
+        catch (CustomException ex) { _logger.LogWarning("Failed to {Action}: {Message}", description, ex.Message); return Ok(new { Success = false, Message = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Failed to {Action}.", description); return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." }); }
     }
 }

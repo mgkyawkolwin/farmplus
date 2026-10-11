@@ -8,6 +8,7 @@ export interface DealerItem {
   city?: string;
   country?: string;
   logoUrl?: string | null;
+  clearLogoUrl?: boolean;
   isActive: boolean;
   rowVersion?: string;
   createdAtUtc?: string;

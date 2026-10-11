@@ -35,10 +35,6 @@ public class ProductEntity : EntityBase<Guid>
 
     [Required]
     [Precision(18, 2)]
-    public decimal PurchasePrice { get; set; } = 0.00m;
-
-    [Required]
-    [Precision(18, 2)]
     public decimal SalePrice { get; set; } = 0.00m;
 
     [Required]

@@ -12,6 +12,7 @@ public sealed record SupplierDto
     public string? Country { get; set; }
     public string? LogoUrl { get; set; }
     public bool IsActive { get; set; }
+    public List<SupplierRecentPurchaseDto> RecentPurchases { get; set; } = [];
     public Guid RowVersion { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public Guid CreatedById { get; set; }

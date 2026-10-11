@@ -1,16 +1,37 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Alert as RNAlert, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert as RNAlert,
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  Switch,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Plus, Pencil, Trash2, X, ChevronLeft, Image as ImageIcon } from 'lucide-react-native';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+} from 'lucide-react-native';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { Badge } from '@/components/ui/badge';
 import { DealerServiceClient } from '@/services/dealerService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +40,13 @@ import { Icon } from '@/components/ui/icon';
 import { DealerItem } from '@/models/dealer';
 import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
+
+const COLORS = {
+  muted: '#64748B',
+  border: '#D9DEE5',
+  rowBorder: '#CBD5E1',
+  green: '#16794B',
+};
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -32,36 +60,47 @@ export default function DealersScreen() {
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const [modalVisible, setModalVisible] = React.useState(false);
-  const [editingDealer, setEditingDealer] = React.useState<DealerItem | null>(null);
+  const [editingDealer, setEditingDealer] = React.useState<DealerItem | null>(
+    null,
+  );
   const [logoImage, setLogoImage] = React.useState<string | null>(null);
-  const [logoFile, setLogoFile] = React.useState<{ uri: string; name: string; type: string } | null>(null);
+  const [logoFile, setLogoFile] = React.useState<{
+    uri: string;
+    name: string;
+    type: string;
+  } | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const loadDealers = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
-    try {
-      if (requestedPage === 1 && !append) {
-        setLoading(true);
-      }
-      if (requestedPage > 1) {
-        setLoadingMore(true);
-      }
-      if (isRefresh) {
-        setRefreshing(true);
-      }
-      setErrorMessage(null);
+  const loadDealers = React.useCallback(
+    async (requestedPage = 1, append = false, isRefresh = false) => {
+      try {
+        if (requestedPage === 1 && !append) {
+          setLoading(true);
+        }
+        if (requestedPage > 1) {
+          setLoadingMore(true);
+        }
+        if (isRefresh) {
+          setRefreshing(true);
+        }
+        setErrorMessage(null);
 
-      const data = await service.getDealers(requestedPage, 20);
-      setDealers((prev) => (requestedPage === 1 || !append ? data : [...prev, ...data]));
-      setPage(requestedPage);
-      setHasMore(data.length >= 20);
-    } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to load dealers.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
-    }
-  }, [service]);
+        const data = await service.getDealers(requestedPage, 20);
+        setDealers((prev) =>
+          requestedPage === 1 || !append ? data : [...prev, ...data],
+        );
+        setPage(requestedPage);
+        setHasMore(data.length >= 20);
+      } catch (error: any) {
+        setErrorMessage(error?.message || 'Unable to load dealers.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+      }
+    },
+    [service],
+  );
 
   React.useEffect(() => {
     void loadDealers(1, false, false);
@@ -78,12 +117,19 @@ export default function DealersScreen() {
     void loadDealers(page + 1, true, false);
   }, [hasMore, loading, loadingMore, page, refreshing, loadDealers]);
 
-  const handleScroll = React.useCallback((event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 24) {
-      handleLoadMore();
-    }
-  }, [handleLoadMore]);
+  const handleScroll = React.useCallback(
+    (event: any) => {
+      const { layoutMeasurement, contentOffset, contentSize } =
+        event.nativeEvent;
+      if (
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - 24
+      ) {
+        handleLoadMore();
+      }
+    },
+    [handleLoadMore],
+  );
 
   const openCreateModal = () => {
     setEditingDealer({
@@ -99,7 +145,7 @@ export default function DealersScreen() {
       logoUrl: undefined,
       rowVersion: '',
       createdAtUtc: '',
-      updatedAtUtc: ''
+      updatedAtUtc: '',
     });
     setLogoImage(null);
     setLogoFile(null);
@@ -124,7 +170,8 @@ export default function DealersScreen() {
   };
 
   const pickLogo = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
       SnackBar.Error('Permission to access photos is required.');
       return;
@@ -161,7 +208,9 @@ export default function DealersScreen() {
   const removeLogo = () => {
     setLogoImage(null);
     setLogoFile(null);
-    setEditingDealer((prev: DealerItem | null) => prev ? ({ ...prev, logoUrl: null } as DealerItem) : prev);
+    setEditingDealer((prev: DealerItem | null) =>
+      prev ? ({ ...prev, logoUrl: null } as DealerItem) : prev,
+    );
   };
 
   const handleSubmit = async () => {
@@ -197,7 +246,9 @@ export default function DealersScreen() {
         await service.uploadDealerLogo(dealerId, logoFile);
       }
 
-      SnackBar.Success(`Dealer "${editingDealer.dealerName}" ${editingDealer.id ? 'updated' : 'created'} successfully.`);
+      SnackBar.Success(
+        `Dealer "${editingDealer.dealerName}" ${editingDealer.id ? 'updated' : 'created'} successfully.`,
+      );
       await loadDealers(1, false, false);
       closeModal();
     } catch (error: any) {
@@ -213,8 +264,12 @@ export default function DealersScreen() {
       `Are you sure you want to delete "${dealer.dealerName}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => handleDelete(dealer) },
-      ]
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDelete(dealer),
+        },
+      ],
     );
   };
 
@@ -224,187 +279,380 @@ export default function DealersScreen() {
       SnackBar.Success(`Dealer "${dealer.dealerName}" deleted successfully.`);
       await loadDealers(1, false, false);
     } catch (error: any) {
-      SnackBar.Error(error?.message || `Unable to delete dealer "${dealer.dealerName}".`);
+      SnackBar.Error(
+        error?.message || `Unable to delete dealer "${dealer.dealerName}".`,
+      );
     }
   };
 
   return (
-    <SafeAreaView className='bg-background' style={styles.page}>
-      <View className='bg-background border-b border-border' style={styles.headerBar}>
-        <Button variant='ghost' onPress={() => router.back()} style={styles.backButton}>
-          <Icon as={ChevronLeft} size={22} className='text-foreground' />
+    <SafeAreaView className="bg-background" style={styles.page}>
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+
+      <View
+        className="bg-background border-b border-border"
+        style={styles.headerBar}
+      >
+        <Button
+          variant="ghost"
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Icon as={ChevronLeft} size={22} className="text-foreground" />
         </Button>
-        <Text className='text-foreground' style={styles.headerTitle}>Dealers</Text>
-        <Button variant='default' size='sm' onPress={() => router.push('/dealers/new')}>
-          <Icon as={Plus} size={14} className='text-primary-foreground' />
-          <Text className='text-primary-foreground'>Add</Text>
-        </Button>
+        <Text className="text-foreground" style={styles.headerTitle}>
+          Dealers
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="New dealer"
+          onPress={() => router.push('/dealers/new')}
+          style={styles.addButton}
+        >
+          <Plus size={18} color="#FFFFFF" />
+        </Pressable>
       </View>
 
       <KeyboardAwareScrollView
-        className='bg-background'
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.green}
+          />
+        }
         onScroll={handleScroll}
         scrollEventThrottle={400}
       >
         {loading && !refreshing ? (
-          <View style={styles.emptyState}>
-            <ActivityIndicator size='large' />
-            <Text className='text-muted-foreground' style={styles.emptyText}>Loading dealers...</Text>
+          <View style={styles.centeredState}>
+            <ActivityIndicator size="large" color={COLORS.green} />
+            <Text className="text-muted-foreground" style={styles.stateText}>
+              Loading dealers...
+            </Text>
           </View>
         ) : dealers.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text className='text-muted-foreground' style={styles.emptyText}>No dealers yet.</Text>
+          <View style={styles.centeredState}>
+            <Text className="text-foreground" style={styles.stateTitle}>
+              No dealers found
+            </Text>
+            <Text className="text-muted-foreground" style={styles.stateText}>
+              Add a dealer to get started.
+            </Text>
           </View>
         ) : (
-          <View style={styles.listContainer}>
-            {dealers.map((dealer) => (
-              <Pressable
-                className='bg-card border-border'
-                key={dealer.id}
-                style={styles.card}
-                onPress={() => router.push({ pathname: '/dealers/view', params: { id: dealer.id } })}
-              >
-                <View style={styles.categoryInfo}>
+          <>
+            <View style={styles.tableHeader}>
+              <Text
+                style={[styles.headerCell, styles.headerInfo]}
+              >{`Dealer · ${dealers.length}${hasMore ? '+' : ''}`}</Text>
+              <Text style={[styles.headerCell, styles.statusColumn]}>
+                Status
+              </Text>
+              <View style={styles.headerChevronSpace} />
+            </View>
+            {dealers.map((dealer) => {
+              const detail =
+                [dealer.phoneNumber, dealer.city].filter(Boolean).join(' · ') ||
+                dealer.email ||
+                '';
+              return (
+                <Pressable
+                  key={dealer.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Dealer ${dealer.dealerName}`}
+                  style={styles.row}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/dealers/view',
+                      params: { id: dealer.id },
+                    })
+                  }
+                >
                   <View style={styles.logoWrapper}>
                     {dealer.logoUrl ? (
-                      <Image source={{ uri: dealer.logoUrl }} style={styles.dealerLogo} resizeMode='cover' />
+                      <Image
+                        source={{ uri: dealer.logoUrl }}
+                        style={styles.dealerLogo}
+                        resizeMode="cover"
+                      />
                     ) : (
                       <View style={styles.logoPlaceholder}>
-                        <Icon as={ImageIcon} size={18} className='text-muted-foreground' />
+                        <Icon
+                          as={ImageIcon}
+                          size={18}
+                          className="text-muted-foreground"
+                        />
                       </View>
                     )}
                   </View>
-                  <View style={styles.dealerInfo}>
-                    <Text className='text-foreground' style={styles.categoryName}>{dealer.dealerName}</Text>
-                    <Badge style={{ maxWidth: 70 }} variant={dealer.isActive ? 'active' : 'muted'}>
-                      <Text>{dealer.isActive ? 'Active' : 'Inactive'}</Text>
-                    </Badge>
+
+                  <View style={styles.infoColumn}>
+                    <Text
+                      className="text-foreground"
+                      style={styles.dealerName}
+                      numberOfLines={1}
+                    >
+                      {dealer.dealerName}
+                    </Text>
+                    {detail ? (
+                      <Text
+                        className="text-muted-foreground"
+                        style={styles.dealerDetail}
+                        numberOfLines={1}
+                      >
+                        {detail}
+                      </Text>
+                    ) : null}
                   </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
+
+                  <View style={styles.statusColumn}>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        dealer.isActive
+                          ? styles.statusActive
+                          : styles.statusInactive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          dealer.isActive
+                            ? styles.statusTextActive
+                            : styles.statusTextInactive,
+                        ]}
+                      >
+                        {dealer.isActive ? 'ACTIVE' : 'INACTIVE'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Icon
+                    as={ChevronRight}
+                    size={16}
+                    className="text-muted-foreground"
+                  />
+                </Pressable>
+              );
+            })}
+          </>
         )}
         {loadingMore ? (
           <View style={styles.loadMoreRow}>
-            <ActivityIndicator size='small' />
-            <Text className='text-muted-foreground'>Loading more...</Text>
+            <ActivityIndicator size="small" color={COLORS.green} />
+            <Text className="text-muted-foreground" style={styles.loadMoreText}>
+              Loading more...
+            </Text>
           </View>
         ) : null}
       </KeyboardAwareScrollView>
 
-      <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-            className='bg-card border-border'
+            className="bg-card border-border"
             style={styles.modalSheet}
           >
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
-              keyboardShouldPersistTaps='handled'
+              keyboardShouldPersistTaps="handled"
               automaticallyAdjustKeyboardInsets={true}
               showsVerticalScrollIndicator={true}
             >
               <View style={styles.modalHeader}>
-                <Text variant='h4' className='text-foreground'>
+                <Text variant="h4" className="text-foreground">
                   {editingDealer?.id ? 'Edit Dealer' : 'Add Dealer'}
                 </Text>
                 <Pressable onPress={closeModal} style={styles.closeButton}>
-                  <Icon as={X} size={20} color='#4b5563' />
+                  <Icon as={X} size={20} color="#4b5563" />
                 </Pressable>
               </View>
 
-              <Label className='text-foreground' style={styles.label}>Dealer Name</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Dealer Name
+              </Label>
               <Input
-                placeholder='Enter dealer name'
+                placeholder="Enter dealer name"
                 value={editingDealer?.dealerName}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, dealerName: text } as DealerItem))}
-                autoCapitalize='words'
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, dealerName: text }) as DealerItem,
+                  )
+                }
+                autoCapitalize="words"
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>Email</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Email
+              </Label>
               <Input
-                placeholder='Enter email'
+                placeholder="Enter email"
                 value={editingDealer?.email}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, email: text } as DealerItem))}
-                keyboardType='email-address'
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, email: text }) as DealerItem,
+                  )
+                }
+                keyboardType="email-address"
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>Phone</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Phone
+              </Label>
               <Input
-                placeholder='Enter phone number'
+                placeholder="Enter phone number"
                 value={editingDealer?.phoneNumber}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, phoneNumber: text } as DealerItem))}
-                keyboardType='phone-pad'
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, phoneNumber: text }) as DealerItem,
+                  )
+                }
+                keyboardType="phone-pad"
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>Address</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Address
+              </Label>
               <Input
-                placeholder='Enter address'
+                placeholder="Enter address"
                 value={editingDealer?.address}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, address: text } as DealerItem))}
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, address: text }) as DealerItem,
+                  )
+                }
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>State / Division</Label>
+              <Label className="text-foreground" style={styles.label}>
+                State / Division
+              </Label>
               <Input
-                placeholder='Enter state or division'
+                placeholder="Enter state or division"
                 value={editingDealer?.stateDivision}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, stateDivision: text } as DealerItem))}
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, stateDivision: text }) as DealerItem,
+                  )
+                }
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>City</Label>
+              <Label className="text-foreground" style={styles.label}>
+                City
+              </Label>
               <Input
-                placeholder='Enter city'
+                placeholder="Enter city"
                 value={editingDealer?.city}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, city: text } as DealerItem))}
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, city: text }) as DealerItem,
+                  )
+                }
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>Country</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Country
+              </Label>
               <Input
-                placeholder='Enter country'
+                placeholder="Enter country"
                 value={editingDealer?.country}
-                onChangeText={(text) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, country: text } as DealerItem))}
+                onChangeText={(text) =>
+                  setEditingDealer(
+                    (prev: DealerItem | null) =>
+                      ({ ...prev, country: text }) as DealerItem,
+                  )
+                }
                 style={styles.input}
               />
 
-              <Label className='text-foreground' style={styles.label}>Dealer Logo</Label>
+              <Label className="text-foreground" style={styles.label}>
+                Dealer Logo
+              </Label>
               {logoImage ? (
                 <View style={styles.logoPreviewContainer}>
-                  <Image source={{ uri: logoImage }} style={styles.logoPreview} resizeMode='cover' />
-                  <Button variant='ghost' size='sm' onPress={removeLogo} style={styles.removeLogoButton}>
-                    <Text className='text-destructive'>Remove</Text>
+                  <Image
+                    source={{ uri: logoImage }}
+                    style={styles.logoPreview}
+                    resizeMode="cover"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onPress={removeLogo}
+                    style={styles.removeLogoButton}
+                  >
+                    <Text className="text-destructive">Remove</Text>
                   </Button>
                 </View>
               ) : null}
-              <Button variant='outline' size='sm' onPress={pickLogo} style={styles.pickerButton}>
-                <Text className='text-foreground'>{logoImage ? 'Change logo' : 'Choose logo'}</Text>
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={pickLogo}
+                style={styles.pickerButton}
+              >
+                <Text className="text-foreground">
+                  {logoImage ? 'Change logo' : 'Choose logo'}
+                </Text>
               </Button>
 
               <View style={styles.switchRow}>
-                <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+                <Text className="text-foreground" style={styles.switchLabel}>
+                  Is Active
+                </Text>
                 <Switch
                   value={editingDealer?.isActive}
-                  onValueChange={(value) => setEditingDealer((prev: DealerItem | null) => ({ ...prev, isActive: value } as DealerItem))}
+                  onValueChange={(value) =>
+                    setEditingDealer(
+                      (prev: DealerItem | null) =>
+                        ({ ...prev, isActive: value }) as DealerItem,
+                    )
+                  }
                 />
               </View>
 
               <View style={styles.modalActions}>
-                <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
-                  <Text className='text-foreground'>Cancel</Text>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={closeModal}
+                  style={styles.modalButton}
+                >
+                  <Text className="text-foreground">Cancel</Text>
                 </Button>
-                <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={styles.modalButton}>
-                  {saving ? <ActivityIndicator size='small' color='#fff' /> : <Text className='text-primary-foreground'>Save</Text>}
+                <Button
+                  variant="default"
+                  size="sm"
+                  onPress={handleSubmit}
+                  disabled={saving}
+                  style={styles.modalButton}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text className="text-primary-foreground">Save</Text>
+                  )}
                 </Button>
               </View>
             </ScrollView>
@@ -423,54 +671,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   backButton: {
-    minWidth: 40,
+    minWidth: 44,
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  addButton: {
+    width: 34,
+    height: 34,
+    marginHorizontal: 5,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.green,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
     paddingBottom: 24,
   },
-  listContainer: {
-    gap: 4,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderWidth: 1,
-  },
-  categoryName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  categoryInfo: {
+  tableHeader: {
+    minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F1F5F9',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  headerCell: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  headerInfo: {
     flex: 1,
-    marginRight: 8,
+    paddingLeft: 56,
+  },
+  headerChevronSpace: {
+    width: 16,
+  },
+  row: {
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.rowBorder,
+    backgroundColor: '#FFFFFF',
   },
   logoWrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -486,24 +754,63 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#E5E7EB',
   },
-  dealerInfo: {
+  infoColumn: {
     flex: 1,
-    flexDirection: 'column',
+    minWidth: 0,
+    gap: 4,
+  },
+  dealerName: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  dealerDetail: {
+    fontSize: 12,
+  },
+  statusColumn: {
+    width: 88,
+    alignItems: 'flex-start',
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  statusActive: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusInactive: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  statusTextActive: {
+    color: '#047857',
+  },
+  statusTextInactive: {
+    color: '#B91C1C',
+  },
+  centeredState: {
+    flex: 1,
     justifyContent: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 48,
   },
-  emptyState: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+  stateTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 6,
   },
-  emptyText: {
-    marginTop: 8,
+  stateText: {
+    fontSize: 13,
     textAlign: 'center',
+    marginTop: 6,
+  },
+  loadMoreText: {
+    fontSize: 12,
   },
   modalOverlay: {
     flex: 1,

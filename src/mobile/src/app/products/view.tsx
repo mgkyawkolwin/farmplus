@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   ActivityIndicator,
   Image,
@@ -9,35 +9,40 @@ import {
   StatusBar,
   StyleSheet,
   View,
-} from 'react-native';
-import { useColorScheme } from 'nativewind';
-import { ChevronLeft, Mail, MapPin, Pencil, Phone } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { ChevronLeft, Pencil } from "lucide-react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
-import { container, DI_TOKENS } from '@/di';
-import { ProductItem } from '@/models/product';
-import { IProductService } from '@/services/productService';
-import LoadingOverlay from '@/components/loadingOverlay';
-import SnackBar from '@/components/ui/snack-bar';
-import Gallery from '@/components/gallery';
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+import { container, DI_TOKENS } from "@/di";
+import { ProductItem } from "@/models/product";
+import { IProductService } from "@/services/productService";
+import SnackBar from "@/components/ui/snack-bar";
+import Gallery from "@/components/gallery";
 
-const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
+const productService = container.resolve<IProductService>(
+  DI_TOKENS.IProductService,
+);
+
+const COLORS = {
+  ink: "#0F172A",
+  muted: "#64748B",
+  border: "#D9DEE5",
+  green: "#16794B",
+  greenTint: "#F4FAF6",
+  amber: "#9A6700",
+};
 
 export default function ProductViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [product, setProduct] = React.useState<ProductItem | null>(null);
   const [loading, setLoading] = React.useState(true);
-
-
 
   const loadProduct = React.useCallback(async () => {
     if (!productId) {
@@ -50,7 +55,7 @@ export default function ProductViewScreen() {
       const result = await productService.getProductById(productId);
       setProduct(result);
     } catch (error) {
-      SnackBar.Error('Failed to load product details');
+      SnackBar.Error("Failed to load product details");
       router.back();
     } finally {
       setLoading(false);
@@ -61,7 +66,7 @@ export default function ProductViewScreen() {
     React.useCallback(() => {
       void loadProduct();
       return undefined;
-    }, [loadProduct])
+    }, [loadProduct]),
   );
 
   const otherImages = React.useMemo(() => {
@@ -78,120 +83,149 @@ export default function ProductViewScreen() {
 
   if (!product) {
     return (
-      <SafeAreaView className="flex-1 bg-background" style={styles.page}>
+      <SafeAreaView style={styles.page}>
+        <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color="#4f46e5" />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Loading product...</Text>
+          <ActivityIndicator size="large" color={COLORS.green} />
+          <Text style={styles.loadingText}>Loading product...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const isActive = Boolean(product.isActive);
+  const isLowStock = (product.currentStock ?? 0) < (product.minimumStock ?? 0);
+  const subtitle =
+    [product.category, product.brand].filter(Boolean).join(" · ") ||
+    "No category";
   const detailRows = [
-    {
-      icon: Phone,
-      label: 'Brand',
-      value: product.brand || '-',
-    },
-    {
-      icon: Mail,
-      label: 'Category',
-      value: product.category || '-',
-    },
-    {
-      icon: MapPin,
-      label: 'Unit',
-      value: product.unit || '-',
-    },
+    { label: "Brand", value: product.brand || "-" },
+    { label: "Category", value: product.category || "-" },
+    { label: "Unit", value: product.unit || "-" },
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar className="bg-background" barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'} />
-      {/* <LoadingOverlay isLoading={loading} /> */}
+    <SafeAreaView style={styles.page}>
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      <View className="bg-background border-b border-border" style={styles.headerBar}>
-        <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
+      <View style={styles.headerBar}>
+        <Button
+          variant="ghost"
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>
-          Product
-        </Text>
-        <Button variant="ghost" onPress={() => router.push({ pathname: '/products/edit', params: { id: product.id } })} style={styles.headerAction}>
+        <Text style={styles.headerTitle}>Product</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Edit product"
+          onPress={() =>
+            router.push({
+              pathname: "/products/edit",
+              params: { id: product.id },
+            })
+          }
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={Pencil} size={18} />
-        </Button>
+        </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroCard}>
-          {product.coverImageUrl ? (
-            <Image source={{ uri: product.coverImageUrl }} style={styles.heroImage} />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Text style={styles.heroPlaceholderText}>{product.name?.charAt(0) || 'P'}</Text>
-            </View>
-          )}
-
-          <View style={styles.heroInfo}>
-            <Text className="text-foreground" style={styles.productName}>
-              {product.name}
-            </Text>
-            <Text className="text-muted-foreground" style={styles.productSince}>
-              {product.description || 'No description provided'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.profileCard}>
-          <View style={styles.profileMain}>
-            <Badge variant={product.isActive ? 'default' : 'outline'} style={styles.badge}>
-              <Text>{product.isActive ? 'Active' : 'Inactive'}</Text>
-            </Badge>
-          </View>
-
-          <View style={styles.detailsSection}>
-            {detailRows.map((row, index) => (
-              <View key={row.label} style={[styles.detailRow, index < detailRows.length - 1 ? styles.detailRowBorder : null]}>
-                <View style={styles.detailIconWrap}>
-                  <Icon className="text-foreground" as={row.icon} size={18} />
-                </View>
-
-                <View style={styles.detailTextWrap}>
-                  <Text className="text-muted-foreground" style={styles.detailLabel}>{row.label}</Text>
-                  <Text className="text-foreground" style={styles.detailValue}>{row.value}</Text>
-                </View>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <View style={styles.profilePanel}>
+          <View style={styles.profileRow}>
+            {product.coverImageUrl ? (
+              <Image
+                source={{ uri: product.coverImageUrl }}
+                style={styles.thumbImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.thumbPlaceholder}>
+                <Text style={styles.thumbInitial}>
+                  {product.name?.charAt(0)?.toUpperCase() || "P"}
+                </Text>
               </View>
-            ))}
+            )}
+
+            <View style={styles.profileInfo}>
+              <Text style={styles.productName} numberOfLines={2}>
+                {product.name}
+              </Text>
+              <Text style={styles.productMeta} numberOfLines={1}>
+                {subtitle}
+              </Text>
+              <View
+                style={[
+                  styles.statusPill,
+                  isActive ? styles.statusActive : styles.statusInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    isActive
+                      ? styles.statusTextActive
+                      : styles.statusTextInactive,
+                  ]}
+                >
+                  {isActive ? "ACTIVE" : "INACTIVE"}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.statsSection}>
-          <Text className="text-foreground" style={styles.statsTitle}>Inventory</Text>
-          <View style={styles.statsCard}>
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>Purchase Price</Text>
-              <Text className="text-foreground" style={styles.statsValue}>{product.purchasePrice != null ? `${product.purchasePrice} MMK` : '0 MMK'}</Text>
+        <Text style={styles.sectionHeading}>Details</Text>
+        <View style={styles.panel}>
+          {detailRows.map((row, index) => (
+            <View
+              key={row.label}
+              style={[
+                styles.detailRow,
+                index < detailRows.length - 1 ? styles.rowDivider : null,
+              ]}
+            >
+              <Text style={styles.detailLabel}>{row.label}</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>
+                {row.value}
+              </Text>
             </View>
-            <View style={styles.statsDivider} />
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>Sale Price</Text>
-              <Text className="text-foreground" style={styles.statsValue}>{product.salePrice != null ? `${product.salePrice} MMK` : '0 MMK'}</Text>
-            </View>
-          </View>
+          ))}
         </View>
 
-        <View style={styles.statsSection}>
-          <Text className="text-foreground" style={styles.statsTitle}>Stock</Text>
-          <View style={styles.statsCard}>
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>Current Stock</Text>
-              <Text className="text-foreground" style={styles.statsValue}>{product.currentStock ?? 0}</Text>
-            </View>
-            <View style={styles.statsDivider} />
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>Minimum Stock</Text>
-              <Text className="text-foreground" style={styles.statsValue}>{product.minimumStock ?? 0}</Text>
-            </View>
+        <Text style={styles.sectionHeading}>Description</Text>
+        <View style={styles.panel}>
+          <Text style={styles.descriptionText}>
+            {product.description || "No description provided"}
+          </Text>
+        </View>
+
+        <Text style={styles.sectionHeading}>Inventory</Text>
+        <View style={styles.kpiPanel}>
+          <View style={styles.kpiCell}>
+            <Text style={styles.kpiLabel}>Sale Price</Text>
+            <Text style={styles.kpiValue} numberOfLines={1}>
+              {product.salePrice != null ? `${product.salePrice} MMK` : "0 MMK"}
+            </Text>
+          </View>
+          <View style={styles.kpiDivider} />
+          <View style={styles.kpiCell}>
+            <Text style={styles.kpiLabel}>Current Stock</Text>
+            <Text
+              style={[
+                styles.kpiValue,
+                isLowStock ? styles.kpiValueWarning : null,
+              ]}
+            >
+              {product.currentStock ?? 0}
+            </Text>
+          </View>
+          <View style={styles.kpiDivider} />
+          <View style={styles.kpiCell}>
+            <Text style={styles.kpiLabel}>Minimum Stock</Text>
+            <Text style={styles.kpiValue}>{product.minimumStock ?? 0}</Text>
           </View>
         </View>
 
@@ -204,39 +238,198 @@ export default function ProductViewScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1 },
-  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 6 },
-  backButton: { minWidth: 40 },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
-  headerAction: { minWidth: 40 },
-  content: { padding: 16, gap: 16 },
-  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 12 },
-  heroCard: { borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
-  heroImage: { width: '100%', height: 220, resizeMode: 'cover' },
-  heroPlaceholder: { width: '100%', height: 220, backgroundColor: '#4f46e5', alignItems: 'center', justifyContent: 'center' },
-  heroPlaceholderText: { color: '#FFFFFF', fontSize: 36, fontWeight: '700' },
-  heroInfo: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
-  profileCard: { borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', padding: 16 },
-  profileMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4f46e5', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
-  profileInfo: { flex: 1 },
-  productName: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  productSince: { fontSize: 13 },
-  badge: { alignSelf: 'flex-start' },
-  detailsSection: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', overflow: 'hidden' },
-  detailRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  detailIconWrap: { width: 34, alignItems: 'center' },
-  detailTextWrap: { flex: 1, marginLeft: 6 },
-  detailLabel: { fontSize: 12, marginBottom: 2 },
-  detailValue: { fontSize: 14, fontWeight: '600' },
-  statsSection: { gap: 8 },
-  statsTitle: { fontSize: 16, fontWeight: '700' },
-  statsCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14 },
-  statsColumn: { flex: 1, alignItems: 'center' },
-  statsLabel: { fontSize: 12, marginBottom: 4 },
-  statsValue: { fontSize: 15, fontWeight: '700' },
-  statsDivider: { width: 1, height: 44, backgroundColor: '#E5E7EB', marginHorizontal: 12 },
+  page: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerButton: {
+    minWidth: 44,
+    alignItems: "center",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.ink,
+  },
+  contentContainer: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 32,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  profilePanel: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderTopWidth: 3,
+    borderTopColor: COLORS.green,
+    borderRadius: 6,
+    padding: 16,
+  },
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  thumbImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "#F1F5F9",
+  },
+  thumbPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.greenTint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbInitial: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: COLORS.green,
+  },
+  profileInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.ink,
+  },
+  productMeta: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  statusPill: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  statusActive: {
+    backgroundColor: "#D1FAE5",
+  },
+  statusInactive: {
+    backgroundColor: "#FEE2E2",
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  statusTextActive: {
+    color: "#047857",
+  },
+  statusTextInactive: {
+    color: "#B91C1C",
+  },
+  sectionHeading: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "800",
+    color: COLORS.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  panel: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  detailValue: {
+    flexShrink: 1,
+    marginLeft: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.ink,
+    textAlign: "right",
+  },
+  descriptionText: {
+    padding: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.ink,
+  },
+  kpiPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  kpiCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  kpiDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 36,
+    backgroundColor: COLORS.border,
+  },
+  kpiLabel: {
+    marginBottom: 4,
+    fontSize: 11,
+    color: COLORS.muted,
+    textAlign: "center",
+  },
+  kpiValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.ink,
+    textAlign: "center",
+  },
+  kpiValueWarning: {
+    color: COLORS.amber,
+  },
 });

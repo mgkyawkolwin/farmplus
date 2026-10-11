@@ -1,230 +1,438 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { ArrowUpRight, ContactRound, HandCoins, Package, ShieldCheck, TrendingUp, Wallet } from 'lucide-react-native';
+import * as React from "react";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useFocusEffect, useRouter, type Href } from "expo-router";
+import {
+  AlertTriangle,
+  Boxes,
+  ChevronRight,
+  CirclePlus,
+  ClipboardList,
+  HandCoins,
+  Receipt,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import HomeTopBar from '@/components/homeTopBar';
-import LoadingOverlay from '@/components/loadingOverlay';
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
-import SnackBar from '@/components/ui/snack-bar';
-import { container, DI_TOKENS } from '@/di';
-import { CustomerItem } from '@/models/customer';
-import { ProductItem } from '@/models/product';
-import { Purchase } from '@/models/purchase';
-import { SaleDashboard } from '@/models/sale';
-import { ICustomerService } from '@/services/customerService';
-import { IProductService } from '@/services/productService';
-import { IPurchaseService } from '@/services/purchaseService';
-import { ISaleService } from '@/services/saleService';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import HomeTopBar from "@/components/homeTopBar";
+import LoadingOverlay from "@/components/loadingOverlay";
+import {
+  BarChart,
+  DonutChart,
+  RankedBars,
+  compactNumber,
+} from "@/components/charts";
+import { Text } from "@/components/ui/text";
+import SnackBar from "@/components/ui/snack-bar";
+import { container, DI_TOKENS } from "@/di";
+import { useSelectedShopChanged } from "@/lib/selectedShop";
+import { CustomerItem } from "@/models/customer";
+import { DealerItem } from "@/models/dealer";
+import { ProductItem } from "@/models/product";
+import { Purchase } from "@/models/purchase";
+import { Sale, SaleDashboard } from "@/models/sale";
+import { Supplier } from "@/models/supplier";
+import { ICustomerService } from "@/services/customerService";
+import { DealerServiceClient } from "@/services/dealerService";
+import { IProductService } from "@/services/productService";
+import { IPurchaseService } from "@/services/purchaseService";
+import { ISaleService } from "@/services/saleService";
+import { SupplierServiceClient } from "@/services/supplierService";
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
-const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
-const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
-const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
+const purchaseService = container.resolve<IPurchaseService>(
+  DI_TOKENS.IPurchaseService,
+);
+const productService = container.resolve<IProductService>(
+  DI_TOKENS.IProductService,
+);
+const customerService = container.resolve<ICustomerService>(
+  DI_TOKENS.ICustomerService,
+);
+const supplierService = new SupplierServiceClient();
+const dealerService = new DealerServiceClient();
+
+const COLORS = {
+  ink: "#0F172A",
+  muted: "#64748B",
+  border: "#D9DEE5",
+  surface: "#FFFFFF",
+  green: "#16794B",
+  blue: "#2367A8",
+  amber: "#9A6700",
+  red: "#B42318",
+};
+
+type Tone = "green" | "blue" | "amber" | "red";
+
+const TONES: Record<Tone, { fg: string; bg: string; border: string }> = {
+  green: { fg: "#16794B", bg: "#F4FAF6", border: "#D5E9DC" },
+  blue: { fg: "#2367A8", bg: "#F3F8FC", border: "#D6E6F3" },
+  amber: { fg: "#9A6700", bg: "#FFFAEE", border: "#EFE2BF" },
+  red: { fg: "#B42318", bg: "#FFF5F4", border: "#F0D8D5" },
+};
+
+const CATEGORY_COLORS = ["#2367A8", "#16794B", "#9A6700", "#7C3AED", "#0E7490"];
+const OTHER_COLOR = "#94A3B8";
+
+type DashboardData = {
+  saleDashboard: SaleDashboard | null;
+  sales: Sale[];
+  purchases: Purchase[];
+  products: ProductItem[];
+  customers: CustomerItem[];
+  suppliers: Supplier[];
+  dealers: DealerItem[];
+};
+
+const emptyData: DashboardData = {
+  saleDashboard: null,
+  sales: [],
+  purchases: [],
+  products: [],
+  customers: [],
+  suppliers: [],
+  dealers: [],
+};
 
 function money(value: number) {
-  return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
+  return `${value.toLocaleString("en-US", { maximumFractionDigits: 0 })} MMK`;
 }
 
-function countText(value: number) {
-  return value.toLocaleString('en-US');
+function count(value: number) {
+  return value.toLocaleString("en-US");
 }
 
-function numberBadge(value: number, positive: boolean) {
+function monthKey(date: Date) {
+  return date.getFullYear() * 12 + date.getMonth();
+}
+
+function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  return result.status === "fulfilled" ? result.value : fallback;
+}
+
+function Section({
+  title,
+  subtitle,
+  onViewAll,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onViewAll?: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <View style={[styles.trendPill, positive ? styles.trendUp : styles.trendDown]}>
-      <ArrowUpRight size={12} color={positive ? '#16794B' : '#B42318'} />
-      <Text style={[styles.trendText, positive ? styles.trendTextUp : styles.trendTextDown]}>{value}%</Text>
+    <View>
+      <View style={styles.sectionHeading}>
+        <View style={styles.sectionTitleBlock}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          {subtitle ? (
+            <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+          ) : null}
+        </View>
+        {onViewAll ? (
+          <Pressable style={styles.seeAll} onPress={onViewAll}>
+            <Text style={styles.seeAllText}>View all</Text>
+            <ChevronRight size={14} color={COLORS.green} />
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={styles.panel}>{children}</View>
     </View>
   );
 }
 
-function MetricCard({
+function Kpi({
   label,
   value,
-  subtext,
-  icon,
+  caption,
+  icon: IconComponent,
   tone,
 }: {
   label: string;
   value: string;
-  subtext: string;
+  caption: string;
   icon: typeof Wallet;
-  tone: 'green' | 'blue' | 'amber' | 'red';
+  tone: Tone;
 }) {
-  const IconComponent = icon;
-  const palette = tone === 'green'
-    ? { box: styles.metricGreenBox, accent: '#16794B', bg: '#ECF9F0' }
-    : tone === 'blue'
-      ? { box: styles.metricBlueBox, accent: '#2367A8', bg: '#EAF4FF' }
-      : tone === 'amber'
-        ? { box: styles.metricAmberBox, accent: '#A06A00', bg: '#FFF7EA' }
-        : { box: styles.metricRedBox, accent: '#B42318', bg: '#FFF1F0' };
-
+  const palette = TONES[tone];
   return (
-    <View style={[styles.metricCard, palette.box]}>
-      <View style={[styles.metricIconWrap, { backgroundColor: palette.bg }]}>
-        <IconComponent size={18} color={palette.accent} />
+    <View
+      style={[
+        styles.kpi,
+        {
+          backgroundColor: palette.bg,
+          borderColor: palette.border,
+          borderTopColor: palette.fg,
+        },
+      ]}
+    >
+      <View style={styles.kpiHeader}>
+        <View style={styles.kpiIcon}>
+          <IconComponent size={16} color={palette.fg} />
+        </View>
+        <Text style={styles.kpiLabel} numberOfLines={1}>
+          {label}
+        </Text>
       </View>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricSubtext}>{subtext}</Text>
+      <View style={styles.kpiBody}>
+        <Text
+          style={styles.kpiValue}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {value}
+        </Text>
+        <Text style={styles.kpiCaption} numberOfLines={1}>
+          {caption}
+        </Text>
+      </View>
     </View>
   );
 }
 
-function PerformanceRow({
+function PartnerRow({
   label,
-  value,
   total,
-  progress,
-  accent,
-  hint,
+  active,
+  color,
 }: {
   label: string;
-  value: string;
-  total: string;
-  progress: number;
-  accent: string;
-  hint: string;
+  total: number;
+  active: number;
+  color: string;
 }) {
+  const share = total > 0 ? (active / total) * 100 : 0;
   return (
-    <View style={styles.performanceRow}>
-      <View style={styles.performanceMeta}>
-        <Text style={styles.performanceLabel}>{label}</Text>
-        <Text style={styles.performanceHint}>{hint}</Text>
+    <View style={styles.partnerRow}>
+      <View style={styles.partnerHeader}>
+        <Text style={styles.partnerLabel}>{label}</Text>
+        <Text style={styles.partnerCount}>{count(total)}</Text>
       </View>
-      <View style={styles.performanceRight}>
-        <Text style={styles.performanceValue}>{value}</Text>
-        <Text style={styles.performanceTotal}>{total}</Text>
+      <View style={styles.partnerTrack}>
+        <View
+          style={[
+            styles.partnerFill,
+            { width: `${share}%`, backgroundColor: color },
+          ]}
+        />
       </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.min(Math.max(progress, 0), 100)}%`, backgroundColor: accent }]} />
-      </View>
+      <Text style={styles.partnerCaption}>
+        {count(active)} active · {count(total - active)} inactive
+      </Text>
     </View>
   );
+}
+
+function statusOf(sale: Sale) {
+  if (sale.status === "Voided")
+    return { label: "VOID", color: "#B91C1C", bg: "#FEE2E2" };
+  if (sale.paidAmount > 0 && sale.balance <= 0)
+    return { label: "PAID", color: "#047857", bg: "#D1FAE5" };
+  return { label: "UNPAID", color: "#B45309", bg: "#FEF3C7" };
 }
 
 export default function DashboardScreen() {
-  const [sales, setSales] = React.useState<SaleDashboard | null>(null);
-  const [purchaseItems, setPurchaseItems] = React.useState<Purchase[]>([]);
-  const [productItems, setProductItems] = React.useState<ProductItem[]>([]);
-  const [customerItems, setCustomerItems] = React.useState<CustomerItem[]>([]);
+  const router = useRouter();
+  const [data, setData] = React.useState<DashboardData>(emptyData);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const loadMetrics = React.useCallback(async () => {
-    try {
-      const [saleDashboard, products, customers, purchases] = await Promise.all([
-        saleService.getDashboard(),
-        productService.getProducts(1, 2000),
-        customerService.getCustomers(1, 2000),
-        purchaseService.getPurchases(1, 2000),
-      ]);
+  const loadDashboard = React.useCallback(async () => {
+    const results = await Promise.allSettled([
+      saleService.getDashboard(),
+      saleService.getSales(1, 1000),
+      purchaseService.getPurchases(1, 1000),
+      productService.getProducts(1, 2000),
+      customerService.getCustomers(1, 2000),
+      supplierService.getSuppliers(1, 2000),
+      dealerService.getDealers(1, 2000),
+    ]);
 
-      setSales(saleDashboard ?? null);
-      setPurchaseItems(Array.isArray(purchases) ? purchases : []);
-      setProductItems(Array.isArray(products) ? products : []);
-      setCustomerItems(Array.isArray(customers) ? customers : []);
-    } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to load dashboard metrics');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    if (results.every((result) => result.status === "rejected")) {
+      SnackBar.Error("Unable to load dashboard data");
     }
+
+    setData({
+      saleDashboard: settled(results[0], null),
+      sales: settled(results[1], []),
+      purchases: settled(results[2], []),
+      products: settled(results[3], []),
+      customers: settled(results[4], []),
+      suppliers: settled(results[5], []),
+      dealers: settled(results[6], []),
+    });
+    setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
       setLoading(true);
-      void loadMetrics();
+      void loadDashboard();
       return undefined;
-    }, [loadMetrics]),
+    }, [loadDashboard]),
   );
 
-  const monthSales = sales?.thisMonthSales ?? 0;
-  const todaySales = sales?.todaySales ?? 0;
-  const purchaseTotal = purchaseItems.reduce((sum, item) => sum + (Number(item.netTotal ?? 0) || 0), 0);
-  const totalPurchases = purchaseItems.length;
-  const averagePurchaseValue = totalPurchases > 0 ? purchaseTotal / totalPurchases : 0;
+  useSelectedShopChanged(() => {
+    setLoading(true);
+    void loadDashboard();
+  });
 
-  const productCount = productItems.length;
-  const activeProducts = productItems.filter((product) => product.isActive !== false).length;
-  const lowStockProducts = productItems.filter((product) => Number(product.currentStock ?? 0) <= Number(product.minimumStock ?? 0)).length;
-  const inventoryHealth = productCount > 0 ? (activeProducts / productCount) * 100 : 0;
+  const metrics = React.useMemo(() => {
+    const { saleDashboard, sales, purchases, products, customers, suppliers } =
+      data;
+    const activeSales = sales.filter((sale) => sale.status !== "Voided");
+    const now = new Date();
+    const currentMonth = monthKey(now);
 
-  const customerCount = customerItems.length;
-  const activeCustomers = customerItems.filter((customer) => customer.isActive !== false).length;
-  const inactiveCustomers = customerCount - activeCustomers;
-  const customerHealth = customerCount > 0 ? (activeCustomers / customerCount) * 100 : 0;
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      return {
+        key: monthKey(date),
+        label: date.toLocaleDateString("en-US", { month: "short" }),
+        sales: 0,
+        purchases: 0,
+      };
+    });
+    const bucket = new Map(months.map((month) => [month.key, month]));
+    activeSales.forEach((sale) => {
+      const entry = bucket.get(monthKey(new Date(sale.saleDate)));
+      if (entry) entry.sales += sale.netTotal;
+    });
+    purchases.forEach((purchase) => {
+      const entry = bucket.get(monthKey(new Date(purchase.purchaseDate)));
+      if (entry) entry.purchases += purchase.netTotal;
+    });
 
-  const grossMargin = Math.max(monthSales - purchaseTotal, 0);
-  const marginPercent = monthSales > 0 ? (grossMargin / monthSales) * 100 : 0;
-  const avgOrderValue = sales && sales.recentSales && sales.recentSales.length > 0 ? monthSales / sales.recentSales.length : 0;
+    const monthPurchases = bucket.get(currentMonth)?.purchases ?? 0;
+    const collected = activeSales.reduce(
+      (sum, sale) => sum + sale.paidAmount,
+      0,
+    );
+    const outstanding = activeSales.reduce(
+      (sum, sale) => sum + Math.max(sale.balance, 0),
+      0,
+    );
 
-  const topProduct = productItems.reduce<ProductItem | null>((best, item) => {
-    if (!best) return item;
-    return Number(item.currentStock ?? 0) > Number(best.currentStock ?? 0) ? item : best;
-  }, null);
+    const activeProducts = products.filter(
+      (product) => product.isActive !== false,
+    );
+    const stockOf = (product: ProductItem) => Number(product.currentStock ?? 0);
+    const minOf = (product: ProductItem) => Number(product.minimumStock ?? 0);
+    const valueOf = (product: ProductItem) =>
+      Math.max(stockOf(product), 0) * Number(product.salePrice ?? 0);
+    const outOfStock = activeProducts.filter((p) => stockOf(p) <= 0);
+    const lowStock = activeProducts.filter(
+      (p) => stockOf(p) > 0 && stockOf(p) <= minOf(p),
+    );
+    const healthy = activeProducts.length - outOfStock.length - lowStock.length;
+    const inventoryValue = activeProducts.reduce(
+      (sum, product) => sum + valueOf(product),
+      0,
+    );
 
-  const insights = [
-    {
-      title: 'Gross margin',
-      value: money(grossMargin),
-      detail: `${Math.round(marginPercent)}% of sales retained after stock cost`,
-      tone: 'green' as const,
-    },
-    {
-      title: 'Inventory alert',
-      value: `${countText(lowStockProducts)} items`,
-      detail: `${countText(activeProducts)} active products ready for movement`,
-      tone: 'amber' as const,
-    },
-    {
-      title: 'Customer health',
-      value: `${Math.round(customerHealth)}%`,
-      detail: `${countText(activeCustomers)} active vs ${countText(inactiveCustomers)} inactive`,
-      tone: 'red' as const,
-    },
-  ];
+    const categoryTotals = Array.from(
+      activeProducts.reduce((totals, product) => {
+        const category = product.category?.trim() || "Uncategorized";
+        totals.set(category, (totals.get(category) ?? 0) + valueOf(product));
+        return totals;
+      }, new Map<string, number>()),
+    )
+      .map(([label, value]) => ({ label, value }))
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+    const categorySlices = categoryTotals
+      .slice(0, CATEGORY_COLORS.length)
+      .map((item, index) => ({ ...item, color: CATEGORY_COLORS[index] }));
+    const otherValue = categoryTotals
+      .slice(CATEGORY_COLORS.length)
+      .reduce((sum, item) => sum + item.value, 0);
+    if (otherValue > 0) {
+      categorySlices.push({
+        label: "Other",
+        value: otherValue,
+        color: OTHER_COLOR,
+      });
+    }
 
-  const kpis = [
-    {
-      label: 'Monthly sales',
-      value: money(monthSales),
-      subtext: `${money(todaySales)} today`,
-      icon: Wallet,
-      tone: 'green' as const,
-    },
-    {
-      label: 'Purchases',
-      value: money(purchaseTotal),
-      subtext: `${countText(totalPurchases)} orders`,
-      icon: HandCoins,
-      tone: 'blue' as const,
-    },
-    {
-      label: 'Products',
-      value: countText(productCount),
-      subtext: `${Math.round(inventoryHealth)}% active`,
-      icon: Package,
-      tone: 'amber' as const,
-    },
-    {
-      label: 'Customers',
-      value: countText(customerCount),
-      subtext: `${Math.round(customerHealth)}% engaged`,
-      icon: ContactRound,
-      tone: 'red' as const,
-    },
-  ];
+    const lowStockItems = [...outOfStock, ...lowStock]
+      .sort(
+        (a, b) =>
+          stockOf(a) / Math.max(minOf(a), 1) -
+          stockOf(b) / Math.max(minOf(b), 1),
+      )
+      .slice(0, 5);
+
+    const topCustomers = customers
+      .filter((customer) => (customer.totalOutstanding ?? 0) > 0)
+      .sort((a, b) => (b.totalOutstanding ?? 0) - (a.totalOutstanding ?? 0))
+      .slice(0, 5)
+      .map((customer) => ({
+        label: customer.name,
+        value: customer.totalOutstanding ?? 0,
+      }));
+
+    const supplierTotals = purchases.reduce((totals, purchase) => {
+      totals.set(
+        purchase.supplierName,
+        (totals.get(purchase.supplierName) ?? 0) + purchase.netTotal,
+      );
+      return totals;
+    }, new Map<string, number>());
+    const topSuppliers = Array.from(supplierTotals)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    return {
+      months,
+      monthSales: saleDashboard?.thisMonthSales ?? 0,
+      todaySales: saleDashboard?.todaySales ?? 0,
+      monthPurchases,
+      purchaseOrders: purchases.length,
+      receivables: saleDashboard?.unpaidAmount ?? outstanding,
+      unpaidInvoices: saleDashboard?.unpaidSales ?? 0,
+      collected,
+      outstanding,
+      activeProducts: activeProducts.length,
+      inventoryValue,
+      outOfStock: outOfStock.length,
+      lowStock: lowStock.length,
+      healthy,
+      categorySlices,
+      lowStockItems,
+      topCustomers,
+      topSuppliers,
+      activeCustomers: customers.filter((item) => item.isActive !== false)
+        .length,
+      activeSuppliers: suppliers.filter((item) => item.isActive !== false)
+        .length,
+      activeDealers: data.dealers.filter((item) => item.isActive !== false)
+        .length,
+      recentSales: (saleDashboard?.recentSales ?? []).slice(0, 5),
+    };
+  }, [data]);
+
+  const alerts = metrics.outOfStock + metrics.lowStock;
+  const healthTotal = Math.max(
+    metrics.healthy + metrics.lowStock + metrics.outOfStock,
+    1,
+  );
 
   return (
-    <SafeAreaView style={styles.page}>
+    <SafeAreaView className="bg-background" style={styles.page}>
       <HomeTopBar />
       <LoadingOverlay isLoading={loading} />
       <ScrollView
@@ -235,529 +443,530 @@ export default function DashboardScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              void loadMetrics();
+              void loadDashboard();
             }}
           />
         }
       >
-        <View style={styles.headerRow}>
-          <View style={styles.headerTextBlock}>
-            <Text style={styles.eyebrow}>Executive summary</Text>
-            <Text variant="h2" style={styles.header}>Operations dashboard</Text>
+        <View style={styles.titleRow}>
+          <View style={styles.titleBlock}>
+            <Text style={styles.eyebrow}>Executive dashboard</Text>
+            <Text style={styles.title}>Business overview</Text>
+            <Text style={styles.date}>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </Text>
           </View>
           <View style={styles.livePill}>
-            <View style={styles.dotLive} />
+            <View style={styles.liveDot} />
             <Text style={styles.liveText}>Live</Text>
           </View>
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroLabel}>Month-to-date revenue</Text>
-              <Text style={styles.heroValue}>{money(monthSales)}</Text>
-            </View>
-            <View style={styles.heroTrendWrap}>
-              <Icon as={TrendingUp} size={16} color="#A7F3D0" />
-              {numberBadge(Math.min(96, Math.max(15, Math.round(marginPercent))), true)}
-            </View>
-          </View>
-
-          <View style={styles.heroGrid}>
-            <View style={styles.heroMiniCard}>
-              <Text style={styles.miniLabel}>Today</Text>
-              <Text style={styles.miniValue}>{money(todaySales)}</Text>
-            </View>
-            <View style={styles.heroMiniCard}>
-              <Text style={styles.miniLabel}>Gross margin</Text>
-              <Text style={styles.miniValue}>{money(grossMargin)}</Text>
-            </View>
-            <View style={styles.heroMiniCard}>
-              <Text style={styles.miniLabel}>Avg order</Text>
-              <Text style={styles.miniValue}>{money(avgOrderValue)}</Text>
-            </View>
-          </View>
+        <View style={styles.kpiGrid}>
+          <Kpi
+            label="Sales · month"
+            value={money(metrics.monthSales)}
+            caption={`${money(metrics.todaySales)} today`}
+            icon={TrendingUp}
+            tone="green"
+          />
+          <Kpi
+            label="Purchases · month"
+            value={money(metrics.monthPurchases)}
+            caption={`${count(metrics.purchaseOrders)} orders recorded`}
+            icon={HandCoins}
+            tone="blue"
+          />
+          <Kpi
+            label="Receivables"
+            value={money(metrics.receivables)}
+            caption={`${count(metrics.unpaidInvoices)} unpaid invoices`}
+            icon={Receipt}
+            tone="amber"
+          />
+          <Kpi
+            label="Inventory value"
+            value={money(metrics.inventoryValue)}
+            caption={`${count(metrics.activeProducts)} active products`}
+            icon={Boxes}
+            tone="blue"
+          />
+          <Kpi
+            label="Stock alerts"
+            value={count(alerts)}
+            caption={`${count(metrics.outOfStock)} out of stock`}
+            icon={AlertTriangle}
+            tone={alerts > 0 ? "red" : "green"}
+          />
+          <Kpi
+            label="Customers"
+            value={count(data.customers.length)}
+            caption={`${count(metrics.activeCustomers)} active`}
+            icon={Users}
+            tone="green"
+          />
         </View>
 
-        <View style={styles.metricGrid}>
-          {kpis.map((item) => (
-            <MetricCard
-              key={item.label}
-              label={item.label}
-              value={item.value}
-              subtext={item.subtext}
-              icon={item.icon}
-              tone={item.tone}
+        <View style={styles.actionRow}>
+          <Pressable
+            style={[styles.actionButton, styles.actionPrimary]}
+            onPress={() => router.push("/sales/new" as Href)}
+          >
+            <CirclePlus size={18} color="#FFFFFF" />
+            <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>
+              New Sale
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.actionButton, styles.actionSecondary]}
+            onPress={() => router.push("/purchases/new" as Href)}
+          >
+            <ClipboardList size={18} color={COLORS.green} />
+            <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>
+              New Purchase
+            </Text>
+          </Pressable>
+        </View>
+
+        <Section
+          title="Sales vs purchases"
+          subtitle="Last 6 months · net totals"
+        >
+          <BarChart
+            data={metrics.months.map((month) => ({
+              label: month.label,
+              values: [month.sales, month.purchases],
+            }))}
+            series={[
+              { name: "Sales", color: COLORS.green },
+              { name: "Purchases", color: COLORS.blue },
+            ]}
+          />
+        </Section>
+
+        <Section title="Collections" subtitle="Paid vs outstanding sales">
+          <DonutChart
+            centerLabel="Collected"
+            centerValue={`${Math.round(
+              (metrics.collected /
+                Math.max(metrics.collected + metrics.outstanding, 1)) *
+                100,
+            )}%`}
+            slices={[
+              {
+                label: "Collected",
+                value: metrics.collected,
+                color: COLORS.green,
+              },
+              {
+                label: "Outstanding",
+                value: metrics.outstanding,
+                color: COLORS.amber,
+              },
+            ]}
+          />
+        </Section>
+
+        <Section
+          title="Inventory by category"
+          subtitle="Stock value at sale price"
+        >
+          {metrics.categorySlices.length > 0 ? (
+            <DonutChart
+              centerLabel="Total value"
+              centerValue={compactNumber(metrics.inventoryValue)}
+              slices={metrics.categorySlices}
             />
-          ))}
-        </View>
+          ) : (
+            <Text style={styles.empty}>No stock value recorded.</Text>
+          )}
+        </Section>
 
-        <View style={styles.panel}>
-          <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>Performance overview</Text>
-            <Text style={styles.panelHint}>Commercial health</Text>
+        <Section
+          title="Stock health"
+          subtitle="Active products by status"
+          onViewAll={() => router.push("/inventory/list" as Href)}
+        >
+          <View style={styles.healthBar}>
+            <View
+              style={{
+                flex: metrics.healthy / healthTotal,
+                backgroundColor: COLORS.green,
+              }}
+            />
+            <View
+              style={{
+                flex: metrics.lowStock / healthTotal,
+                backgroundColor: COLORS.amber,
+              }}
+            />
+            <View
+              style={{
+                flex: metrics.outOfStock / healthTotal,
+                backgroundColor: COLORS.red,
+              }}
+            />
           </View>
-
-          <PerformanceRow
-            label="Sales efficiency"
-            value={money(monthSales)}
-            total={money(monthSales + purchaseTotal)}
-            progress={Math.min(100, Math.max(0, marginPercent))}
-            accent="#16794B"
-            hint={`${Math.round(marginPercent)}% margin`}
-          />
-          <PerformanceRow
-            label="Purchase load"
-            value={money(purchaseTotal)}
-            total={money(monthSales + purchaseTotal)}
-            progress={Math.min(100, Math.max(0, (purchaseTotal / Math.max(monthSales + purchaseTotal, 1)) * 100))}
-            accent="#2367A8"
-            hint={`${countText(totalPurchases)} orders`}
-          />
-          <PerformanceRow
-            label="Inventory health"
-            value={`${Math.round(inventoryHealth)}%`}
-            total={`${countText(activeProducts)} active`}
-            progress={Math.min(100, Math.max(0, inventoryHealth))}
-            accent="#A06A00"
-            hint={`${countText(lowStockProducts)} low-stock`}
-          />
-          <PerformanceRow
-            label="Customer retention"
-            value={`${Math.round(customerHealth)}%`}
-            total={`${countText(activeCustomers)} active`}
-            progress={Math.min(100, Math.max(0, customerHealth))}
-            accent="#B42318"
-            hint={`${countText(inactiveCustomers)} inactive`}
-          />
-        </View>
-
-        <View style={styles.dualGrid}>
-          <View style={styles.panel}>
-            <View style={styles.panelHeader}>
-              <Text style={styles.panelTitle}>Inventory pulse</Text>
-              <Text style={styles.panelHint}>Stock</Text>
-            </View>
-
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Low stock</Text>
-              <Text style={styles.listValue}>{countText(lowStockProducts)}</Text>
-            </View>
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Active products</Text>
-              <Text style={styles.listValue}>{countText(activeProducts)}</Text>
-            </View>
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Top stock item</Text>
-              <Text style={styles.listValue} numberOfLines={1}>
-                {topProduct?.name ?? 'No data'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.panel}>
-            <View style={styles.panelHeader}>
-              <Text style={styles.panelTitle}>Customer pulse</Text>
-              <Text style={styles.panelHint}>Engagement</Text>
-            </View>
-
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Active</Text>
-              <Text style={styles.listValue}>{countText(activeCustomers)}</Text>
-            </View>
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Inactive</Text>
-              <Text style={styles.listValue}>{countText(inactiveCustomers)}</Text>
-            </View>
-            <View style={styles.listRow}>
-              <Text style={styles.listLabel}>Coverage</Text>
-              <Text style={styles.listValue}>{Math.round(customerHealth)}%</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.panel}>
-          <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>Operational insights</Text>
-            <View style={styles.insightBadge}>
-              <ShieldCheck size={14} color="#16794B" />
-              <Text style={styles.insightBadgeText}>Healthy</Text>
-            </View>
-          </View>
-
-          {insights.map((item) => (
-            <View key={item.title} style={styles.insightRow}>
-              <View style={[styles.insightDot, item.tone === 'green' ? styles.dotGreen : item.tone === 'amber' ? styles.dotAmber : styles.dotRed]} />
-              <View style={styles.insightTextWrap}>
-                <Text style={styles.insightTitle}>{item.title}</Text>
-                <Text style={styles.insightDetail}>{item.detail}</Text>
+          <View style={styles.healthLegend}>
+            {[
+              { label: "Healthy", value: metrics.healthy, color: COLORS.green },
+              { label: "Low", value: metrics.lowStock, color: COLORS.amber },
+              { label: "Out", value: metrics.outOfStock, color: COLORS.red },
+            ].map((item) => (
+              <View key={item.label} style={styles.healthItem}>
+                <Text style={[styles.healthValue, { color: item.color }]}>
+                  {count(item.value)}
+                </Text>
+                <Text style={styles.healthLabel}>{item.label}</Text>
               </View>
-              <Text style={styles.insightValue}>{item.value}</Text>
+            ))}
+          </View>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.th, styles.tdWide]}>Needs restocking</Text>
+              <Text style={[styles.th, styles.tdNum]}>On hand</Text>
+              <Text style={[styles.th, styles.tdNum]}>Min</Text>
             </View>
-          ))}
-        </View>
+            {metrics.lowStockItems.map((product) => (
+              <View key={product.id} style={styles.tableRow}>
+                <Text style={[styles.td, styles.tdWide]} numberOfLines={1}>
+                  {product.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.td,
+                    styles.tdNum,
+                    {
+                      color:
+                        Number(product.currentStock ?? 0) <= 0
+                          ? COLORS.red
+                          : COLORS.amber,
+                      fontWeight: "700",
+                    },
+                  ]}
+                >
+                  {count(Number(product.currentStock ?? 0))}
+                </Text>
+                <Text style={[styles.td, styles.tdNum]}>
+                  {count(Number(product.minimumStock ?? 0))}
+                </Text>
+              </View>
+            ))}
+            {metrics.lowStockItems.length === 0 ? (
+              <Text style={styles.empty}>
+                All products are sufficiently stocked.
+              </Text>
+            ) : null}
+          </View>
+        </Section>
+
+        <Section
+          title="Top customer receivables"
+          subtitle="Highest outstanding balances"
+          onViewAll={() => router.push("/customers/list" as Href)}
+        >
+          <RankedBars
+            items={metrics.topCustomers}
+            color={COLORS.amber}
+            formatValue={(value) => money(value)}
+            emptyText="No outstanding balances."
+          />
+        </Section>
+
+        <Section
+          title="Top suppliers"
+          subtitle="By purchase value"
+          onViewAll={() => router.push("/suppliers/list" as Href)}
+        >
+          <RankedBars
+            items={metrics.topSuppliers}
+            color={COLORS.blue}
+            formatValue={(value) => money(value)}
+            emptyText="No purchases recorded."
+          />
+        </Section>
+
+        <Section title="Partner network" subtitle="Active relationships">
+          <View style={styles.partners}>
+            <PartnerRow
+              label="Customers"
+              total={data.customers.length}
+              active={metrics.activeCustomers}
+              color={COLORS.green}
+            />
+            <PartnerRow
+              label="Suppliers"
+              total={data.suppliers.length}
+              active={metrics.activeSuppliers}
+              color={COLORS.blue}
+            />
+            <PartnerRow
+              label="Dealers"
+              total={data.dealers.length}
+              active={metrics.activeDealers}
+              color={COLORS.amber}
+            />
+          </View>
+        </Section>
+
+        <Section
+          title="Recent sales"
+          subtitle="Latest transactions"
+          onViewAll={() => router.push("/sales/list" as Href)}
+        >
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.th, styles.tdWide]}>Customer</Text>
+              <Text style={[styles.th, styles.tdNum]}>Total</Text>
+              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+            </View>
+            {metrics.recentSales.map((sale) => {
+              const status = statusOf(sale);
+              return (
+                <View key={sale.id} style={styles.tableRow}>
+                  <View style={styles.tdWide}>
+                    <Text style={styles.td} numberOfLines={1}>
+                      {sale.customerName}
+                    </Text>
+                    <Text style={styles.tdSub}>
+                      {new Date(sale.saleDate).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>
+                    {money(sale.netTotal)}
+                  </Text>
+                  <View style={styles.tdStatus}>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        { backgroundColor: status.bg },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.statusText, { color: status.color }]}
+                      >
+                        {status.label}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+            {metrics.recentSales.length === 0 ? (
+              <Text style={styles.empty}>No sales recorded.</Text>
+            ) : null}
+          </View>
+        </Section>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-    backgroundColor: '#EEF2F4',
+  page: { flex: 1, backgroundColor: COLORS.surface },
+  scrollView: { flex: 1, backgroundColor: COLORS.surface },
+  content: { padding: 16, paddingBottom: 100, gap: 20 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
   },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 100,
-    gap: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingTop: 4,
-  },
-  headerTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  header: {
-    fontWeight: '700',
-    fontSize: 26,
-    color: '#0F172A',
-  },
+  titleBlock: { flex: 1, gap: 2 },
   eyebrow: {
-    color: '#475467',
-    fontSize: 11,
-    fontWeight: '700',
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "800",
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
+  title: { color: COLORS.ink, fontSize: 22, fontWeight: "800" },
+  date: { color: COLORS.muted, fontSize: 12 },
   livePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#EAFBF0',
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#CDE8D6",
+    backgroundColor: "#EAFBF0",
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#CDE8D6',
+    paddingVertical: 5,
   },
-  dotLive: {
-    width: 8,
-    height: 8,
+  liveDot: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
-    backgroundColor: '#1D9A59',
+    backgroundColor: "#1D9A59",
   },
-  liveText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#16794B',
-  },
-  heroCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 24,
-    padding: 18,
+  liveText: { color: COLORS.green, fontSize: 11, fontWeight: "700" },
+  kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  kpi: {
+    width: "48%",
+    minHeight: 88,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
-    gap: 16,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  heroTitleWrap: {
-    flex: 1,
-    gap: 4,
-  },
-  heroLabel: {
-    color: '#B7C4D0',
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  heroValue: {
-    color: '#FFFFFF',
-    fontSize: 31,
-    fontWeight: '800',
-  },
-  heroTrendWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  heroGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  heroMiniCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderTopWidth: 3,
     paddingHorizontal: 12,
     paddingVertical: 10,
-  },
-  miniLabel: {
-    color: '#C7D5CF',
-    fontSize: 11,
-    marginBottom: 6,
-  },
-  miniValue: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  metricGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: "space-between",
     gap: 10,
   },
-  metricCard: {
-    width: '48%',
-    minHeight: 124,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
+  kpiHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  kpiIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFFAA",
+  },
+  kpiLabel: {
+    flex: 1,
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  kpiBody: { gap: 2 },
+  kpiValue: { color: COLORS.ink, fontSize: 18, fontWeight: "800" },
+  kpiCaption: { color: COLORS.muted, fontSize: 10 },
+  actionRow: { flexDirection: "row", gap: 10 },
+  actionButton: {
+    flex: 1,
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  metricGreenBox: {
-    backgroundColor: '#F2FBF5',
-    borderColor: '#CDE8D6',
+  actionPrimary: { backgroundColor: COLORS.green, borderColor: COLORS.green },
+  actionSecondary: { backgroundColor: "#F4FAF6", borderColor: COLORS.green },
+  actionLabel: { fontSize: 13, fontWeight: "700", letterSpacing: 0.2 },
+  actionPrimaryLabel: { color: "#FFFFFF" },
+  actionSecondaryLabel: { color: COLORS.green },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
-  metricBlueBox: {
-    backgroundColor: '#F1F8FF',
-    borderColor: '#D9EAFB',
+  sectionTitleBlock: { flex: 1, gap: 2 },
+  sectionTitle: {
+    color: COLORS.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  metricAmberBox: {
-    backgroundColor: '#FFF9EE',
-    borderColor: '#F1E0AF',
+  sectionSubtitle: { color: COLORS.muted, fontSize: 11 },
+  seeAll: {
+    minHeight: 30,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#CDE8D6",
+    backgroundColor: "#F4FAF6",
   },
-  metricRedBox: {
-    backgroundColor: '#FFF3F1',
-    borderColor: '#F3D7D2',
-  },
-  metricIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricLabel: {
-    color: '#475467',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metricValue: {
-    color: '#101828',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  metricSubtext: {
-    color: '#6B7280',
+  seeAllText: {
+    color: COLORS.green,
     fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   panel: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 16,
-    gap: 12,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: COLORS.surface,
+    padding: 12,
   },
-  panelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  panelTitle: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  panelHint: {
-    color: '#6B7280',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  performanceRow: {
-    gap: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  performanceMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  performanceLabel: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  performanceHint: {
-    color: '#6B7280',
-    fontSize: 11,
-  },
-  performanceRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  performanceValue: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  performanceTotal: {
-    color: '#6B7280',
-    fontSize: 11,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#E5E7EB',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-  dualGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 4,
-  },
-  listLabel: {
-    color: '#475467',
-    fontSize: 12,
-    flex: 1,
-  },
-  listValue: {
-    color: '#111827',
-    fontSize: 12,
-    fontWeight: '700',
-    flexShrink: 1,
-    maxWidth: '55%',
-    textAlign: 'right',
-  },
-  insightBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#EAFBF0',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: '#CDE8D6',
-  },
-  insightBadgeText: {
-    color: '#16794B',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  insightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  insightDot: {
-    width: 10,
+  healthBar: {
+    flexDirection: "row",
     height: 10,
-    borderRadius: 999,
+    borderRadius: 5,
+    overflow: "hidden",
+    backgroundColor: COLORS.border,
   },
-  dotGreen: {
-    backgroundColor: '#16794B',
+  healthLegend: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 12,
+    marginBottom: 14,
   },
-  dotAmber: {
-    backgroundColor: '#A06A00',
+  healthItem: { alignItems: "center", gap: 2 },
+  healthValue: { fontSize: 18, fontWeight: "800" },
+  healthLabel: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
-  dotRed: {
-    backgroundColor: '#B42318',
+  partners: { gap: 14 },
+  partnerRow: { gap: 5 },
+  partnerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  insightTextWrap: {
-    flex: 1,
-    gap: 2,
+  partnerLabel: { color: COLORS.ink, fontSize: 12, fontWeight: "700" },
+  partnerCount: { color: COLORS.ink, fontSize: 14, fontWeight: "800" },
+  partnerTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.border,
+    overflow: "hidden",
   },
-  insightTitle: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
+  partnerFill: { height: "100%", borderRadius: 3 },
+  partnerCaption: { color: COLORS.muted, fontSize: 10 },
+  table: { marginHorizontal: -12 },
+  tableHeader: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    backgroundColor: "#F1F5F9",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#D9DEE5",
   },
-  insightDetail: {
-    color: '#6B7280',
-    fontSize: 11,
-    lineHeight: 16,
+  tableRow: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#CBD5E1",
   },
-  insightValue: {
-    color: '#111827',
-    fontSize: 13,
-    fontWeight: '700',
+  th: {
+    color: COLORS.muted,
+    fontSize: 9,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  trendPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    gap: 3,
-  },
-  trendUp: {
-    backgroundColor: '#E8F7EE',
-  },
-  trendDown: {
-    backgroundColor: '#FDECEC',
-  },
-  trendText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  trendTextUp: {
-    color: '#16794B',
-  },
-  trendTextDown: {
-    color: '#B42318',
+  td: { color: COLORS.ink, fontSize: 12 },
+  tdSub: { color: COLORS.muted, fontSize: 10, marginTop: 1 },
+  tdWide: { flex: 1.6 },
+  tdNum: { flex: 1, textAlign: "right" },
+  tdStatus: { width: 64, alignItems: "flex-end" },
+  statusPill: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
+  statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.3 },
+  empty: {
+    color: COLORS.muted,
+    fontSize: 12,
+    textAlign: "center",
+    paddingVertical: 14,
   },
 });

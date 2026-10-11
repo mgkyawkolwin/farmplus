@@ -8,7 +8,6 @@ public sealed record ProductDto
     public string Brand { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
-    public decimal PurchasePrice { get; set; } = 0.00m;
     public decimal SalePrice { get; set; } = 0.00m;
     public int CurrentStock { get; set; } = 0;
     public int MinimumStock { get; set; } = 0;

@@ -1,36 +1,36 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
-  ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
+  StyleProp,
   StyleSheet,
+  TextStyle,
   View,
-  useColorScheme,
-} from 'react-native';
-import { ChevronLeft, CreditCard, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  ViewStyle,
+} from "react-native";
+import { ChevronLeft, Mail, MapPin, Pencil, Phone } from "lucide-react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Icon } from '@/components/ui/icon';
-import { Text } from '@/components/ui/text';
-import { container, DI_TOKENS } from '@/di';
-import { CustomerItem } from '@/models/customer';
-import { ICustomerService } from '@/services/customerService';
-import LoadingOverlay from '@/components/loadingOverlay';
-import SnackBar from '@/components/ui/snack-bar';
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+import { container, DI_TOKENS } from "@/di";
+import { CustomerItem } from "@/models/customer";
+import { ICustomerService } from "@/services/customerService";
+import SnackBar from "@/components/ui/snack-bar";
 
-const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
+const customerService = container.resolve<ICustomerService>(
+  DI_TOKENS.ICustomerService,
+);
 
 export default function CustomerViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
   const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [customer, setCustomer] = React.useState<CustomerItem | null>(null);
@@ -47,7 +47,7 @@ export default function CustomerViewScreen() {
       const result = await customerService.getCustomerById(customerId);
       setCustomer(result);
     } catch (error) {
-      SnackBar.Error('Failed to load customer details');
+      SnackBar.Error("Failed to load customer details");
       router.back();
     } finally {
       setLoading(false);
@@ -58,377 +58,511 @@ export default function CustomerViewScreen() {
     React.useCallback(() => {
       void loadCustomer();
       return undefined;
-    }, [loadCustomer])
+    }, [loadCustomer]),
   );
 
   if (!customer) {
     return null;
   }
 
-  const createdAt = customer.createdAtUtc ? new Date(customer.createdAtUtc) : null;
-  const createdAtText = createdAt && !Number.isNaN(createdAt.getTime())
-    ? createdAt.toISOString()
-    : 'Unknown';
+  const createdAt = customer.createdAtUtc
+    ? new Date(customer.createdAtUtc)
+    : null;
+  const createdAtText =
+    createdAt && !Number.isNaN(createdAt.getTime())
+      ? createdAt.toISOString()
+      : "Unknown";
+  const formatMoney = (amount: number | undefined) =>
+    `${(amount ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} MMK`;
 
   const detailRows = [
     {
       icon: Phone,
-      label: 'Phone',
-      value: customer.phone || '-',
+      label: "Phone",
+      value: customer.phone || "-",
       action: () => {
         if (customer.phone) {
-          SnackBar.Success('Phone action placeholder');
+          SnackBar.Success("Phone action placeholder");
         }
       },
     },
     {
       icon: Mail,
-      label: 'Email',
-      value: customer.email || '-',
+      label: "Email",
+      value: customer.email || "-",
       action: () => {
         if (customer.email) {
-          SnackBar.Success('Email action placeholder');
+          SnackBar.Success("Email action placeholder");
         }
       },
     },
     {
       icon: MapPin,
-      label: 'Address',
-      value: customer.address || '-',
+      label: "Address",
+      value: customer.address || "-",
       action: () => {
         if (customer.address) {
-          SnackBar.Success('Address action placeholder');
+          SnackBar.Success("Address action placeholder");
         }
       },
     },
   ];
 
-  return (
-    <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar
-        className="bg-background"
-        barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
-      />
-      {/* <LoadingOverlay isLoading={loading} /> */}
+  const initial = customer.name?.charAt(0).toUpperCase() || "C";
+  const owesBalance = (customer.totalOutstanding ?? 0) > 0;
+  const recentSales = customer.recentSales ?? [];
+  const recentPayments = customer.recentPayments ?? [];
 
-      <View className="bg-background border-b border-border" style={styles.headerBar}>
-        <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
+  return (
+    <SafeAreaView style={styles.page}>
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+
+      <View style={styles.headerBar}>
+        <Button
+          variant="ghost"
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>
-          Customer
-        </Text>
-        <Button variant="ghost" onPress={() => router.push({ pathname: '/customers/edit', params: { id: customer.id } })} style={styles.headerAction}>
+        <Text style={styles.headerTitle}>Customer</Text>
+        <Button
+          variant="ghost"
+          onPress={() =>
+            router.push({
+              pathname: "/customers/edit",
+              params: { id: customer.id },
+            })
+          }
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={Pencil} size={18} />
         </Button>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileMain}>
-            <Avatar alt="Customer avatar" style={styles.avatar}>
-              <AvatarImage source={{ uri: `https://api.dicebear.com/7.x/avataaars/svg?seed=${customer.id}` }} />
-              <AvatarFallback>
-                <Text style={styles.avatarFallbackText}>{customer.name?.charAt(0) || 'C'}</Text>
-              </AvatarFallback>
-            </Avatar>
-
-            <View style={styles.profileInfo}>
-              <Text className="text-foreground" style={styles.customerName}>
-                {customer.name}
-              </Text>
-              <Text className="text-muted-foreground" style={styles.customerSince}>
-                Customer since {createdAtText}
-              </Text>
-            </View>
-
-            <Badge variant={customer.isActive ? 'default' : 'outline'} style={styles.badge}>
-              <Text>{customer.isActive ? 'Active' : 'Inactive'}</Text>
-            </Badge>
+        <View style={styles.profilePanel}>
+          <View style={styles.avatarWrap}>
+            {customer.profilePictureUrl ? (
+              <Image
+                source={{ uri: customer.profilePictureUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarInitial}>{initial}</Text>
+            )}
           </View>
 
-          <View style={styles.detailsSection}>
-            {detailRows.map((row, index) => (
-              <View key={row.label} style={[styles.detailRow, index < detailRows.length - 1 ? styles.detailRowBorder : null]}>
-                <View style={styles.detailIconWrap}>
-                  <Icon className="text-foreground" as={row.icon} size={18} />
-                </View>
-
-                <View style={styles.detailTextWrap}>
-                  <Text className="text-muted-foreground" style={styles.detailLabel}>
-                    {row.label}
-                  </Text>
-                  <Text className="text-foreground" style={styles.detailValue}>
-                    {row.value}
-                  </Text>
-                </View>
-
-                <Pressable onPress={row.action} style={styles.detailAction}>
-                  <Icon className="text-foreground" as={row.icon} size={16} />
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.statsSection}>
-          <Text className="text-foreground" style={styles.statsTitle}>
-            Sales and Balance
-          </Text>
-
-          <View style={styles.statsCard}>
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>
-                Total Sales
-              </Text>
-              <Text className="text-foreground" style={styles.statsValue}>
-                2,450,000 MMK
-              </Text>
-            </View>
-
-            <View style={styles.statsDivider} />
-
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>
-                Outstanding
-              </Text>
-              <Text className="text-foreground" style={styles.statsValue}>
-                120,000 MMK
+          <View style={styles.profileInfo}>
+            <Text style={styles.customerName} numberOfLines={1}>
+              {customer.name}
+            </Text>
+            <Text style={styles.customerSince}>
+              Customer since {createdAtText}
+            </Text>
+            <View
+              style={[
+                styles.statusPill,
+                customer.isActive
+                  ? styles.statusPillActive
+                  : styles.statusPillInactive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  customer.isActive
+                    ? styles.statusTextActive
+                    : styles.statusTextInactive,
+                ]}
+              >
+                {customer.isActive ? "ACTIVE" : "INACTIVE"}
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.statsSection}>
-          <Text className="text-foreground" style={styles.statsTitle}>
-            Paid and Orders
-          </Text>
-
-          <View style={styles.statsCard}>
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>
-                Total Paid
-              </Text>
-              <Text className="text-foreground" style={styles.statsValue}>
-                2,450,000 MMK
-              </Text>
+        <Text style={styles.sectionHeading}>Contact</Text>
+        <View style={styles.panel}>
+          {detailRows.map((row, index) => (
+            <View
+              key={row.label}
+              style={[
+                styles.contactRow,
+                index < detailRows.length - 1 ? styles.rowDivider : null,
+              ]}
+            >
+              <View style={styles.contactIconWrap}>
+                <Icon
+                  className="text-muted-foreground"
+                  as={row.icon}
+                  size={16}
+                />
+              </View>
+              <View style={styles.contactText}>
+                <Text style={styles.fieldLabel}>{row.label}</Text>
+                <Text style={styles.fieldValue} numberOfLines={1}>
+                  {row.value}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={row.label}
+                onPress={row.action}
+                style={styles.actionButton}
+              >
+                <Icon className="text-foreground" as={row.icon} size={14} />
+              </Pressable>
             </View>
+          ))}
+        </View>
 
-            <View style={styles.statsDivider} />
+        <Text style={styles.sectionHeading}>Summary</Text>
+        <View style={styles.kpiGrid}>
+          <KpiTile
+            label="Total Sales"
+            value={formatMoney(customer.totalSales)}
+            accent={styles.accentBlue}
+          />
+          <KpiTile
+            label="Total Orders"
+            value={(customer.totalOrders ?? 0).toLocaleString("en-US")}
+            accent={styles.accentSlate}
+          />
+          <KpiTile
+            label="Total Paid"
+            value={formatMoney(customer.totalPaid)}
+            accent={styles.accentGreen}
+          />
+          <KpiTile
+            label="Outstanding"
+            value={formatMoney(customer.totalOutstanding)}
+            accent={owesBalance ? styles.accentAmber : styles.accentGreen}
+            valueStyle={owesBalance ? styles.valueAmber : null}
+          />
+        </View>
 
-            <View style={styles.statsColumn}>
-              <Text className="text-muted-foreground" style={styles.statsLabel}>
-                Total Orders
-              </Text>
-              <Text className="text-foreground" style={styles.statsValue}>
-                35
-              </Text>
-            </View>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Recent Sales</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: "/customers/sales",
+                params: { customerId: customer.id },
+              })
+            }
+          >
+            <Text style={styles.viewAllText}>View all</Text>
+          </Pressable>
+        </View>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Total</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Balance</Text>
           </View>
-
-          <View style={styles.actionRow}>
-            <Pressable style={styles.actionButton}>
-              <View style={styles.actionIconWrap}>
-                <Icon className="text-foreground" as={Plus} size={18} />
-              </View>
-              <Text className="text-foreground" style={styles.actionLabel}>
-                New Sale
+          {recentSales.map((sale) => (
+            <Pressable
+              key={sale.id}
+              accessibilityRole="button"
+              style={styles.tableRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/sales/view",
+                  params: { id: sale.id },
+                })
+              }
+            >
+              <Text style={[styles.cell, styles.dateCol]}>
+                {new Date(sale.saleDate).toLocaleDateString()}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(sale.netTotal)}
+              </Text>
+              <Text
+                style={[
+                  styles.cell,
+                  styles.amountCol,
+                  sale.balance > 0 ? styles.cellAmber : null,
+                ]}
+              >
+                {formatMoney(sale.balance)}
               </Text>
             </Pressable>
+          ))}
+          {recentSales.length === 0 ? (
+            <Text style={styles.emptyText}>No sales recorded.</Text>
+          ) : null}
+        </View>
 
-            <Pressable style={styles.actionButton}>
-              <View style={styles.actionIconWrap}>
-                <Icon className="text-foreground" as={CreditCard} size={18} />
-              </View>
-              <Text className="text-foreground" style={styles.actionLabel}>
-                Payment
-              </Text>
-            </Pressable>
-
-            <Pressable style={styles.actionButton}>
-              <View style={styles.actionIconWrap}>
-                <Icon className="text-foreground" as={Pencil} size={18} />
-              </View>
-              <Text className="text-foreground" style={styles.actionLabel}  onPress={() => router.push({ pathname: '/customers/edit', params: { id: customer.id } })}>
-                Edit
-              </Text>
-            </Pressable>
-
-            <Pressable style={styles.actionButton}>
-              <View style={styles.actionIconWrap}>
-                <Icon className="text-foreground" as={Plus} size={18} />
-              </View>
-              <Text className="text-foreground" style={styles.actionLabel}>
-                More
-              </Text>
-            </Pressable>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Recent Payments</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: "/customers/payments",
+                params: { customerId: customer.id },
+              })
+            }
+          >
+            <Text style={styles.viewAllText}>View all</Text>
+          </Pressable>
+        </View>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Amount</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>
+              Balance After
+            </Text>
           </View>
+          {recentPayments.map((payment) => (
+            <Pressable
+              key={payment.id}
+              accessibilityRole="button"
+              style={styles.tableRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/sales/view",
+                  params: { id: payment.saleId },
+                })
+              }
+            >
+              <Text style={[styles.cell, styles.dateCol]}>
+                {new Date(payment.paidAt).toLocaleDateString()}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(payment.amount)}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(payment.balanceAfter)}
+              </Text>
+            </Pressable>
+          ))}
+          {recentPayments.length === 0 ? (
+            <Text style={styles.emptyText}>No payments recorded.</Text>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+type KpiTileProps = {
+  label: string;
+  value: string;
+  accent: StyleProp<ViewStyle>;
+  valueStyle?: StyleProp<TextStyle>;
+};
+
+function KpiTile({ label, value, accent, valueStyle }: KpiTileProps) {
+  return (
+    <View style={[styles.kpiTile, accent]}>
+      <Text style={styles.kpiLabel}>{label}</Text>
+      <Text style={[styles.kpiValue, valueStyle]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const COLORS = {
+  ink: "#0F172A",
+  muted: "#64748B",
+  border: "#D9DEE5",
+  rowBorder: "#CBD5E1",
+  green: "#16794B",
+  greenTint: "#F4FAF6",
+  blue: "#2367A8",
+  amber: "#9A6700",
+};
+
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
+  page: { flex: 1, backgroundColor: "#FFFFFF" },
   headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 8,
     paddingVertical: 6,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  backButton: {
-    minWidth: 40,
-  },
+  headerButton: { minWidth: 40 },
   headerTitle: {
     flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '600',
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.ink,
   },
-  headerAction: {
-    minWidth: 40,
+  content: { padding: 16, gap: 12, paddingBottom: 32 },
+  profilePanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderTopWidth: 3,
+    borderColor: COLORS.border,
+    borderTopColor: COLORS.green,
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
   },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  profileCard: {
-  },
-  profileMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
+  avatarWrap: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.greenTint,
   },
-  avatarFallbackText: {
-    fontSize: 20,
-    fontWeight: '700',
+  avatarImage: { width: "100%", height: "100%" },
+  avatarInitial: { fontSize: 22, fontWeight: "800", color: COLORS.green },
+  profileInfo: { flex: 1, minWidth: 0, gap: 3 },
+  customerName: { fontSize: 18, fontWeight: "800", color: COLORS.ink },
+  customerSince: { fontSize: 12, color: COLORS.muted },
+  statusPill: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  profileInfo: {
-    flex: 1,
+  statusPillActive: { backgroundColor: "#D1FAE5" },
+  statusPillInactive: { backgroundColor: "#FEE2E2" },
+  statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  statusTextActive: { color: "#047857" },
+  statusTextInactive: { color: "#B91C1C" },
+  sectionHeading: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: COLORS.muted,
   },
-  customerName: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  customerSince: {
-    fontSize: 13,
+  viewAllText: { fontSize: 12, fontWeight: "700", color: COLORS.green },
+  panel: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
   },
-  badge: {
-    alignSelf: 'flex-start',
-  },
-  detailsSection: {
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  detailRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.rowBorder,
   },
-  detailIconWrap: {
-    width: 34,
-    alignItems: 'center',
+  contactIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F5F9",
   },
-  detailTextWrap: {
-    flex: 1,
-    marginLeft: 6,
+  contactText: { flex: 1, minWidth: 0, gap: 2 },
+  fieldLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: COLORS.muted,
   },
-  detailLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailAction: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  statsSection: {
-    gap: 8,
-  },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  statsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  statsColumn: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statsLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  statsValue: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  statsDivider: {
-    width: 1,
-    height: 44,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 12,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  fieldValue: { fontSize: 14, fontWeight: "600", color: COLORS.ink },
   actionButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  kpiTile: {
+    width: "48%",
+    padding: 12,
     gap: 6,
+    borderWidth: 1,
+    borderTopWidth: 3,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
   },
-  actionIconWrap: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+  accentBlue: { borderTopColor: COLORS.blue, backgroundColor: "#F5F9FF" },
+  accentGreen: {
+    borderTopColor: COLORS.green,
+    backgroundColor: COLORS.greenTint,
   },
-  actionLabel: {
+  accentAmber: { borderTopColor: COLORS.amber, backgroundColor: "#FFFBEB" },
+  accentSlate: { borderTopColor: COLORS.muted, backgroundColor: "#F8FAFC" },
+  kpiLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: COLORS.muted,
+  },
+  kpiValue: { fontSize: 15, fontWeight: "800", color: COLORS.ink },
+  valueAmber: { color: COLORS.amber },
+  table: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  tableHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
+    backgroundColor: "#F1F5F9",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerCell: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: COLORS.muted,
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.rowBorder,
+  },
+  cell: { fontSize: 12, color: COLORS.ink },
+  cellAmber: { color: COLORS.amber, fontWeight: "700" },
+  dateCol: { flex: 1.2 },
+  amountCol: { flex: 1, textAlign: "right" },
+  emptyText: {
+    padding: 14,
+    textAlign: "center",
     fontSize: 12,
-    fontWeight: '600',
+    color: COLORS.muted,
   },
 });

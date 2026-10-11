@@ -185,7 +185,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
       productName: product.name,
       unit: product.unit,
       quantity: '1',
-      unitPrice: String(product.purchasePrice ?? 0),
+      unitPrice: '0',
     }]);
     setPickerVisible(false);
   };
@@ -521,7 +521,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                         <View style={styles.productOptionInfo}>
                           <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                           <Text style={styles.productMeta} numberOfLines={1}>
-                            {formatMoney(product.purchasePrice ?? 0)}{product.unit ? ` / ${product.unit}` : ''}
+                            Enter the purchase price for this item{product.unit ? ` (${product.unit})` : ''}
                             {showStock ? `  ·  In shop: ${(product.currentStock ?? 0).toLocaleString('en-US')}` : ''}
                           </Text>
                         </View>

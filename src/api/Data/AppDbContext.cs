@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<SupplierEntity> Suppliers => Set<SupplierEntity>();
     public DbSet<ShopEntity> Shops => Set<ShopEntity>();
     public DbSet<ShopStockEntity> ShopStocks => Set<ShopStockEntity>();
+    public DbSet<StockMovementEntity> StockMovements => Set<StockMovementEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
     public DbSet<MediaEntity> Medias => Set<MediaEntity>();
@@ -50,5 +51,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ShopStockEntity>()
             .HasIndex(stock => new { stock.ShopId, stock.ProductId })
             .IsUnique();
+        modelBuilder.Entity<StockMovementEntity>()
+            .HasIndex(movement => new { movement.ShopId, movement.ProductId, movement.CreatedAtUtc });
     }
 }

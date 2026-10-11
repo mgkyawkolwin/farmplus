@@ -10,7 +10,7 @@ export default function PurchaseDashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <PurchaseDashboardContent showHeader title="Purchases" onBack={() => router.back()} />
+      <PurchaseDashboardContent showHeader title="Purchase Dashboard" onBack={() => router.back()} />
     </SafeAreaView>
   );
 }

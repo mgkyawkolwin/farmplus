@@ -13,7 +13,6 @@ export interface ProductItem {
   brand?: string;
   category?: string;
   unit?: string;
-  purchasePrice?: number;
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
@@ -41,7 +40,6 @@ export interface CreateProductRequest {
   brand?: string;
   category?: string;
   unit?: string;
-  purchasePrice?: number;
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
@@ -57,7 +55,6 @@ export interface UpdateProductRequest {
   brand?: string;
   category?: string;
   unit?: string;
-  purchasePrice?: number;
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;

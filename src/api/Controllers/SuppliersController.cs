@@ -81,6 +81,36 @@ public class SuppliersController : BaseController
         }
     }
 
+    [HttpGet("{id:guid}/purchases")]
+    public async Task<IActionResult> GetSupplierPurchases(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var result = await _supplierService.GetSupplierPurchasesAsync(id, page, pageSize);
+            return Ok(new
+            {
+                Success = true,
+                Data = new
+                {
+                    Items = result.Items,
+                    Page = result.Page,
+                    PageSize = result.PageSize,
+                    TotalCount = result.Total,
+                    TotalPages = result.TotalPages,
+                },
+            });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve purchases for supplier {SupplierId}.", id);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierRequestDto request)
     {

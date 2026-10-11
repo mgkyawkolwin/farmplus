@@ -15,7 +15,6 @@ public static class ProductMappings
             Brand = entity.Brand,
             Category = entity.Category,
             Unit = entity.Unit,
-            PurchasePrice = entity.PurchasePrice,
             SalePrice = entity.SalePrice,
             CurrentStock = entity.CurrentStock,
             MinimumStock = entity.MinimumStock,
