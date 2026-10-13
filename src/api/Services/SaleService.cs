@@ -150,7 +150,17 @@ public class SaleService : ISaleService
         var userId = GetCurrentUserId();
         var shop = await _shopStock.RequireCurrentShopAsync();
         var customerName = WalkInCustomerName;
-        if (request.CustomerId.HasValue)
+        if (request.DealerId.HasValue)
+        {
+            if (request.CustomerId.HasValue)
+            {
+                throw new CustomException("A sale cannot have both a customer and a dealer.");
+            }
+            var dealer = await GetTenantDealers().SingleOrDefaultAsync(item => item.Id == request.DealerId.Value)
+                ?? throw new CustomException("Dealer not found.");
+            customerName = dealer.DealerName;
+        }
+        else if (request.CustomerId.HasValue)
         {
             var customer = await GetTenantCustomers().SingleOrDefaultAsync(item => item.Id == request.CustomerId.Value)
                 ?? throw new CustomException("Customer not found.");
@@ -221,6 +231,7 @@ public class SaleService : ISaleService
         var sale = new SaleEntity
         {
             CustomerId = request.CustomerId,
+            DealerId = request.DealerId,
             CustomerName = customerName,
             ShopId = shop.Id,
             SaleDate = DateTime.UtcNow,
@@ -516,6 +527,13 @@ public class SaleService : ISaleService
         return query.Where(customer => customer.MainTenantId == GetCurrentTenantId());
     }
 
+    private IQueryable<DealerEntity> GetTenantDealers()
+    {
+        var query = _dbContext.Dealers.AsQueryable();
+        if (_currentUserService.IsAdmin) return query;
+        return query.Where(dealer => dealer.MainTenantId == GetCurrentTenantId());
+    }
+
     private Guid? GetCurrentTenantId()
     {
         if (Guid.TryParse(_currentUserService.TenantId, out var tenantId)) return tenantId;
@@ -536,6 +554,7 @@ public class SaleService : ISaleService
         {
             Id = sale.Id,
             CustomerId = sale.CustomerId,
+            DealerId = sale.DealerId,
             CustomerName = sale.CustomerName,
             SaleDate = new DateTimeOffset(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)),
             TotalProducts = sale.TotalProducts,

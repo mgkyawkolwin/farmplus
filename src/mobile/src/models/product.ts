@@ -16,6 +16,9 @@ export interface ProductItem {
   salePrice?: number;
   currentStock?: number;
   minimumStock?: number;
+  totalOrders?: number;
+  totalQuantitySold?: number;
+  totalRevenue?: number;
   isActive?: boolean;
   coverImageUrl?: string;
   medias?: ProductMediaItem[];

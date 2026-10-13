@@ -10,6 +10,24 @@ export interface DealerItem {
   logoUrl?: string | null;
   clearLogoUrl?: boolean;
   isActive: boolean;
+  totalOrders?: number;
+  totalSales?: number;
+  totalPaid?: number;
+  totalOutstanding?: number;
+  recentSales?: Array<{
+    id: string;
+    saleDate: string;
+    netTotal: number;
+    balance: number;
+    status: string;
+  }>;
+  recentPayments?: Array<{
+    id: string;
+    saleId: string;
+    amount: number;
+    balanceAfter: number;
+    paidAt: string;
+  }>;
   rowVersion?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;

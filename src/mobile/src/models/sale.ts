@@ -22,6 +22,7 @@ export interface SalePayment {
 export interface Sale {
   id: string;
   customerId?: string;
+  dealerId?: string;
   customerName: string;
   saleDate: string;
   totalProducts: number;
@@ -64,6 +65,7 @@ export interface SaleDashboard {
 
 export interface CreateSaleRequest {
   customerId?: string;
+  dealerId?: string;
   taxRate?: number;
   discount?: number;
   paidAmount?: number;

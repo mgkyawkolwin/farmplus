@@ -7,8 +7,11 @@ import {
   Pressable,
   ScrollView,
   StatusBar,
+  StyleProp,
   StyleSheet,
+  TextStyle,
   View,
+  ViewStyle,
 } from "react-native";
 import { ChevronLeft, Pencil } from "lucide-react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -35,6 +38,24 @@ const COLORS = {
   greenTint: "#F4FAF6",
   amber: "#9A6700",
 };
+
+type SummaryTileProps = {
+  label: string;
+  value: string;
+  accent: StyleProp<ViewStyle>;
+  valueStyle?: StyleProp<TextStyle>;
+};
+
+function SummaryTile({ label, value, accent, valueStyle }: SummaryTileProps) {
+  return (
+    <View style={[styles.kpiTile, accent]}>
+      <Text style={styles.tileLabel}>{label}</Text>
+      <Text style={[styles.tileValue, valueStyle]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
 
 export default function ProductViewScreen() {
   const router = useRouter();
@@ -98,6 +119,8 @@ export default function ProductViewScreen() {
   const subtitle =
     [product.category, product.brand].filter(Boolean).join(" · ") ||
     "No category";
+  const formatMoney = (amount: number | undefined) =>
+    `${(amount ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} MMK`;
   const detailRows = [
     { label: "Brand", value: product.brand || "-" },
     { label: "Category", value: product.category || "-" },
@@ -227,6 +250,31 @@ export default function ProductViewScreen() {
             <Text style={styles.kpiLabel}>Minimum Stock</Text>
             <Text style={styles.kpiValue}>{product.minimumStock ?? 0}</Text>
           </View>
+        </View>
+
+        <Text style={styles.sectionHeading}>Summary</Text>
+        <View style={styles.kpiGrid}>
+          <SummaryTile
+            label="Total Revenue"
+            value={formatMoney(product.totalRevenue)}
+            accent={styles.accentBlue}
+          />
+          <SummaryTile
+            label="Total Orders"
+            value={(product.totalOrders ?? 0).toLocaleString("en-US")}
+            accent={styles.accentSlate}
+          />
+          <SummaryTile
+            label="Units Sold"
+            value={(product.totalQuantitySold ?? 0).toLocaleString("en-US")}
+            accent={styles.accentGreen}
+          />
+          <SummaryTile
+            label="Current Stock"
+            value={(product.currentStock ?? 0).toLocaleString("en-US")}
+            accent={isLowStock ? styles.accentAmber : styles.accentGreen}
+            valueStyle={isLowStock ? styles.kpiValueWarning : null}
+          />
         </View>
 
         {otherImages.length > 0 ? (
@@ -432,4 +480,31 @@ const styles = StyleSheet.create({
   kpiValueWarning: {
     color: COLORS.amber,
   },
+  kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  kpiTile: {
+    width: "48%",
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderTopWidth: 3,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+  },
+  tileLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: COLORS.muted,
+    textAlign: "left",
+  },
+  tileValue: { fontSize: 15, fontWeight: "800", color: COLORS.ink },
+  accentBlue: { borderTopColor: "#2367A8", backgroundColor: "#F5F9FF" },
+  accentGreen: {
+    borderTopColor: COLORS.green,
+    backgroundColor: COLORS.greenTint,
+  },
+  accentAmber: { borderTopColor: COLORS.amber, backgroundColor: "#FFFBEB" },
+  accentSlate: { borderTopColor: COLORS.muted, backgroundColor: "#F8FAFC" },
 });

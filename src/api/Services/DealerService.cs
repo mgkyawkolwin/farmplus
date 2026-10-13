@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using FarmPlus.Api.Data;
 using FarmPlus.Api.Dtos;
+using FarmPlus.Api.Constants;
+using FarmPlus.Api.Dtos.Customers;
 using FarmPlus.Api.Dtos.Dealers;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
@@ -83,7 +85,31 @@ public class DealerService : IDealerService
             query = query.Where(b => b.MainTenantId == tenantId);
         }
         var dealer = await query.SingleOrDefaultAsync(d => d.Id == id);
-        return dealer == null ? null : await MapDealerToDtoAsync(dealer);
+        if (dealer == null) return null;
+
+        var dto = await MapDealerToDtoAsync(dealer);
+        var sales = _dbContext.Sales.AsNoTracking()
+            .Where(sale => sale.DealerId == id && sale.Status != SaleStatus.Voided);
+        dto.TotalOrders = await sales.CountAsync();
+        dto.TotalSales = await sales.SumAsync(sale => (decimal?)sale.NetTotal) ?? 0m;
+        dto.TotalPaid = await sales.SumAsync(sale => (decimal?)sale.PaidAmount) ?? 0m;
+        dto.TotalOutstanding = await sales.SumAsync(sale => (decimal?)sale.Balance) ?? 0m;
+        dto.RecentSales = await sales.OrderByDescending(sale => sale.SaleDate).ThenByDescending(sale => sale.CreatedAtUtc).Take(5)
+            .Select(sale => new CustomerRecentSaleDto { Id = sale.Id, SaleDate = sale.SaleDate, NetTotal = sale.NetTotal, Balance = sale.Balance, Status = sale.Status }).ToListAsync();
+        dto.RecentPayments = await _dbContext.SalePayments.AsNoTracking()
+            .Where(payment => sales.Any(sale => sale.Id == payment.SaleId))
+            .OrderByDescending(payment => payment.CreatedAtUtc)
+            .Take(5)
+            .Select(payment => new CustomerRecentPaymentDto
+            {
+                Id = payment.Id,
+                SaleId = payment.SaleId,
+                Amount = payment.Amount,
+                BalanceAfter = payment.BalanceAfter,
+                PaidAt = payment.CreatedAtUtc,
+            })
+            .ToListAsync();
+        return dto;
     }
 
     public async Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request)

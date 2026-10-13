@@ -77,7 +77,7 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
       title: 'Reports',
       tone: 'slate',
       items: [
-        { label: 'Customer', icon: Users, path: '/customers/list' },
+        { label: 'Customer', icon: Users, path: '/reports/customers/dashboard' },
         { label: 'Dealer', icon: Briefcase, path: '/dealers/dashboard' },
         { label: 'Supplier', icon: Building, path: '/suppliers/dashboard' },
         { label: 'Product', icon: Package, path: '/products/dashboard' },

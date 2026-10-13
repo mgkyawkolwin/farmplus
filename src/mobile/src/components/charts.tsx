@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StyleSheet, View } from "react-native";
-import Svg, { Circle, G, Line, Rect, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 
 import { Text } from "@/components/ui/text";
 
@@ -115,6 +115,124 @@ export function BarChart({
               </G>
             );
           })}
+        </Svg>
+      ) : (
+        <View style={{ height }} />
+      )}
+      <Legend
+        items={series.map((item) => ({ label: item.name, color: item.color }))}
+      />
+    </View>
+  );
+}
+
+export type LineSeries = { name: string; color: string; values: number[] };
+
+/** Multi-series line chart with a filled area under the first series. */
+export function LineChart({
+  labels,
+  series,
+  height = 180,
+}: {
+  labels: string[];
+  series: LineSeries[];
+  height?: number;
+}) {
+  const [width, setWidth] = React.useState(0);
+  const axisWidth = 38;
+  const sidePad = 10;
+  const bottomPad = 22;
+  const topPad = 8;
+  const plotHeight = height - bottomPad - topPad;
+  const plotWidth = Math.max(width - axisWidth - sidePad * 2, 0);
+  const max = niceMax(Math.max(0, ...series.flatMap((item) => item.values)));
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const step = labels.length > 1 ? plotWidth / (labels.length - 1) : 0;
+  const xAt = (index: number) =>
+    axisWidth + sidePad + (labels.length > 1 ? index * step : plotWidth / 2);
+  const yAt = (value: number) => topPad + plotHeight * (1 - value / max);
+  const labelEvery = Math.max(Math.ceil(labels.length / 7), 1);
+
+  return (
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <Svg width={width} height={height}>
+          {ticks.map((tick) => {
+            const y = topPad + plotHeight * (1 - tick);
+            return (
+              <G key={tick}>
+                <Line
+                  x1={axisWidth}
+                  x2={width}
+                  y1={y}
+                  y2={y}
+                  stroke="#E2E8F0"
+                  strokeWidth={1}
+                />
+                <SvgText
+                  x={axisWidth - 6}
+                  y={y + 3}
+                  fontSize={9}
+                  fill="#64748B"
+                  textAnchor="end"
+                >
+                  {compactNumber(max * tick)}
+                </SvgText>
+              </G>
+            );
+          })}
+          {series.map((item, seriesIndex) => {
+            const points = item.values.map((value, index) => ({
+              x: xAt(index),
+              y: yAt(value),
+            }));
+            if (points.length === 0) return null;
+            const line = points
+              .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
+              .join(" ");
+            const baseline = topPad + plotHeight;
+            const area = `${line} L${points[points.length - 1].x} ${baseline} L${points[0].x} ${baseline} Z`;
+            return (
+              <G key={item.name}>
+                {seriesIndex === 0 ? (
+                  <Path d={area} fill={item.color} fillOpacity={0.1} />
+                ) : null}
+                <Path
+                  d={line}
+                  stroke={item.color}
+                  strokeWidth={2}
+                  fill="none"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {points.map((point, index) => (
+                  <Circle
+                    key={index}
+                    cx={point.x}
+                    cy={point.y}
+                    r={2.5}
+                    fill="#FFFFFF"
+                    stroke={item.color}
+                    strokeWidth={1.5}
+                  />
+                ))}
+              </G>
+            );
+          })}
+          {labels.map((label, index) =>
+            index % labelEvery === 0 ? (
+              <SvgText
+                key={`${label}-${index}`}
+                x={xAt(index)}
+                y={height - 6}
+                fontSize={9}
+                fill="#64748B"
+                textAnchor="middle"
+              >
+                {label}
+              </SvgText>
+            ) : null,
+          )}
         </Svg>
       ) : (
         <View style={{ height }} />

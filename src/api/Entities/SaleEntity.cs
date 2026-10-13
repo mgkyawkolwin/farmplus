@@ -10,6 +10,9 @@ public class SaleEntity : EntityBase<Guid>
 {
     public Guid? CustomerId { get; set; }
 
+    /// <summary>Set when the sale is made to a dealer instead of a customer.</summary>
+    public Guid? DealerId { get; set; }
+
     [Required]
     [MaxLength(100)]
     public required string CustomerName { get; set; }

@@ -12,6 +12,12 @@ public sealed record DealerDto
     public string? Country { get; set; }
     public string? LogoUrl { get; set; }
     public bool IsActive { get; set; }
+    public int TotalOrders { get; set; }
+    public decimal TotalSales { get; set; }
+    public decimal TotalPaid { get; set; }
+    public decimal TotalOutstanding { get; set; }
+    public List<Customers.CustomerRecentSaleDto> RecentSales { get; set; } = [];
+    public List<Customers.CustomerRecentPaymentDto> RecentPayments { get; set; } = [];
     public Guid RowVersion { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public Guid CreatedById { get; set; }

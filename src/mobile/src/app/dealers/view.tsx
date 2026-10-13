@@ -4,10 +4,14 @@ import * as React from 'react';
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   ScrollView,
   StatusBar,
+  StyleProp,
   StyleSheet,
+  TextStyle,
   View,
+  ViewStyle,
 } from 'react-native';
 import {
   ChevronLeft,
@@ -16,6 +20,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  ShoppingCart,
 } from 'lucide-react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -93,6 +98,11 @@ export default function DealerViewScreen() {
   const initial = dealer.dealerName?.charAt(0).toUpperCase() || 'D';
   const subtitle =
     [dealer.city, dealer.country].filter(Boolean).join(', ') || 'Dealer';
+  const recentSales = dealer.recentSales ?? [];
+  const recentPayments = dealer.recentPayments ?? [];
+  const formatMoney = (amount: number | undefined) =>
+    `${(amount ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
+  const owesBalance = (dealer.totalOutstanding ?? 0) > 0;
 
   return (
     <SafeAreaView style={styles.page}>
@@ -163,6 +173,19 @@ export default function DealerViewScreen() {
           </View>
         </View>
 
+        <Button
+          onPress={() =>
+            router.push({
+              pathname: '/dealers/sales' as '/dealers/view',
+              params: { dealerId: dealer.id },
+            })
+          }
+          disabled={!dealer.isActive}
+        >
+          <Icon className="text-background" as={ShoppingCart} size={16} />
+          <Text className="text-background font-semibold">Sale</Text>
+        </Button>
+
         <Text style={styles.sectionHeading}>Contact & Location</Text>
         <View style={styles.panel}>
           {detailRows.map((row, index) => (
@@ -189,8 +212,124 @@ export default function DealerViewScreen() {
             </View>
           ))}
         </View>
+
+        <Text style={styles.sectionHeading}>Summary</Text>
+        <View style={styles.kpiGrid}>
+          <KpiTile
+            label="Total Sales"
+            value={formatMoney(dealer.totalSales)}
+            accent={styles.accentBlue}
+          />
+          <KpiTile
+            label="Total Orders"
+            value={(dealer.totalOrders ?? 0).toLocaleString('en-US')}
+            accent={styles.accentSlate}
+          />
+          <KpiTile
+            label="Total Paid"
+            value={formatMoney(dealer.totalPaid)}
+            accent={styles.accentGreen}
+          />
+          <KpiTile
+            label="Outstanding"
+            value={formatMoney(dealer.totalOutstanding)}
+            accent={owesBalance ? styles.accentAmber : styles.accentGreen}
+            valueStyle={owesBalance ? styles.cellAmber : null}
+          />
+        </View>
+
+        <Text style={styles.sectionHeading}>Recent Sales</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Total</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Balance</Text>
+          </View>
+          {recentSales.map((sale) => (
+            <Pressable
+              key={sale.id}
+              accessibilityRole="button"
+              style={styles.tableRow}
+              onPress={() =>
+                router.push({ pathname: '/sales/view', params: { id: sale.id } })
+              }
+            >
+              <Text style={[styles.cell, styles.dateCol]}>
+                {new Date(sale.saleDate).toLocaleDateString()}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(sale.netTotal)}
+              </Text>
+              <Text
+                style={[
+                  styles.cell,
+                  styles.amountCol,
+                  sale.balance > 0 ? styles.cellAmber : null,
+                ]}
+              >
+                {formatMoney(sale.balance)}
+              </Text>
+            </Pressable>
+          ))}
+          {recentSales.length === 0 ? (
+            <Text style={styles.emptyText}>No sales recorded.</Text>
+          ) : null}
+        </View>
+
+        <Text style={styles.sectionHeading}>Recent Payments</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Amount</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>Balance After</Text>
+          </View>
+          {recentPayments.map((payment) => (
+            <Pressable
+              key={payment.id}
+              accessibilityRole="button"
+              style={styles.tableRow}
+              onPress={() =>
+                router.push({
+                  pathname: '/sales/view',
+                  params: { id: payment.saleId },
+                })
+              }
+            >
+              <Text style={[styles.cell, styles.dateCol]}>
+                {new Date(payment.paidAt).toLocaleDateString()}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(payment.amount)}
+              </Text>
+              <Text style={[styles.cell, styles.amountCol]}>
+                {formatMoney(payment.balanceAfter)}
+              </Text>
+            </Pressable>
+          ))}
+          {recentPayments.length === 0 ? (
+            <Text style={styles.emptyText}>No payments recorded.</Text>
+          ) : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+type KpiTileProps = {
+  label: string;
+  value: string;
+  accent: StyleProp<ViewStyle>;
+  valueStyle?: StyleProp<TextStyle>;
+};
+
+function KpiTile({ label, value, accent, valueStyle }: KpiTileProps) {
+  return (
+    <View style={[styles.kpiTile, accent]}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={[styles.kpiValue, valueStyle]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -306,4 +445,65 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
   },
   fieldValue: { fontSize: 14, fontWeight: '600', color: COLORS.ink },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  kpiTile: {
+    width: '48%',
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderTopWidth: 3,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  accentBlue: { borderTopColor: '#2367A8', backgroundColor: '#F5F9FF' },
+  accentGreen: {
+    borderTopColor: COLORS.green,
+    backgroundColor: COLORS.greenTint,
+  },
+  accentAmber: { borderTopColor: '#9A6700', backgroundColor: '#FFFBEB' },
+  accentSlate: { borderTopColor: COLORS.muted, backgroundColor: '#F8FAFC' },
+  kpiValue: { fontSize: 15, fontWeight: '800', color: COLORS.ink },
+  table: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 32,
+    paddingHorizontal: 12,
+    backgroundColor: '#F1F5F9',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerCell: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: COLORS.muted,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.rowBorder,
+  },
+  cell: { fontSize: 12, color: COLORS.ink },
+  cellAmber: { color: '#9A6700', fontWeight: '700' },
+  dateCol: { flex: 1.2 },
+  amountCol: { flex: 1, textAlign: 'right' },
+  emptyText: {
+    padding: 14,
+    textAlign: 'center',
+    fontSize: 12,
+    color: COLORS.muted,
+  },
 });
