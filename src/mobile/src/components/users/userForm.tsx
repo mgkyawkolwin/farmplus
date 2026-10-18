@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
@@ -17,8 +17,11 @@ import LoadingOverlay from '@/components/loadingOverlay';
 import { container, DI_TOKENS } from '@/di';
 import { IUserService } from '@/services/userService';
 import { UpdateUserRequest } from '@/models/user';
+import { RoleItem } from '@/models/role';
+import { IRoleService } from '@/services/roleService';
 
 const userService = container.resolve<IUserService>(DI_TOKENS.IUserService);
+const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
 
 type UserFormState = {
   userName: string;
@@ -28,6 +31,7 @@ type UserFormState = {
   address: string;
   city: string;
   rowVersion: string;
+  roleId: string;
 };
 
 const emptyForm: UserFormState = {
@@ -38,6 +42,7 @@ const emptyForm: UserFormState = {
   address: '',
   city: '',
   rowVersion: '',
+  roleId: '',
 };
 
 export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
@@ -48,6 +53,18 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const [form, setForm] = React.useState<UserFormState>(emptyForm);
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(mode === 'edit');
+  const [roles, setRoles] = React.useState<RoleItem[]>([]);
+  const [rolePickerVisible, setRolePickerVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    roleService.getRoles(1, 100).then((items) => {
+      if (active) setRoles(items);
+    }).catch(() => {
+      if (active) SnackBar.Error('Failed to load roles');
+    });
+    return () => { active = false; };
+  }, []);
 
   React.useEffect(() => {
     if (mode !== 'edit') return;
@@ -67,6 +84,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         address: user.address ?? '',
         city: user.city ?? '',
         rowVersion: user.rowVersion ?? '',
+        roleId: user.roleId ?? '',
       });
     }).catch(() => {
       if (active) {
@@ -101,6 +119,10 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
       SnackBar.Error('Password is required');
       return;
     }
+    if (!form.roleId) {
+      SnackBar.Error('Select a role for this user');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -112,6 +134,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           password: form.password,
           address: form.address.trim() || undefined,
           city: form.city.trim() || undefined,
+          roleId: form.roleId,
         });
         SnackBar.Success('User created successfully');
       } else {
@@ -122,6 +145,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           address: form.address.trim() || undefined,
           city: form.city.trim() || undefined,
           rowVersion: form.rowVersion,
+          roleId: form.roleId,
         };
         await userService.updateUser(userId, request);
         SnackBar.Success('User updated successfully');
@@ -240,6 +264,16 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
             />
           </View>
 
+          <View style={styles.field}>
+            <Label className="text-foreground">Role <Text className="text-red-500">*</Text></Label>
+            <Pressable style={styles.roleSelect} onPress={() => setRolePickerVisible(true)} disabled={loading}>
+              <Text className="text-foreground" numberOfLines={1}>
+                {roles.find((item) => item.id === form.roleId)?.role ?? 'Choose a role'}
+              </Text>
+            </Pressable>
+            {roles.length === 0 ? <Text className="text-muted-foreground">Create a role before adding users.</Text> : null}
+          </View>
+
           <View style={styles.actions}>
             <Button variant="outline" style={styles.actionButton} onPress={() => router.back()} disabled={loading}>
               <Text className="text-foreground">Cancel</Text>
@@ -252,6 +286,27 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
         </KeyboardAwareScrollView>
       )}
+      <Modal transparent visible={rolePickerVisible} animationType="slide" onRequestClose={() => setRolePickerVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setRolePickerVisible(false)}>
+          <View style={styles.rolePicker}>
+            <Text className="text-foreground" style={styles.rolePickerTitle}>Select Role</Text>
+            <ScrollView>
+              {roles.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.roleOption}
+                  onPress={() => {
+                    updateField('roleId', item.id);
+                    setRolePickerVisible(false);
+                  }}
+                >
+                  <Text className="text-foreground">{item.role}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -270,6 +325,11 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 40 },
   formContent: { flexGrow: 1, padding: 20, paddingBottom: 40 },
   field: { marginBottom: 20 },
+  roleSelect: { minHeight: 44, justifyContent: 'center', marginTop: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#00000066' },
+  rolePicker: { maxHeight: '70%', padding: 16, borderRadius: 8, backgroundColor: '#FFFFFF' },
+  rolePickerTitle: { marginBottom: 10, fontSize: 16, fontWeight: '700' },
+  roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   actionButton: { flex: 1 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },

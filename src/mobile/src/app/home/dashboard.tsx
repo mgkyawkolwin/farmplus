@@ -25,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import HomeTopBar from "@/components/homeTopBar";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import {
   BarChart,
   DonutChart,
@@ -47,6 +48,7 @@ import { IProductService } from "@/services/productService";
 import { IPurchaseService } from "@/services/purchaseService";
 import { ISaleService } from "@/services/saleService";
 import { SupplierServiceClient } from "@/services/supplierService";
+import { RolePermissionServiceClient } from "@/services/rolePermissionService";
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const purchaseService = container.resolve<IPurchaseService>(
@@ -60,6 +62,7 @@ const customerService = container.resolve<ICustomerService>(
 );
 const supplierService = new SupplierServiceClient();
 const dealerService = new DealerServiceClient();
+const permissionService = new RolePermissionServiceClient();
 
 const COLORS = {
   ink: "#0F172A",
@@ -248,6 +251,25 @@ export default function DashboardScreen() {
   const [data, setData] = React.useState<DashboardData>(emptyData);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [permissionState, setPermissionState] = React.useState<"checking" | "authorized" | "denied">("checking");
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      setPermissionState("checking");
+      permissionService.getCurrentPermissions().then((permissions) => {
+        if (!active) return;
+        setPermissionState(
+          permissions.isExempt || permissions.permissionKeys.includes("/home/dashboard")
+            ? "authorized"
+            : "denied",
+        );
+      }).catch(() => {
+        if (active) setPermissionState("denied");
+      });
+      return () => { active = false; };
+    }, []),
+  );
 
   const loadDashboard = React.useCallback(async () => {
     const results = await Promise.allSettled([
@@ -279,13 +301,15 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== "authorized") return undefined;
       setLoading(true);
       void loadDashboard();
       return undefined;
-    }, [loadDashboard]),
+    }, [loadDashboard, permissionState]),
   );
 
   useSelectedShopChanged(() => {
+    if (permissionState !== "authorized") return;
     setLoading(true);
     void loadDashboard();
   });
@@ -430,6 +454,24 @@ export default function DashboardScreen() {
     metrics.healthy + metrics.lowStock + metrics.outOfStock,
     1,
   );
+
+  if (permissionState === "checking") {
+    return (
+      <SafeAreaView className="bg-background" style={styles.page}>
+        <View style={styles.accessState}>
+          <Text style={styles.accessText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (permissionState === "denied") {
+    return (
+      <SafeAreaView className="bg-background" style={styles.page}>
+        <UnauthorizedView />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
@@ -769,6 +811,8 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: COLORS.surface },
+  accessState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  accessText: { color: COLORS.muted, fontSize: 14, textAlign: "center" },
   scrollView: { flex: 1, backgroundColor: COLORS.surface },
   content: { padding: 16, paddingBottom: 100, gap: 20 },
   titleRow: {

@@ -11,11 +11,15 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { BrandServiceClient } from '@/services/brandService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
 import { BrandItem } from '@/models/brand';
 import SnackBar from '@/components/ui/snack-bar';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { RolePermissionServiceClient } from '@/services/rolePermissionService';
+
+const permissionService = new RolePermissionServiceClient();
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -30,6 +34,7 @@ export default function BrandsScreen() {
   const service = React.useMemo(() => new BrandServiceClient(), []);
 
   const [brands, setBrands] = React.useState<BrandItem[]>([]);
+  const [permissionState, setPermissionState] = React.useState<'checking' | 'authorized' | 'denied'>('checking');
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = React.useState(true);
@@ -41,6 +46,24 @@ export default function BrandsScreen() {
   const [modalVisible, setModalVisible] = React.useState(false);
   const [editingBrand, setEditingBrand] = React.useState<BrandItem | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      setPermissionState('checking');
+      permissionService.getCurrentPermissions().then((permissions) => {
+        if (!active) return;
+        setPermissionState(
+          permissions.isExempt || permissions.permissionKeys.includes('/brands/brands')
+            ? 'authorized'
+            : 'denied',
+        );
+      }).catch(() => {
+        if (active) setPermissionState('denied');
+      });
+      return () => { active = false; };
+    }, []),
+  );
 
   const loadBrands = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
     try {
@@ -69,8 +92,9 @@ export default function BrandsScreen() {
   }, [service]);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return;
     void loadBrands(1, false, false);
-  }, [loadBrands]);
+  }, [loadBrands, permissionState]);
 
   const handleRefresh = React.useCallback(() => {
     void loadBrands(1, false, true);
@@ -164,6 +188,23 @@ export default function BrandsScreen() {
       SnackBar.Error(error?.message || `Unable to delete brand "${brand.brand}".`);
     }
   };
+
+  if (permissionState === 'checking') {
+    return (
+      <SafeAreaView className='bg-background' style={[styles.page, styles.permissionState]}>
+        <ActivityIndicator size='large' color='#16794B' />
+        <Text className='text-muted-foreground' style={styles.permissionText}>Checking permissions...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (permissionState === 'denied') {
+    return (
+      <SafeAreaView className='bg-background' style={styles.page}>
+        <UnauthorizedView />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className='bg-background' style={styles.page}>
@@ -341,6 +382,13 @@ export default function BrandsScreen() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
+  },
+  permissionState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionText: {
+    marginTop: 10,
   },
   headerBar: {
     flexDirection: 'row',

@@ -138,7 +138,8 @@ builder.Services.AddCors(options =>
 });
 
 
-builder.Services.AddControllers();
+builder.Services.AddScoped<PermissionAuthorizationFilter>();
+builder.Services.AddControllers(options => options.Filters.AddService<PermissionAuthorizationFilter>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -177,6 +178,7 @@ builder.Services.Configure<ComponentSettings>(builder.Configuration.GetSection("
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IRolePermissionService, RolePermissionService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
@@ -194,6 +196,7 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<IShopStockService, ShopStockService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

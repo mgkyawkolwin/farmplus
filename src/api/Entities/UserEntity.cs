@@ -25,6 +25,8 @@ public class UserEntity : EntityBase<Guid>
     [MaxLength(100)]
     public string? City { get; set; }
 
+    public Guid? RoleId { get; set; }
+
     [MaxLength(500)]
     public string? ProfilePictureUrl { get; set; }
 

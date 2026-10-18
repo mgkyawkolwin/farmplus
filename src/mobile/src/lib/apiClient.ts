@@ -4,14 +4,13 @@ import CustomError from './customError';
 import ApiResponse from '@/models/apiResponse'
 import { clearTokens, getSelectedShopId, getToken } from '@/lib/authStorage';
 
-// const DEFAULT_API_BASE_URL = 'http://10.171.168.26:5555/api';
+// const DEFAULT_API_BASE_URL = 'http://10.131.7.26:5555/api';
 const DEFAULT_API_BASE_URL = 'https://farmplusapi.bitsbytes.solutions/api';
 // const DEFAULT_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 export const API_BASE_URL = DEFAULT_API_BASE_URL;
 const AUTH_USER_STORAGE_KEY = 'auth_user';
 
 export async function fetchJson(path: string, options: RequestInit = {}): Promise<ApiResponse<any>> {
-  console.log('API Request:', { API_BASE_URL, path, options });
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -25,8 +24,6 @@ export async function fetchJson(path: string, options: RequestInit = {}): Promis
     ...options,
   });
 
-  console.log({statusText: response.statusText, status: response.status });
-
   // Handle 401 Unauthorized response - token is invalid/expired
   if (response.status === 401) {
     await clearTokens();
@@ -38,7 +35,6 @@ export async function fetchJson(path: string, options: RequestInit = {}): Promis
   }
 
   const responseJson = await response.json() as unknown as ApiResponse<any>;
-  console.log(responseJson);
 
   if (!responseJson.success){
     throw new CustomError(responseJson.message);
@@ -77,6 +73,5 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
 }
 
 export async function authenticatedFetchApi(path: string, options: RequestInit = {}): Promise<ApiResponse<any>> {
-  console.log('Authenticated API Request:', { path, options });
   return authenticatedFetchJson(path, options);
 }

@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   BarChart3,
   Boxes,
@@ -46,7 +45,7 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
       items: [
         { label: 'Users', icon: Users, path: '/users/list' },
         { label: 'Roles', icon: ShieldCheck, path: '/roles/list' },
-        { label: 'Role Permissions', icon: UserCog, path: '/settings' },
+        { label: 'Role Permissions', icon: UserCog, path: '/rolepermissions' },
       ],
     },
     {
@@ -78,12 +77,12 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
       tone: 'slate',
       items: [
         { label: 'Customer', icon: Users, path: '/reports/customers/dashboard' },
-        { label: 'Dealer', icon: Briefcase, path: '/dealers/dashboard' },
-        { label: 'Supplier', icon: Building, path: '/suppliers/dashboard' },
-        { label: 'Product', icon: Package, path: '/products/dashboard' },
-        { label: 'Inventory', icon: Warehouse, path: '/inventory/dashboard' },
-        { label: 'Sale', icon: ShoppingBag, path: '/sales/dashboard' },
-        { label: 'Purchase', icon: HandCoins, path: '/purchases/dashboard' },
+        { label: 'Dealer', icon: Briefcase, path: '/reports/dealers/dashboard' },
+        { label: 'Supplier', icon: Building, path: '/reports/suppliers/dashboard' },
+        { label: 'Product', icon: Package, path: '/reports/products/dashboard' },
+        { label: 'Inventory', icon: Warehouse, path: '/reports/inventories/dashboard' },
+        { label: 'Sale', icon: ShoppingBag, path: '/reports/sales/dashboard' },
+        { label: 'Purchase', icon: HandCoins, path: '/reports/purchases/dashboard' },
       ],
     },
   ];

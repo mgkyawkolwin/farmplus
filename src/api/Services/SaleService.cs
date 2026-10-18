@@ -101,6 +101,7 @@ public class SaleService : ISaleService
             {
                 Id = sale.Id,
                 CustomerId = sale.CustomerId,
+                DealerId = sale.DealerId,
                 CustomerName = sale.CustomerName,
                 SaleDate = new DateTimeOffset(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)),
                 TotalProducts = sale.TotalProducts,

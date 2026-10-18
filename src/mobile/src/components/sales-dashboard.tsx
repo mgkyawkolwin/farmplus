@@ -2,20 +2,23 @@
 
 import * as React from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import { CalendarDays, ChevronLeft, ChevronRight, CirclePlus, ClipboardList, ContactRound, Package, ReceiptText, TrendingUp, Wallet } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { Sale, SaleDashboard } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { RolePermissionServiceClient } from '@/services/rolePermissionService';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
+const permissionService = new RolePermissionServiceClient();
 
 function money(value: number) {
   return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
@@ -97,9 +100,30 @@ export function SalesDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const permissionKey = pathname === '/home/sales' ? '/home/sales' : '/sales/dashboard';
   const [dashboard, setDashboard] = React.useState<SaleDashboard | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [permissionState, setPermissionState] = React.useState<'checking' | 'authorized' | 'denied'>('checking');
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      setPermissionState('checking');
+      permissionService.getCurrentPermissions().then((permissions) => {
+        if (!active) return;
+        setPermissionState(
+          permissions.isExempt || permissions.permissionKeys.includes(permissionKey)
+            ? 'authorized'
+            : 'denied',
+        );
+      }).catch(() => {
+        if (active) setPermissionState('denied');
+      });
+      return () => { active = false; };
+    }, [permissionKey]),
+  );
 
   const loadDashboard = React.useCallback(async () => {
     try {
@@ -114,15 +138,36 @@ export function SalesDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadDashboard();
       return undefined;
-    }, [loadDashboard]),
+    }, [loadDashboard, permissionState]),
   );
 
   useSelectedShopChanged(() => {
+    if (permissionState !== 'authorized') return;
     void loadDashboard();
   });
+
+  if (permissionState === 'checking') {
+    return (
+      <View style={styles.page}>
+        <View style={styles.accessState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.accessText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (permissionState === 'denied') {
+    return (
+      <View style={styles.page}>
+        <UnauthorizedView />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.page}>
@@ -211,6 +256,8 @@ export function SalesDashboardContent({
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
+  accessState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  accessText: { marginTop: 8, textAlign: 'center' },
   headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   headerButton: { minWidth: 44 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },

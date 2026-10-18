@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -32,8 +32,10 @@ import {
   storeSelectedShopId,
 } from "@/lib/authStorage";
 import { notifySelectedShopChanged } from "@/lib/selectedShop";
+import { MessageServiceClient } from "@/services/messageService";
 
 const shopService = new ShopServiceClient();
+const messageService = new MessageServiceClient();
 
 export default function HomeTopBar() {
   const router = useRouter();
@@ -44,6 +46,19 @@ export default function HomeTopBar() {
   );
   const [pickerVisible, setPickerVisible] = React.useState(false);
   const [loadingShops, setLoadingShops] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      messageService.getUnreadCount().then((count) => {
+        if (active) setUnreadCount(count);
+      }).catch(() => {
+        if (active) setUnreadCount(0);
+      });
+      return () => { active = false; };
+    }, []),
+  );
 
   const loadShops = React.useCallback(async (showError = false) => {
     setLoadingShops(true);
@@ -140,7 +155,21 @@ export default function HomeTopBar() {
           </Pressable>
         </View>
         <View style={styles.rightSection}>
-          <Icon className="text-foreground" as={Bell} size={22} />
+          <Button
+            variant="ghost"
+            onPress={() => router.push('/messages/list' as Parameters<typeof router.push>[0])}
+            style={styles.iconButton}
+            accessibilityLabel={unreadCount > 0 ? `Messages, ${unreadCount} unread` : 'Messages'}
+          >
+            <View style={styles.notificationButton}>
+              <Icon className="text-foreground" as={Bell} size={22} />
+              {unreadCount > 0 ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              ) : null}
+            </View>
+          </Button>
 
           <Button
             variant="ghost"
@@ -305,6 +334,20 @@ const styles = StyleSheet.create({
     alignContent: "flex-end",
     gap: 8,
   },
+  notificationButton: { position: 'relative' },
+  notificationBadge: {
+    position: 'absolute',
+    top: -7,
+    right: -9,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#B42318',
+  },
+  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
   selectTrigger: {
     width: 160,
     maxWidth: 160,

@@ -221,6 +221,53 @@ namespace FarmPlus.Api.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("FarmPlus.Api.Entities.CustomerMessageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("MainTenantId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId", "UserId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "IsRead", "CreatedAtUtc");
+
+                    b.ToTable("CustomerMessages");
+                });
+
             modelBuilder.Entity("FarmPlus.Api.Entities.DealerEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -331,6 +378,49 @@ namespace FarmPlus.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Medias");
+                });
+
+            modelBuilder.Entity("FarmPlus.Api.Entities.MessageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("MainTenantId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<Guid>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("FarmPlus.Api.Entities.ProductEntity", b =>
@@ -557,6 +647,47 @@ namespace FarmPlus.Api.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("FarmPlus.Api.Entities.RolePermissionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("MainTenantId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("PermissionKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId", "PermissionKey")
+                        .IsUnique();
+
+                    b.ToTable("RolePermissions");
+                });
+
             modelBuilder.Entity("FarmPlus.Api.Entities.SaleEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -580,6 +711,9 @@ namespace FarmPlus.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<Guid?>("DealerId")
+                        .HasColumnType("char(36)");
 
                     b.Property<decimal>("Discount")
                         .HasPrecision(18, 2)
@@ -1042,6 +1176,9 @@ namespace FarmPlus.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
 
+                    b.Property<Guid?>("RoleId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("RowVersion")
                         .IsConcurrencyToken()
                         .HasColumnType("char(36)");
@@ -1059,7 +1196,24 @@ namespace FarmPlus.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RoleId");
+
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("FarmPlus.Api.Entities.CustomerMessageEntity", b =>
+                {
+                    b.HasOne("FarmPlus.Api.Entities.MessageEntity", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FarmPlus.Api.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FarmPlus.Api.Entities.PurchaseItemEntity", b =>
@@ -1067,6 +1221,15 @@ namespace FarmPlus.Api.Migrations
                     b.HasOne("FarmPlus.Api.Entities.PurchaseEntity", null)
                         .WithMany("Items")
                         .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FarmPlus.Api.Entities.RolePermissionEntity", b =>
+                {
+                    b.HasOne("FarmPlus.Api.Entities.RoleEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1087,6 +1250,14 @@ namespace FarmPlus.Api.Migrations
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("FarmPlus.Api.Entities.UserEntity", b =>
+                {
+                    b.HasOne("FarmPlus.Api.Entities.RoleEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("FarmPlus.Api.Entities.PurchaseEntity", b =>

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import {
   ChevronLeft,
+  ChevronRight,
   Globe,
   Mail,
   MapPin,
@@ -238,7 +239,22 @@ export default function DealerViewScreen() {
           />
         </View>
 
-        <Text style={styles.sectionHeading}>Recent Sales</Text>
+        <View style={styles.sectionHeadingRow}>
+          <Text style={styles.sectionHeading}>Recent Sales</Text>
+          <Button
+            variant="ghost"
+            style={styles.viewAllButton}
+            onPress={() =>
+              router.push({
+                pathname: '/dealers/history',
+                params: { dealerId: dealer.id, kind: 'sales' },
+              } as Parameters<typeof router.push>[0])
+            }
+          >
+            <Text style={styles.viewAllText}>View all</Text>
+            <Icon as={ChevronRight} size={14} color={COLORS.green} />
+          </Button>
+        </View>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
@@ -276,7 +292,22 @@ export default function DealerViewScreen() {
           ) : null}
         </View>
 
-        <Text style={styles.sectionHeading}>Recent Payments</Text>
+        <View style={styles.sectionHeadingRow}>
+          <Text style={styles.sectionHeading}>Recent Payments</Text>
+          <Button
+            variant="ghost"
+            style={styles.viewAllButton}
+            onPress={() =>
+              router.push({
+                pathname: '/dealers/history',
+                params: { dealerId: dealer.id, kind: 'payments' },
+              } as Parameters<typeof router.push>[0])
+            }
+          >
+            <Text style={styles.viewAllText}>View all</Text>
+            <Icon as={ChevronRight} size={14} color={COLORS.green} />
+          </Button>
+        </View>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
@@ -410,6 +441,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: COLORS.muted,
   },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  viewAllButton: {
+    minHeight: 32,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAllText: { fontSize: 12, fontWeight: '700', color: COLORS.green },
   panel: {
     borderWidth: 1,
     borderColor: COLORS.border,

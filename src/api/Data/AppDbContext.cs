@@ -24,11 +24,14 @@ public class AppDbContext : DbContext
     public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
     public DbSet<MediaEntity> Medias => Set<MediaEntity>();
     public DbSet<RoleEntity> Roles => Set<RoleEntity>();
+    public DbSet<RolePermissionEntity> RolePermissions => Set<RolePermissionEntity>();
     public DbSet<PurchaseEntity> Purchases => Set<PurchaseEntity>();
     public DbSet<PurchaseItemEntity> PurchaseItems => Set<PurchaseItemEntity>();
     public DbSet<SaleEntity> Sales => Set<SaleEntity>();
     public DbSet<SaleItemEntity> SaleItems => Set<SaleItemEntity>();
     public DbSet<SalePaymentEntity> SalePayments => Set<SalePaymentEntity>();
+    public DbSet<MessageEntity> Messages => Set<MessageEntity>();
+    public DbSet<CustomerMessageEntity> CustomerMessages => Set<CustomerMessageEntity>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +54,34 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ShopStockEntity>()
             .HasIndex(stock => new { stock.ShopId, stock.ProductId })
             .IsUnique();
+        modelBuilder.Entity<RolePermissionEntity>()
+            .HasIndex(permission => new { permission.RoleId, permission.PermissionKey })
+            .IsUnique();
+        modelBuilder.Entity<RolePermissionEntity>()
+            .HasOne<RoleEntity>()
+            .WithMany()
+            .HasForeignKey(permission => permission.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<UserEntity>()
+            .HasOne<RoleEntity>()
+            .WithMany()
+            .HasForeignKey(user => user.RoleId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<CustomerMessageEntity>()
+            .HasIndex(message => new { message.MessageId, message.UserId })
+            .IsUnique();
+        modelBuilder.Entity<CustomerMessageEntity>()
+            .HasIndex(message => new { message.UserId, message.IsRead, message.CreatedAtUtc });
+        modelBuilder.Entity<CustomerMessageEntity>()
+            .HasOne<MessageEntity>()
+            .WithMany()
+            .HasForeignKey(message => message.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<CustomerMessageEntity>()
+            .HasOne<UserEntity>()
+            .WithMany()
+            .HasForeignKey(message => message.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<StockMovementEntity>()
             .HasIndex(movement => new { movement.ShopId, movement.ProductId, movement.CreatedAtUtc });
     }

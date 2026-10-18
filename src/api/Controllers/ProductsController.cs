@@ -133,6 +133,10 @@ public class ProductsController : BaseController
     public Task<IActionResult> GetStockMovements(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20) =>
         ExecuteAsync(async () => (object?)await _productService.GetStockMovementsAsync(id, page, pageSize), "retrieve stock movements");
 
+    [HttpGet("stock-movements")]
+    public Task<IActionResult> GetInventoryMovements([FromQuery] int page = 1, [FromQuery] int pageSize = 20) =>
+        ExecuteAsync(async () => (object?)await _productService.GetInventoryMovementsAsync(page, pageSize), "retrieve inventory movements");
+
     [HttpPost("{id:guid}/stock-in")]
     public Task<IActionResult> StockIn(Guid id, [FromBody] StockAdjustmentRequestDto request) =>
         ExecuteAsync(async () => await _productService.AdjustStockAsync(id, request, true), "record stock in");

@@ -58,7 +58,7 @@ public class AuthService : IAuthService
 
     private async Task<string> SignInAndCreateTokenAsync(UserEntity user)
     {
-        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName, false, user.MainTenantId.ToString()));
+        return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName, false, (user.MainTenantId ?? user.Id).ToString()));
     }
 
     private async Task<string> SignInAndCreateTokenAsync(AdminUserEntity user)
@@ -132,8 +132,11 @@ public class AuthService : IAuthService
             throw new CustomException(_localizer[$"Template.AlreadyExists", "User"]);
         }
 
+        var ownerId = Guid.NewGuid();
         var user = new UserEntity
         {
+            Id = ownerId,
+            MainTenantId = ownerId,
             UserName = normalizedName,
             DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? normalizedName : dto.DisplayName,
             Email = normalizedEmail,
@@ -184,6 +187,13 @@ public class AuthService : IAuthService
         {
             _logger.LogWarning("Sign-in failed for username {Username}: invalid password", dto.Username);
             throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
+        }
+
+        if (!user.MainTenantId.HasValue)
+        {
+            user.MainTenantId = user.Id;
+            user.UpdatedAtUtc = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
         }
 
         _logger.LogTrace("User {Username} authenticated successfully", dto.Username);

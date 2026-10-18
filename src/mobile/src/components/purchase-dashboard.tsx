@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import {
   CalendarDays,
   ChevronLeft,
@@ -18,11 +18,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { Purchase } from '@/models/purchase';
 import { PurchaseServiceClient } from '@/services/purchaseService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { RolePermissionServiceClient } from '@/services/rolePermissionService';
 
 const purchaseService = new PurchaseServiceClient();
+const permissionService = new RolePermissionServiceClient();
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
@@ -96,9 +99,30 @@ export function PurchaseDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const permissionKey = pathname === '/home/purchases' ? '/home/purchases' : '/purchases/dashboard';
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [permissionState, setPermissionState] = React.useState<'checking' | 'authorized' | 'denied'>('checking');
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      setPermissionState('checking');
+      permissionService.getCurrentPermissions().then((permissions) => {
+        if (!active) return;
+        setPermissionState(
+          permissions.isExempt || permissions.permissionKeys.includes(permissionKey)
+            ? 'authorized'
+            : 'denied',
+        );
+      }).catch(() => {
+        if (active) setPermissionState('denied');
+      });
+      return () => { active = false; };
+    }, [permissionKey]),
+  );
 
   const loadPurchases = React.useCallback(async () => {
     try {
@@ -114,13 +138,15 @@ export function PurchaseDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadPurchases();
       return undefined;
-    }, [loadPurchases])
+    }, [loadPurchases, permissionState])
   );
 
   useSelectedShopChanged(() => {
+    if (permissionState !== 'authorized') return;
     void loadPurchases();
   });
 
@@ -149,6 +175,25 @@ export function PurchaseDashboardContent({
       { label: 'Recent', value: recentCount.toLocaleString('en-US'), icon: TrendingUp, tone: 'red' as const },
     ];
   }, [purchases, recentPurchases]);
+
+  if (permissionState === 'checking') {
+    return (
+      <View style={styles.page}>
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (permissionState === 'denied') {
+    return (
+      <View style={styles.page}>
+        <UnauthorizedView />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.page}>

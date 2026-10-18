@@ -8,4 +8,5 @@ public sealed record CreateUserRequestDto
     public string? Password { get; set; }
     public string? Address { get; set; }
     public string? City { get; set; }
+    public Guid? RoleId { get; set; }
 }

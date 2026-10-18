@@ -1,9 +1,13 @@
 import { authenticatedFetchApi } from '@/lib/apiClient';
 import { DealerItem, DealerListPayload } from '@/models/dealer';
+import { CustomerPayment, CustomerPaymentListPayload } from '@/models/customer';
+import { Sale, SaleListPayload } from '@/models/sale';
 
 export interface IDealerService {
   getDealers(page?: number, pageSize?: number): Promise<DealerItem[]>;
   getDealerById(id: string): Promise<DealerItem>;
+  getDealerSales(id: string, page?: number, pageSize?: number): Promise<Sale[]>;
+  getDealerPayments(id: string, page?: number, pageSize?: number): Promise<CustomerPayment[]>;
   createDealer(request: Partial<DealerItem>): Promise<DealerItem>;
   updateDealer(request: DealerItem): Promise<DealerItem>;
   uploadDealerLogo(id: string, file: { uri: string; name: string; type: string }): Promise<DealerItem>;
@@ -26,6 +30,24 @@ export class DealerServiceClient implements IDealerService {
     });
 
     return mapDealer(response.data as DealerItem | undefined);
+  }
+
+  async getDealerSales(id: string, page = 1, pageSize = 20): Promise<Sale[]> {
+    const response = await authenticatedFetchApi(
+      `/dealers/${id}/sales?page=${page}&pageSize=${pageSize}`,
+      { method: 'GET' },
+    );
+    const payload = response.data as SaleListPayload | undefined;
+    return Array.isArray(payload?.items) ? payload.items : [];
+  }
+
+  async getDealerPayments(id: string, page = 1, pageSize = 20): Promise<CustomerPayment[]> {
+    const response = await authenticatedFetchApi(
+      `/dealers/${id}/payments?page=${page}&pageSize=${pageSize}`,
+      { method: 'GET' },
+    );
+    const payload = response.data as CustomerPaymentListPayload | undefined;
+    return Array.isArray(payload?.items) ? payload.items : [];
   }
 
   async createDealer(request: Partial<DealerItem>): Promise<DealerItem> {

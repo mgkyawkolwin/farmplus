@@ -1,6 +1,8 @@
 import { authenticatedFetchApi } from "@/lib/apiClient";
 import {
   CreateProductRequest,
+  InventoryMovement,
+  InventoryMovementListPayload,
   ProductItem,
   ProductListPayload,
   UpdateProductRequest,
@@ -42,6 +44,7 @@ export interface IProductService {
     page?: number,
     pageSize?: number,
   ): Promise<{ items: StockMovement[]; totalCount: number }>;
+  getInventoryMovements(page?: number, pageSize?: number): Promise<InventoryMovement[]>;
 }
 
 export interface StockMovement {
@@ -62,6 +65,15 @@ export class ProductServiceClient implements IProductService {
     );
 
     const payload = response.data as ProductListPayload | undefined;
+    return Array.isArray(payload?.items) ? payload.items : [];
+  }
+
+  async getInventoryMovements(page = 1, pageSize = 20): Promise<InventoryMovement[]> {
+    const response = await authenticatedFetchApi(
+      `/products/stock-movements?page=${page}&pageSize=${pageSize}`,
+      { method: "GET" },
+    );
+    const payload = response.data as InventoryMovementListPayload | undefined;
     return Array.isArray(payload?.items) ? payload.items : [];
   }
 

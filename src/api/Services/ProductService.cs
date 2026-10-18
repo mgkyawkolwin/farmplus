@@ -30,6 +30,7 @@ public interface IProductService
     Task<ProductDto> RecordDamageAsync(Guid id, StockAdjustmentRequestDto request);
     Task TransferStockAsync(Guid id, StockTransferRequestDto request);
     Task<PaginatedResultDto<StockMovementDto>> GetStockMovementsAsync(Guid id, int page, int pageSize);
+    Task<PaginatedResultDto<InventoryMovementDto>> GetInventoryMovementsAsync(int page, int pageSize);
     Task DeleteProductAsync(Guid id);
 }
 
@@ -184,6 +185,52 @@ public class ProductService : IProductService
         var items = await query.OrderByDescending(movement => movement.CreatedAtUtc).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(movement => new StockMovementDto { Id = movement.Id, Quantity = movement.Quantity, Type = movement.Type, Remark = movement.Remark, CreatedAtUtc = movement.CreatedAtUtc }).ToListAsync();
         return new PaginatedResultDto<StockMovementDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+    }
+
+    public async Task<PaginatedResultDto<InventoryMovementDto>> GetInventoryMovementsAsync(int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+
+        var query = from movement in _dbContext.StockMovements.AsNoTracking()
+                    join product in _dbContext.Products.AsNoTracking() on movement.ProductId equals product.Id
+                    join shop in _dbContext.Shops.AsNoTracking() on movement.ShopId equals shop.Id
+                    select new { movement, ProductName = product.Name, ShopName = shop.Name };
+
+        if (!_currentUserService.IsAdmin)
+        {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+            {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(item => item.movement.MainTenantId == tenantId);
+        }
+        if (_currentUserService.ShopId is { } shopId)
+        {
+            query = query.Where(item => item.movement.ShopId == shopId);
+        }
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(item => item.movement.CreatedAtUtc)
+            .ThenByDescending(item => item.movement.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(item => new InventoryMovementDto
+            {
+                Id = item.movement.Id,
+                ProductId = item.movement.ProductId,
+                ProductName = item.ProductName,
+                ShopId = item.movement.ShopId,
+                ShopName = item.ShopName,
+                Quantity = item.movement.Quantity,
+                Type = item.movement.Type,
+                Remark = item.movement.Remark,
+                CreatedAtUtc = item.movement.CreatedAtUtc,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<InventoryMovementDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
     }
 
     public async Task<ProductDto> CreateProductAsync(CreateProductRequestDto request)

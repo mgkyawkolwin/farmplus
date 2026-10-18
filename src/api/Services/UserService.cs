@@ -48,7 +48,17 @@ public class UserService : IUserService
         page = PaginationHelper.NormalizePage(page);
         pageSize = PaginationHelper.NormalizePageSize(pageSize);
 
-        var query = GetTenantUsers().AsNoTracking().OrderByDescending(u => u.CreatedAtUtc);
+        var usersQuery = GetTenantUsers();
+        if (_currentUserService.IsAdmin)
+        {
+            usersQuery = usersQuery.Where(user => !user.MainTenantId.HasValue || user.Id != user.MainTenantId.Value);
+        }
+        else if (Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+        {
+            usersQuery = usersQuery.Where(user => user.Id != tenantId);
+        }
+
+        var query = usersQuery.AsNoTracking().OrderByDescending(u => u.CreatedAtUtc);
         var total = await query.CountAsync();
 
         var users = await query
@@ -63,6 +73,7 @@ public class UserService : IUserService
                 Address = user.Address,
                 City = user.City,
                 ProfilePictureUrl = user.ProfilePictureUrl,
+                RoleId = user.RoleId,
                 RowVersion = user.RowVersion
             })
             .ToListAsync();
@@ -76,6 +87,7 @@ public class UserService : IUserService
             Address = user.Address,
             City = user.City,
             ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
+            RoleId = user.RoleId,
             RowVersion = user.RowVersion
         }).ToList();
 
@@ -99,6 +111,7 @@ public class UserService : IUserService
         var normalizedUserName = request.UserName.Trim();
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var tenantId = GetCurrentTenantId();
+        await EnsureRoleAssignmentAsync(request.RoleId, tenantId);
 
         if (await _dbContext.Users.AnyAsync(u => u.UserName == normalizedUserName || u.Email == normalizedEmail))
         {
@@ -116,7 +129,8 @@ public class UserService : IUserService
             CreatedById = currentUserId,
             UpdatedAtUtc = DateTime.UtcNow,
             UpdatedById = currentUserId,
-            MainTenantId = tenantId
+            MainTenantId = tenantId,
+            RoleId = request.RoleId,
         };
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password!);
         _dbContext.Users.Add(user);
@@ -136,6 +150,11 @@ public class UserService : IUserService
             ValidationHelper.ValidateRequiredGuid(_localizer, "RowVersion", request.RowVersion);
 
             var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id) ?? throw new CustomException("User not found.");
+            if (request.RoleId.HasValue)
+            {
+                await EnsureRoleAssignmentAsync(request.RoleId, user.MainTenantId);
+                user.RoleId = request.RoleId;
+            }
             user.DisplayName = request.DisplayName ?? "";
 
             if (!string.IsNullOrWhiteSpace(request.Email))
@@ -240,8 +259,29 @@ public class UserService : IUserService
             Address = user.Address,
             City = user.City,
             ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
+            RoleId = user.RoleId,
             RowVersion = user.RowVersion
         };
+    }
+
+    private async Task EnsureRoleAssignmentAsync(Guid? roleId, Guid? tenantId)
+    {
+        if (!roleId.HasValue) return;
+
+        var roles = _dbContext.Roles.AsNoTracking().Where(role => role.Id == roleId.Value);
+        if (!_currentUserService.IsAdmin)
+        {
+            if (!tenantId.HasValue)
+            {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            roles = roles.Where(role => role.MainTenantId == tenantId.Value);
+        }
+
+        if (!await roles.AnyAsync())
+        {
+            throw new CustomException("Role not found for this tenant.");
+        }
     }
 
     private string? ResolvePictureUrl(string? objectName)

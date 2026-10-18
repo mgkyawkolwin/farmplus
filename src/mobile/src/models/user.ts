@@ -8,6 +8,7 @@ export default class User {
     profilePictureUrl?: string;
     token?: string;
     rowVersion?: string;
+    roleId?: string;
 }
 
 export interface UserListPayload {
@@ -25,6 +26,7 @@ export interface CreateUserRequest {
     password: string;
     address?: string;
     city?: string;
+    roleId?: string;
 }
 
 export interface UpdateUserRequest {
@@ -33,4 +35,5 @@ export interface UpdateUserRequest {
     address?: string;
     city?: string;
     rowVersion: string;
+    roleId?: string;
 }

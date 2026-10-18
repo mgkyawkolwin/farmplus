@@ -6,6 +6,7 @@ using FarmPlus.Api.Dtos;
 using FarmPlus.Api.Constants;
 using FarmPlus.Api.Dtos.Customers;
 using FarmPlus.Api.Dtos.Dealers;
+using FarmPlus.Api.Dtos.Sales;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.I18N;
@@ -20,6 +21,8 @@ public interface IDealerService
 {
     Task<PaginatedResultDto<DealerDto>> GetDealersAsync(int page, int pageSize, string? dealerName = null);
     Task<DealerDto?> GetDealerByIdAsync(Guid id);
+    Task<PaginatedResultDto<SaleDto>> GetDealerSalesAsync(Guid id, int page, int pageSize);
+    Task<PaginatedResultDto<CustomerRecentPaymentDto>> GetDealerPaymentsAsync(Guid id, int page, int pageSize);
     Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request);
     Task<DealerDto?> UpdateDealerAsync(Guid id, UpdateDealerRequestDto request);
     Task<DealerDto?> UploadDealerLogoAsync(Guid id, IFormFile file);
@@ -110,6 +113,88 @@ public class DealerService : IDealerService
             })
             .ToListAsync();
         return dto;
+    }
+
+    public async Task<PaginatedResultDto<SaleDto>> GetDealerSalesAsync(Guid id, int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        await EnsureDealerExistsAsync(id);
+
+        var sales = _dbContext.Sales.AsNoTracking()
+            .Where(sale => sale.DealerId == id && sale.Status != SaleStatus.Voided);
+        var total = await sales.CountAsync();
+        var items = await sales
+            .OrderByDescending(sale => sale.SaleDate)
+            .ThenByDescending(sale => sale.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(sale => new SaleDto
+            {
+                Id = sale.Id,
+                CustomerName = sale.CustomerName,
+                DealerId = sale.DealerId,
+                SaleDate = new DateTimeOffset(DateTime.SpecifyKind(sale.SaleDate, DateTimeKind.Utc)),
+                TotalProducts = sale.TotalProducts,
+                SubTotal = sale.SubTotal,
+                TaxRate = sale.TaxRate,
+                Tax = sale.Tax,
+                Discount = sale.Discount,
+                NetTotal = sale.NetTotal,
+                PaidAmount = sale.PaidAmount,
+                Balance = sale.Balance,
+                Status = sale.Status,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<SaleDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+    }
+
+    public async Task<PaginatedResultDto<CustomerRecentPaymentDto>> GetDealerPaymentsAsync(Guid id, int page, int pageSize)
+    {
+        page = PaginationHelper.NormalizePage(page);
+        pageSize = PaginationHelper.NormalizePageSize(pageSize);
+        await EnsureDealerExistsAsync(id);
+
+        var payments = _dbContext.SalePayments.AsNoTracking()
+            .Where(payment => _dbContext.Sales.Any(sale =>
+                sale.Id == payment.SaleId &&
+                sale.DealerId == id &&
+                sale.Status != SaleStatus.Voided));
+        var total = await payments.CountAsync();
+        var items = await payments
+            .OrderByDescending(payment => payment.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(payment => new CustomerRecentPaymentDto
+            {
+                Id = payment.Id,
+                SaleId = payment.SaleId,
+                Amount = payment.Amount,
+                BalanceAfter = payment.BalanceAfter,
+                PaidAt = payment.CreatedAtUtc,
+            })
+            .ToListAsync();
+
+        return new PaginatedResultDto<CustomerRecentPaymentDto>(items, page, pageSize, total, PaginationHelper.CalculateTotalPages(total, pageSize));
+    }
+
+    private async Task EnsureDealerExistsAsync(Guid id)
+    {
+        var query = _dbContext.Dealers.AsNoTracking();
+        if (!_currentUserService.IsAdmin)
+        {
+            if (!Guid.TryParse(_currentUserService.TenantId, out var tenantId))
+            {
+                throw new CustomException("Tenant ID is missing for the current user.");
+            }
+            query = query.Where(dealer => dealer.MainTenantId == tenantId);
+        }
+
+        if (!await query.AnyAsync(dealer => dealer.Id == id))
+        {
+            throw new CustomException("Dealer not found.");
+        }
     }
 
     public async Task<DealerDto> CreateDealerAsync(CreateDealerRequestDto request)

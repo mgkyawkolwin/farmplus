@@ -37,6 +37,26 @@ export interface ProductListPayload {
   totalPages?: number;
 }
 
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  shopId: string;
+  shopName: string;
+  quantity: number;
+  type: string;
+  remark?: string;
+  createdAtUtc: string;
+}
+
+export interface InventoryMovementListPayload {
+  items?: InventoryMovement[];
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
+  totalPages?: number;
+}
+
 export interface CreateProductRequest {
   name: string;
   description?: string;

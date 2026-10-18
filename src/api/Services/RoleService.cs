@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmPlus.Api.Data;
 using FarmPlus.Api.Dtos;
 using FarmPlus.Api.Dtos.Roles;
+using FarmPlus.Api.Constants;
 using FarmPlus.Api.Entities;
 using FarmPlus.Api.Exceptions;
 using FarmPlus.Api.Utilities;
@@ -73,8 +74,20 @@ public class RoleService : IRoleService
             UpdatedById = GetCurrentUserId(),
         };
 
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
         _dbContext.Roles.Add(role);
         await _dbContext.SaveChangesAsync();
+        var userId = GetCurrentUserId();
+        _dbContext.RolePermissions.AddRange(PermissionCatalog.Pages.Select(page => new RolePermissionEntity
+        {
+            RoleId = role.Id,
+            PermissionKey = page.Key,
+            MainTenantId = tenantId,
+            CreatedById = userId,
+            UpdatedById = userId,
+        }));
+        await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return MapToDto(role);
     }
 
