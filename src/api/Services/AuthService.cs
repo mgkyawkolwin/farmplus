@@ -66,17 +66,21 @@ public class AuthService : IAuthService
         return await SignInAndCreateTokenAsync((user.Id, user.Email, user.UserName, true, string.Empty));
     }
 
-    private async Task<string> SignInAndCreateTokenAsync((Guid Id, string Email, string UserName, bool isAdmin, string TenantId) user)
+    private async Task<string> SignInAndCreateTokenAsync((Guid Id, string? Email, string UserName, bool isAdmin, string TenantId) user)
     {
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Name, user.UserName),
             new(CustomClaimTypes.IsAdmin, user.isAdmin.ToString()),
             new(CustomClaimTypes.TenantId, user.TenantId),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
+
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Email, user.Email));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -96,7 +100,7 @@ public class AuthService : IAuthService
             var cookieClaims = new[]
             {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Email),
+            new Claim(ClaimTypes.Name, user.Email ?? user.UserName),
             new Claim(CustomClaimTypes.IsAdmin, user.isAdmin.ToString()),
             new Claim(CustomClaimTypes.TenantId, user.TenantId)
         };
@@ -120,11 +124,14 @@ public class AuthService : IAuthService
     {
         _logger.LogDebug("CALLED: RegisterAsync(dto={Dto})", JsonSerializer.Serialize(dto));
         ValidationHelper.ValidateRequiredString(_localizer, "Name", dto.UserName);
-        ValidationHelper.ValidateEmail(_localizer, "Email", dto.Email);
+        if (!string.IsNullOrWhiteSpace(dto.Email))
+        {
+            ValidationHelper.ValidateEmail(_localizer, "Email", dto.Email);
+        }
         ValidationHelper.ValidateRequiredString(_localizer, "Password", dto.Password);
 
         var normalizedName = dto.UserName.Trim();
-        var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email) ? string.Empty : dto.Email.Trim().ToLowerInvariant();
+        var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim().ToLowerInvariant();
 
         if (await _dbContext.Users.AnyAsync(u => u.UserName == normalizedName || (!string.IsNullOrEmpty(normalizedEmail) && u.Email == normalizedEmail)))
         {

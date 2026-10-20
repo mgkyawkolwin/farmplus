@@ -14,10 +14,9 @@ public class UserEntity : EntityBase<Guid>
     [MaxLength(100)]
     public required string DisplayName { get; set; }
 
-    [Required]
     [EmailAddress]
     [MaxLength(50)]
-    public required string Email { get; set; }
+    public string? Email { get; set; }
 
     [MaxLength(500)]
     public string? Address { get; set; }
