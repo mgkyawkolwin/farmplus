@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +33,7 @@ import {
   compactNumber,
 } from "@/components/charts";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -41,6 +43,7 @@ import { InventoryMovement, ProductItem } from "@/models/product";
 import { getInventoryProducts } from "@/services/inventoryService";
 import { IProductService } from "@/services/productService";
 import { useSelectedShopChanged } from "@/lib/selectedShop";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -165,6 +168,7 @@ type MovementTypeStats = { name: string; quantity: number; events: number };
 
 export default function InventoryReportDashboardScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/reports/inventories/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [movements, setMovements] = React.useState<InventoryMovement[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -197,14 +201,15 @@ export default function InventoryReportDashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load();
       return undefined;
-    }, [load]),
+    }, [load, permissionState]),
   );
 
   useSelectedShopChanged(() => {
-    void load();
+    if (permissionState === 'authorized') void load();
   });
 
   const report = React.useMemo(() => {
@@ -342,7 +347,7 @@ export default function InventoryReportDashboardScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={permissionState === 'authorized' && loading} />
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -351,7 +356,11 @@ export default function InventoryReportDashboardScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {
           setRefreshing(true);
@@ -494,7 +503,7 @@ export default function InventoryReportDashboardScreen() {
             {report.recentMovements.length === 0 ? <Text style={styles.empty}>No stock movements recorded.</Text> : null}
           </View>
         </Section>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -534,5 +543,7 @@ const styles = StyleSheet.create({
   amber: { color: COLORS.amber, fontWeight: "700" },
   green: { color: COLORS.green, fontWeight: "700" },
   red: { color: COLORS.red, fontWeight: "700" },
+  centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   empty: { padding: 14, textAlign: "center", fontSize: 12, color: COLORS.muted },
 });

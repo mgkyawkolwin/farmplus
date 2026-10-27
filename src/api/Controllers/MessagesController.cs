@@ -69,6 +69,27 @@ public class MessagesController : ControllerBase
         }
     }
 
+    [HttpGet("{customerMessageId:guid}")]
+    public async Task<IActionResult> GetMessage(Guid customerMessageId)
+    {
+        try
+        {
+            var message = await _messageService.GetMessageAsync(customerMessageId);
+            return message == null
+                ? NotFound(new { Success = false, Message = "Message was not found." })
+                : Ok(new { Success = true, Data = message });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve message {CustomerMessageId}.", customerMessageId);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpPatch("{customerMessageId:guid}/read")]
     public async Task<IActionResult> MarkRead(Guid customerMessageId)
     {
@@ -84,6 +105,25 @@ public class MessagesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to mark message {CustomerMessageId} as read.", customerMessageId);
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
+    [HttpPatch("{customerMessageId:guid}/unread")]
+    public async Task<IActionResult> MarkUnread(Guid customerMessageId)
+    {
+        try
+        {
+            await _messageService.MarkUnreadAsync(customerMessageId);
+            return Ok(new { Success = true, Message = "Message marked as unread." });
+        }
+        catch (CustomException ex)
+        {
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark message {CustomerMessageId} as unread.", customerMessageId);
             return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
         }
     }

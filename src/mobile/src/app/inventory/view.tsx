@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { container, DI_TOKENS } from "@/di";
@@ -31,6 +32,7 @@ import { IProductService, StockMovement } from "@/services/productService";
 import { ProductItem } from "@/models/product";
 import SnackBar from "@/components/ui/snack-bar";
 import Gallery from "@/components/gallery";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -55,6 +57,7 @@ function MovementSeparator() {
 export default function InventoryProductViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const permissionState = usePagePermission('/inventory/view');
   const [product, setProduct] = React.useState<ProductItem | null>(null);
   const [movements, setMovements] = React.useState<StockMovement[]>([]);
   const [page, setPage] = React.useState(1);
@@ -101,10 +104,11 @@ export default function InventoryProductViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load(true);
       return undefined;
-    }, [id]),
+    }, [id, permissionState]),
   );
   const loadMore = () => {
     if (hasMore && !loadingMore && !loading) {
@@ -113,6 +117,7 @@ export default function InventoryProductViewScreen() {
     }
   };
   const saveMovement = async () => {
+    if (permissionState !== 'authorized') return;
     const amount = Number(quantity);
     if (!id || !movementType || !Number.isInteger(amount) || amount <= 0) {
       SnackBar.Error("Enter a positive whole quantity.");
@@ -141,15 +146,27 @@ export default function InventoryProductViewScreen() {
     }
   };
 
-  if (loading && !product)
+  if (permissionState !== 'authorized' || !product)
     return (
-      <SafeAreaView style={styles.loadingState}>
+      <SafeAreaView style={styles.page}>
         <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-        <ActivityIndicator size="large" color={COLORS.green} />
-        <Text style={styles.loadingText}>Loading stock...</Text>
+        <View style={styles.headerBar}>
+          <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
+            <Icon className="text-foreground" as={ChevronLeft} size={22} />
+          </Button>
+          <Text style={styles.headerTitle}>Inventory</Text>
+          <View style={styles.headerButton} />
+        </View>
+        {permissionState === 'denied' ? <UnauthorizedView /> : (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={COLORS.green} />
+            <Text style={styles.loadingText}>
+              {permissionState === 'checking' ? 'Checking permission...' : 'Loading stock...'}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
     );
-  if (!product) return null;
 
   const otherImages = (product.medias ?? [])
     .map((media) => media.url)

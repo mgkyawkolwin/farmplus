@@ -16,11 +16,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
 import { CustomerPayment } from '@/models/customer';
 import { Sale } from '@/models/sale';
 import { DealerServiceClient } from '@/services/dealerService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const dealerService = new DealerServiceClient();
 const PAGE_SIZE = 20;
@@ -45,6 +47,7 @@ function formatDate(value: string) {
 
 export default function DealerHistoryScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/dealers/history');
   const params = useLocalSearchParams<{
     dealerId?: string | string[];
     kind?: string | string[];
@@ -97,10 +100,11 @@ export default function DealerHistoryScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadHistory();
       return undefined;
-    }, [loadHistory]),
+    }, [loadHistory, permissionState]),
   );
 
   const loadMore = () => {
@@ -125,7 +129,14 @@ export default function DealerHistoryScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading && itemCount === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && itemCount === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>

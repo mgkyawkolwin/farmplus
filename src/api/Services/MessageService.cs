@@ -12,8 +12,10 @@ public interface IMessageService
 {
     Task<CreatedMessageDto> CreateMessageAsync(CreateMessageRequestDto request);
     Task<PaginatedResultDto<MessageInboxDto>> GetMessagesAsync(int page, int pageSize);
+    Task<MessageInboxDto?> GetMessageAsync(Guid customerMessageId);
     Task<int> GetUnreadCountAsync();
     Task MarkReadAsync(Guid customerMessageId);
+    Task MarkUnreadAsync(Guid customerMessageId);
 }
 
 public class MessageService : IMessageService
@@ -38,6 +40,20 @@ public class MessageService : IMessageService
         if (!Guid.TryParse(_currentUserService.UserId, out var adminUserId))
         {
             throw new CustomException("Invalid admin session.");
+        }
+        if (!await _dbContext.AdminUsers.AsNoTracking().AnyAsync(adminUser => adminUser.Id == adminUserId))
+        {
+            throw new CustomException("Admin user was not found.");
+        }
+
+        var title = request.Title?.Trim();
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new CustomException("Message title is required.");
+        }
+        if (title.Length > 200)
+        {
+            throw new CustomException("Message title cannot exceed 200 characters.");
         }
 
         var text = request.MessageText?.Trim();
@@ -68,11 +84,11 @@ public class MessageService : IMessageService
 
         var recipients = isBroadcast
             ? await _dbContext.Users.AsNoTracking()
-                .Select(user => new { user.Id, user.MainTenantId })
+                .Select(user => user.Id)
                 .ToListAsync()
             : await _dbContext.Users.AsNoTracking()
                 .Where(user => user.Id == request.TargetUserId!.Value)
-                .Select(user => new { user.Id, user.MainTenantId })
+                .Select(user => user.Id)
                 .ToListAsync();
         if (isSingle && recipients.Count == 0)
         {
@@ -82,10 +98,10 @@ public class MessageService : IMessageService
         var now = DateTime.UtcNow;
         var message = new MessageEntity
         {
+            Title = title,
             Audience = isBroadcast ? BroadcastAudience : SingleAudience,
             MessageText = text,
             TargetUserId = isBroadcast ? null : request.TargetUserId,
-            MainTenantId = isSingle ? recipients[0].MainTenantId : null,
             CreatedById = adminUserId,
             UpdatedById = adminUserId,
             CreatedAtUtc = now,
@@ -99,9 +115,8 @@ public class MessageService : IMessageService
         _dbContext.CustomerMessages.AddRange(recipients.Select(recipient => new CustomerMessageEntity
         {
             MessageId = message.Id,
-            UserId = recipient.Id,
+            UserId = recipient,
             IsRead = false,
-            MainTenantId = recipient.MainTenantId,
             CreatedById = adminUserId,
             UpdatedById = adminUserId,
             CreatedAtUtc = now,
@@ -113,6 +128,7 @@ public class MessageService : IMessageService
         return new CreatedMessageDto
         {
             Id = message.Id,
+            Title = message.Title,
             Audience = message.Audience,
             RecipientCount = recipients.Count,
             CreatedAtUtc = message.CreatedAtUtc,
@@ -133,6 +149,7 @@ public class MessageService : IMessageService
                     {
                         Id = recipient.Id,
                         MessageId = message.Id,
+                        Title = message.Title,
                         MessageText = message.MessageText,
                         Audience = message.Audience,
                         SentAtUtc = message.CreatedAtUtc,
@@ -155,6 +172,27 @@ public class MessageService : IMessageService
             .CountAsync(message => message.UserId == userId && !message.IsRead);
     }
 
+    public async Task<MessageInboxDto?> GetMessageAsync(Guid customerMessageId)
+    {
+        var userId = GetCurrentUserId();
+        return await (
+            from recipient in _dbContext.CustomerMessages.AsNoTracking()
+            join message in _dbContext.Messages.AsNoTracking() on recipient.MessageId equals message.Id
+            where recipient.Id == customerMessageId && recipient.UserId == userId
+            select new MessageInboxDto
+            {
+                Id = recipient.Id,
+                MessageId = message.Id,
+                Title = message.Title,
+                MessageText = message.MessageText,
+                Audience = message.Audience,
+                SentAtUtc = message.CreatedAtUtc,
+                IsRead = recipient.IsRead,
+                ReadAtUtc = recipient.ReadAtUtc,
+            }
+        ).SingleOrDefaultAsync();
+    }
+
     public async Task MarkReadAsync(Guid customerMessageId)
     {
         var userId = GetCurrentUserId();
@@ -165,6 +203,21 @@ public class MessageService : IMessageService
         if (message.IsRead) return;
         message.IsRead = true;
         message.ReadAtUtc = DateTime.UtcNow;
+        message.UpdatedAtUtc = DateTime.UtcNow;
+        message.UpdatedById = userId;
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task MarkUnreadAsync(Guid customerMessageId)
+    {
+        var userId = GetCurrentUserId();
+        var message = await _dbContext.CustomerMessages
+            .SingleOrDefaultAsync(item => item.Id == customerMessageId && item.UserId == userId)
+            ?? throw new CustomException("Message was not found.");
+
+        if (!message.IsRead) return;
+        message.IsRead = false;
+        message.ReadAtUtc = null;
         message.UpdatedAtUtc = DateTime.UtcNow;
         message.UpdatedById = userId;
         await _dbContext.SaveChangesAsync();

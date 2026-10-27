@@ -36,6 +36,7 @@ import { MessageServiceClient } from "@/services/messageService";
 
 const shopService = new ShopServiceClient();
 const messageService = new MessageServiceClient();
+const UNREAD_POLL_INTERVAL_MS = 10_000;
 
 export default function HomeTopBar() {
   const router = useRouter();
@@ -51,12 +52,26 @@ export default function HomeTopBar() {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
-      messageService.getUnreadCount().then((count) => {
-        if (active) setUnreadCount(count);
-      }).catch(() => {
-        if (active) setUnreadCount(0);
-      });
-      return () => { active = false; };
+      let isFetching = false;
+      const refreshUnreadCount = async () => {
+        if (isFetching) return;
+        isFetching = true;
+        try {
+          const count = await messageService.getUnreadCount();
+          if (active) setUnreadCount(count);
+        } catch {
+          // Keep the last known count when the network is temporarily unavailable.
+        } finally {
+          isFetching = false;
+        }
+      };
+
+      void refreshUnreadCount();
+      const intervalId = setInterval(() => void refreshUnreadCount(), UNREAD_POLL_INTERVAL_MS);
+      return () => {
+        active = false;
+        clearInterval(intervalId);
+      };
     }, []),
   );
 
@@ -163,11 +178,7 @@ export default function HomeTopBar() {
           >
             <View style={styles.notificationButton}>
               <Icon className="text-foreground" as={Bell} size={22} />
-              {unreadCount > 0 ? (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                </View>
-              ) : null}
+              {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
             </View>
           </Button>
 
@@ -335,19 +346,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   notificationButton: { position: 'relative' },
-  notificationBadge: {
+  notificationDot: {
     position: 'absolute',
-    top: -7,
-    right: -9,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
+    top: -2,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#B42318',
   },
-  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
   selectTrigger: {
     width: 160,
     maxWidth: 160,

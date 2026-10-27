@@ -24,6 +24,17 @@ public class UserEntity : EntityBase<Guid>
     [MaxLength(100)]
     public string? City { get; set; }
 
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [MaxLength(30)]
+    public string? NationalId { get; set; }
+
+    [MaxLength(30)]
+    public string? PassportNumber { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
     public Guid? RoleId { get; set; }
 
     [MaxLength(500)]

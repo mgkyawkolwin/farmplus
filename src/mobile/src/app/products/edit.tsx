@@ -19,6 +19,7 @@ import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { Checkbox } from "@/components/ui/checkbox";
+import UnauthorizedView from "@/components/unauthorized-view";
 import DropdownModel, { DropdownModelItem } from "@/components/dropdownModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -32,6 +33,7 @@ import { UnitServiceClient } from "@/services/unitService";
 import { ProductMediaItem } from "@/models/product";
 import { normalizeMediaFile } from "@/lib/mediaFile";
 import { useColorScheme } from "nativewind";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -65,6 +67,7 @@ export default function EditProductScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const permissionState = usePagePermission('/products/edit');
   const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = React.useState(false);
@@ -122,10 +125,11 @@ export default function EditProductScreen() {
   }, [brandService, categoryService, unitService]);
 
   React.useEffect(() => {
-    void loadDropdownOptions();
-  }, [loadDropdownOptions]);
+    if (permissionState === 'authorized') void loadDropdownOptions();
+  }, [loadDropdownOptions, permissionState]);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     if (!productId) {
       router.back();
       return;
@@ -172,7 +176,7 @@ export default function EditProductScreen() {
     return () => {
       isActive = false;
     };
-  }, [productId, router]);
+  }, [permissionState, productId, router]);
 
   const handleInputChange = (field: keyof ProductFormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -278,6 +282,7 @@ export default function EditProductScreen() {
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!productId) return;
     if (!formData.name.trim()) {
       SnackBar.Error("Name is required");
@@ -333,7 +338,7 @@ export default function EditProductScreen() {
         className="bg-background"
         barStyle={colorScheme === "light" ? "light-content" : "dark-content"}
       />
-      <LoadingOverlay isLoading={loading || pageLoading} />
+      <LoadingOverlay isLoading={loading || (permissionState === 'authorized' && pageLoading)} />
 
       <View
         className="bg-background border-b border-border"
@@ -352,7 +357,14 @@ export default function EditProductScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#4f46e5" />
           <Text className="text-muted-foreground" style={styles.stateText}>

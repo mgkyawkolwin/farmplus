@@ -21,9 +21,10 @@ public class UsersController : BaseController
     private readonly IUserService _userService;
     private readonly ILogger<UsersController> _logger;
 
-    public UsersController(IUserService userService, ILogger<UsersController> logger) : base(logger)
+    public UsersController(IUserService userService, IOutputCacheStore cacheStore, ILogger<UsersController> logger) : base(logger)
     {
         _userService = userService;
+        _cacheStore = cacheStore;
         _logger = logger;
     }
 
@@ -147,6 +148,11 @@ public class UsersController : BaseController
         try
         {
             _logger.LogDebug("CALLED: ChangePassword(id={Id})", id);
+            if (GetCurrentUserId() != id)
+            {
+                return Ok(new { Success = false, Message = "You can only change your own password." });
+            }
+
             var changed = await _userService.ChangePasswordAsync(id, request);
             return Ok(new { Success = true, Message = "Password updated successfully." });
         }
@@ -162,15 +168,74 @@ public class UsersController : BaseController
         }
     }
 
+    [HttpPatch("{id:guid}/reset-password")]
+    public async Task<IActionResult> ResetUserPassword(Guid id, [FromBody] ResetUserPasswordRequestDto request)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: ResetUserPassword(id={Id})", id);
+            var currentUserId = GetCurrentUserId() ?? throw new CustomException("Invalid session user.");
+            await _userService.ResetUserPasswordAsync(id, request, currentUserId);
+            await _cacheStore.EvictByTagAsync(CachePolicyKeys.StrictPerUserCache, new CancellationToken());
+
+            return Ok(new { Success = true, Message = "Password reset successfully." });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
+    [HttpPatch("{id:guid}/profile")]
+    public async Task<IActionResult> UpdateProfile(Guid id, [FromBody] UpdateProfileRequestDto request)
+    {
+        try
+        {
+            _logger.LogDebug("CALLED: UpdateProfile(id={Id})", id);
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null || currentUserId != id)
+            {
+                return Ok(new { Success = false, Message = "You can only update your own profile." });
+            }
+
+            var user = await _userService.UpdateProfileAsync(id, request, currentUserId.Value);
+            await _cacheStore.EvictByTagAsync(CachePolicyKeys.StrictPerUserCache, new CancellationToken());
+
+            return Ok(new { Success = true, Data = user, Message = "Profile updated successfully." });
+        }
+        catch (CustomException ex)
+        {
+            _logger.LogError("Custom exception occurred: {Message}", ex.Message);
+            return Ok(new { Success = false, Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error occurred.");
+            return StatusCode((int)HttpStatusCode.InternalServerError, new { Success = false, Message = "An unexpected error occurred." });
+        }
+    }
+
     [HttpPatch("{id:guid}/profilePicture")]
     [Consumes("multipart/form-data")]
     [Route("api/users/{id:guid}/profilePicture")]
-    public async Task<IActionResult> UploadProfilePicture(Guid id, [FromForm] IFormFile file)
+    public async Task<IActionResult> UploadProfilePicture(Guid id, IFormFile file)
     {
         try
         {
             _logger.LogDebug("CALLED: UploadProfilePicture(id={Id})", id);
-            var user = await _userService.UploadProfilePictureAsync(id, file, GetCurrentUserId() ?? throw new CustomException("Invalid session user."));
+            var currentUserId = GetCurrentUserId() ?? throw new CustomException("Invalid session user.");
+            if (currentUserId != id)
+            {
+                return Ok(new { Success = false, Message = "You can only update your own profile picture." });
+            }
+
+            var user = await _userService.UploadProfilePictureAsync(id, file, currentUserId);
             return Ok(new { Success = true, Data = user });
         }
         catch (CustomException ex)
@@ -214,6 +279,10 @@ public class UsersController : BaseController
                     Email = user.Email,
                     Address = user.Address,
                     City = user.City,
+                    Phone = user.Phone,
+                    NationalId = user.NationalId,
+                    PassportNumber = user.PassportNumber,
+                    IsActive = user.IsActive,
                     Rating = user.Rating,
                     RatingCount = user.RatingCount,
                     ProfilePictureUrl = user.ProfilePictureUrl,

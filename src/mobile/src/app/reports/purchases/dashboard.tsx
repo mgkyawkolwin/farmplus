@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +33,7 @@ import {
   compactNumber,
 } from "@/components/charts";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -39,6 +41,7 @@ import SnackBar from "@/components/ui/snack-bar";
 import { container, DI_TOKENS } from "@/di";
 import { Purchase } from "@/models/purchase";
 import { IPurchaseService } from "@/services/purchaseService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
 
@@ -162,6 +165,7 @@ type ProductStats = { id: string; name: string; orders: number; spend: number; u
 
 export default function PurchaseReportDashboardScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/reports/purchases/dashboard');
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -188,10 +192,11 @@ export default function PurchaseReportDashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load();
       return undefined;
-    }, [load]),
+    }, [load, permissionState]),
   );
 
   const report = React.useMemo(() => {
@@ -312,7 +317,7 @@ export default function PurchaseReportDashboardScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={permissionState === 'authorized' && loading} />
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -321,7 +326,11 @@ export default function PurchaseReportDashboardScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => {
@@ -454,7 +463,7 @@ export default function PurchaseReportDashboardScreen() {
             {report.recentPurchases.length === 0 ? <Text style={styles.empty}>No purchase orders recorded.</Text> : null}
           </View>
         </Section>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -490,5 +499,7 @@ const styles = StyleSheet.create({
   tdSub: { fontSize: 10, color: COLORS.muted },
   tdWide: { flex: 2, minWidth: 0 },
   tdNum: { flex: 1.2, textAlign: "right" },
+  centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   empty: { padding: 14, textAlign: "center", fontSize: 12, color: COLORS.muted },
 });

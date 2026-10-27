@@ -29,12 +29,15 @@ import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { normalizeMediaFile } from '@/lib/mediaFile';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
 export default function NewCustomerScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
+    const permissionState = usePagePermission('/customers/new');
     const [loading, setLoading] = React.useState(false);
     const [isActive, setIsActive] = React.useState(true);
     const [profileImageUri, setProfileImageUri] = React.useState<string | null>(null);
@@ -87,6 +90,7 @@ export default function NewCustomerScreen() {
     };
 
     const handleSubmit = async () => {
+        if (permissionState !== 'authorized') return;
         if (!formData.name.trim()) {
             SnackBar.Error('Name is required');
             return;
@@ -156,7 +160,14 @@ export default function NewCustomerScreen() {
                 <View></View>
             </View>
 
-            <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: 40 }}
+            {permissionState === 'checking' ? (
+                <View style={styles.centeredState}>
+                    <ActivityIndicator size="large" color="#16794B" />
+                    <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+                </View>
+            ) : permissionState === 'denied' ? (
+                <UnauthorizedView />
+            ) : <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: 40 }}
                 enableOnAndroid={true}
                 extraScrollHeight={40}
                 keyboardShouldPersistTaps="handled"
@@ -333,7 +344,7 @@ export default function NewCustomerScreen() {
                         )}
                     </Button>
                 </View>
-            </KeyboardAwareScrollView>
+            </KeyboardAwareScrollView>}
         </SafeAreaView>
     );
 }
@@ -342,6 +353,8 @@ const styles = StyleSheet.create({
     page: {
         flex: 1,
     },
+    centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    stateText: { marginTop: 8, textAlign: 'center' },
     headerBar: {
         flexDirection: 'row',
         alignItems: 'center',

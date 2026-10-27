@@ -15,9 +15,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Supplier } from "@/models/supplier";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const COLORS = {
   ink: "#0F172A",
@@ -35,6 +37,7 @@ function money(value: number) {
 export default function SupplierViewScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const permissionState = usePagePermission('/suppliers/view');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [supplier, setSupplier] = React.useState<Supplier>();
   const [loading, setLoading] = React.useState(true);
@@ -54,17 +57,30 @@ export default function SupplierViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadSupplier();
       return undefined;
-    }, [loadSupplier]),
+    }, [loadSupplier, permissionState]),
   );
 
-  if (loading || !supplier) {
+  if (permissionState !== 'authorized' || loading || !supplier) {
     return (
       <SafeAreaView style={styles.page}>
+        <View style={styles.headerBar}>
+          <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
+            <Icon className="text-foreground" as={ChevronLeft} size={22} />
+          </Button>
+          <Text style={styles.headerTitle}>Supplier</Text>
+          <View style={styles.headerButton} />
+        </View>
+        {permissionState === 'denied' ? <UnauthorizedView /> : (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={COLORS.green} />
+          <Text className="text-muted-foreground">
+            {permissionState === 'checking' ? 'Checking permission...' : 'Loading supplier...'}
+          </Text>
         </View>
+        )}
       </SafeAreaView>
     );
   }

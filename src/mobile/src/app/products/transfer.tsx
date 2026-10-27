@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Icon } from "@/components/ui/icon";
 import DropdownModel, { DropdownModelItem } from "@/components/dropdownModel";
 import SnackBar from "@/components/ui/snack-bar";
 import { ShopServiceClient } from "@/services/shopService";
 import { container, DI_TOKENS } from "@/di";
 import { IProductService } from "@/services/productService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -23,6 +25,7 @@ const productService = container.resolve<IProductService>(
 export default function TransferProductStockScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const permissionState = usePagePermission('/products/transfer');
   const [shops, setShops] = React.useState<DropdownModelItem[]>([]);
   const [fromShopId, setFromShopId] = React.useState("");
   const [toShopId, setToShopId] = React.useState("");
@@ -33,29 +36,31 @@ export default function TransferProductStockScreen() {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     new ShopServiceClient()
       .getShops(1, 100)
       .then((items) =>
         setShops(items.map((shop) => ({ label: shop.name, value: shop.id }))),
       )
       .catch(() => SnackBar.Error("Unable to load shops."));
-  }, []);
+  }, [permissionState]);
   React.useEffect(() => {
-    if (id && fromShopId)
+    if (permissionState === 'authorized' && id && fromShopId)
       void productService
         .getShopStock(id, fromShopId)
         .then(setFromStock)
         .catch(() => SnackBar.Error("Unable to load source stock."));
-  }, [id, fromShopId]);
+  }, [id, fromShopId, permissionState]);
   React.useEffect(() => {
-    if (id && toShopId)
+    if (permissionState === 'authorized' && id && toShopId)
       void productService
         .getShopStock(id, toShopId)
         .then(setToStock)
         .catch(() => SnackBar.Error("Unable to load destination stock."));
-  }, [id, toShopId]);
+  }, [id, toShopId, permissionState]);
 
   const transfer = async () => {
+    if (permissionState !== 'authorized') return;
     const amount = Number(quantity);
     if (
       !id ||
@@ -100,7 +105,14 @@ export default function TransferProductStockScreen() {
         </Text>
         <View style={styles.spacer} />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      {permissionState === 'checking' ? (
+        <View style={styles.permissionState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground">Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.field}>
           <Label className="text-foreground">From Shop</Label>
           <DropdownModel
@@ -155,7 +167,7 @@ export default function TransferProductStockScreen() {
             <Text className="text-background">Transfer</Text>
           )}
         </Button>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -163,6 +175,7 @@ export default function TransferProductStockScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", padding: 8 },
+  permissionState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
   title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "600" },
   spacer: { width: 40 },
   content: { padding: 16, gap: 16 },

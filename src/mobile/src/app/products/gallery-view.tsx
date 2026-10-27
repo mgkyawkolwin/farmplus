@@ -12,10 +12,13 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 export default function ProductGalleryViewerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ images?: string | string[]; index?: string | string[]; mode?: string | string[] }>();
+  const permissionState = usePagePermission('/products/gallery-view');
   const { width } = Dimensions.get('window');
 
   const parsedImages = React.useMemo(() => {
@@ -114,6 +117,36 @@ export default function ProductGalleryViewerScreen() {
       }),
     [goToNext, goToPrevious],
   );
+
+  if (permissionState === 'checking') {
+    return (
+      <View style={styles.previewContainer}>
+        <View style={styles.previewHeader}>
+          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </Pressable>
+          <Text style={styles.previewTitle}>Images</Text>
+          <View style={styles.previewSpacer} />
+        </View>
+        <View style={styles.emptyState}><Text style={styles.emptyStateText}>Checking permission...</Text></View>
+      </View>
+    );
+  }
+
+  if (permissionState === 'denied') {
+    return (
+      <View style={styles.previewContainer}>
+        <View style={styles.previewHeader}>
+          <Pressable style={styles.closeButton} onPress={() => router.back()}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </Pressable>
+          <Text style={styles.previewTitle}>Images</Text>
+          <View style={styles.previewSpacer} />
+        </View>
+        <UnauthorizedView />
+      </View>
+    );
+  }
 
   if (!parsedImages.length) {
     return (

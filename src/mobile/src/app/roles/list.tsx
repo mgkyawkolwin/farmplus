@@ -9,8 +9,10 @@ import { ChevronLeft, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react-nat
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import LoadingOverlay from '@/components/loadingOverlay';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { container, DI_TOKENS } from '@/di';
 import { RoleItem } from '@/models/role';
 import { IRoleService } from '@/services/roleService';
@@ -20,6 +22,7 @@ const PAGE_SIZE = 20;
 
 export default function RoleListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/roles/list');
   const [roles, setRoles] = React.useState<RoleItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -45,10 +48,11 @@ export default function RoleListScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       fetchRoles();
       return undefined;
-    }, [fetchRoles]),
+    }, [fetchRoles, permissionState]),
   );
 
   const deleteRole = (role: RoleItem) => {
@@ -93,7 +97,14 @@ export default function RoleListScreen() {
         </Button>
       </View>
 
-      {loading && roles.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && roles.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading roles...</Text>

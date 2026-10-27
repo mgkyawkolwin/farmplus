@@ -26,6 +26,8 @@ import { Text } from '@/components/ui/text';
 import SnackBar from '@/components/ui/snack-bar';
 import { Shop } from '@/models/shop';
 import { ShopServiceClient } from '@/services/shopService';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const PAGE_SIZE = 20;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -108,6 +110,7 @@ function ShopCard({ shop, onEdit, onDelete }: { shop: Shop; onEdit: () => void; 
 
 export default function ShopsScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/shops/shops');
   const service = React.useMemo(() => new ShopServiceClient(), []);
 
   const [shops, setShops] = React.useState<Shop[]>([]);
@@ -145,8 +148,9 @@ export default function ShopsScreen() {
   }, [service]);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     void loadShops(1, false, false);
-  }, [loadShops]);
+  }, [loadShops, permissionState]);
 
   const handleScroll = React.useCallback((event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -249,12 +253,21 @@ export default function ShopsScreen() {
           <Icon as={ChevronLeft} size={22} className="text-foreground" />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>Shops</Text>
-        <Button onPress={openCreate} style={styles.addButton}>
+        <Button onPress={openCreate} disabled={permissionState !== 'authorized'} style={styles.addButton}>
           <Plus size={14} color="#FFFFFF" />
           <Text style={styles.addButtonText}>New Shop</Text>
         </Button>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.emptyText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : (
+        <>
       <View style={styles.toolbar}>
         <View style={styles.searchBox}>
           <Search size={15} color="#64748B" />
@@ -412,6 +425,8 @@ export default function ShopsScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 }

@@ -19,7 +19,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { container, DI_TOKENS } from '@/di';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { CustomerItem } from '@/models/customer';
 import { ICustomerService } from '@/services/customerService';
 
@@ -114,6 +116,7 @@ export function CustomerDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const permissionState = usePagePermission('/customers/dashboard');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -132,10 +135,11 @@ export function CustomerDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadCustomers();
       return undefined;
-    }, [loadCustomers])
+    }, [loadCustomers, permissionState])
   );
 
   const recentCustomers = React.useMemo(
@@ -175,7 +179,14 @@ export function CustomerDashboardContent({
         </View>
       ) : null}
 
-      {loading && customers.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && customers.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading customers...</Text>

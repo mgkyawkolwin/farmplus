@@ -4,15 +4,20 @@ namespace FarmPlus.Api.Constants;
 
 public static class PermissionCatalog
 {
+    public static IReadOnlyList<string> AlwaysAccessiblePages { get; } =
+    [
+        "/menu",
+        "/profile",
+        "/settings",
+        "/messages/list",
+    ];
+
     public static IReadOnlyList<PermissionPageDto> Pages { get; } =
     [
         new("/home/dashboard", "Workspace", "Home Dashboard"),
         new("/home/sales", "Workspace", "Sales Overview"),
         new("/home/purchases", "Workspace", "Purchase Overview"),
         new("/home/aichatplaceholder", "Workspace", "AI Assistant"),
-        new("/menu", "Workspace", "Menu"),
-        new("/profile", "Workspace", "Profile"),
-        new("/settings", "Workspace", "Settings"),
         new("/chat/chat", "Workspace", "Chat"),
 
         new("/users/list", "Users, Roles & Permissions", "Users"),
@@ -22,8 +27,6 @@ public static class PermissionCatalog
         new("/roles/new", "Users, Roles & Permissions", "New Role"),
         new("/roles/edit", "Users, Roles & Permissions", "Edit Role"),
         new("/rolepermissions", "Users, Roles & Permissions", "Role Permissions"),
-        new("/messages/list", "Workspace", "Messages"),
-
         new("/units/units", "Configuration", "Units"),
         new("/categories/categories", "Configuration", "Categories"),
         new("/brands/brands", "Configuration", "Brands"),
@@ -87,4 +90,6 @@ public static class PermissionCatalog
     ];
 
     public static bool Contains(string key) => Pages.Any(page => page.Key == key);
+
+    public static bool IsAlwaysAccessible(string key) => AlwaysAccessiblePages.Contains(key, StringComparer.Ordinal);
 }

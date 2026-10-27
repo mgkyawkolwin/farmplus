@@ -45,7 +45,7 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
       items: [
         { label: 'Users', icon: Users, path: '/users/list' },
         { label: 'Roles', icon: ShieldCheck, path: '/roles/list' },
-        { label: 'Role Permissions', icon: UserCog, path: '/rolepermissions' },
+        { label: 'Role Permissions', icon: UserCog, path: '/rolepermissions/rolepermissions' },
       ],
     },
     {
@@ -56,7 +56,6 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
         { label: 'Category', icon: Boxes, path: '/categories/categories' },
         { label: 'Brand', icon: Briefcase, path: '/brands/brands' },
         { label: 'Shop', icon: Store, path: '/shops/shops' },
-        { label: 'Account', icon: UserCog, path: '/settings' },
       ],
     },
     {
@@ -256,7 +255,7 @@ const styles = StyleSheet.create({
   card: {
     minHeight: 84,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#D9DEE5',

@@ -40,6 +40,8 @@ import { Icon } from '@/components/ui/icon';
 import { DealerItem } from '@/models/dealer';
 import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const COLORS = {
   muted: '#64748B',
@@ -50,6 +52,7 @@ const COLORS = {
 
 export default function DealersScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/dealers/dealers');
   const service = React.useMemo(() => new DealerServiceClient(), []);
 
   const [dealers, setDealers] = React.useState<DealerItem[]>([]);
@@ -103,8 +106,9 @@ export default function DealersScreen() {
   );
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     void loadDealers(1, false, false);
-  }, [loadDealers]);
+  }, [loadDealers, permissionState]);
 
   const handleRefresh = React.useCallback(() => {
     void loadDealers(1, false, true);
@@ -307,12 +311,21 @@ export default function DealersScreen() {
           accessibilityRole="button"
           accessibilityLabel="New dealer"
           onPress={() => router.push('/dealers/new')}
+          disabled={permissionState !== 'authorized'}
           style={styles.addButton}
         >
           <Plus size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={COLORS.green} />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : (
       <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -449,6 +462,7 @@ export default function DealersScreen() {
           </View>
         ) : null}
       </KeyboardAwareScrollView>
+      )}
 
       <Modal
         visible={modalVisible}

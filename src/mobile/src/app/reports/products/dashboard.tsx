@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -31,6 +32,7 @@ import {
   compactNumber,
 } from "@/components/charts";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -38,6 +40,7 @@ import SnackBar from "@/components/ui/snack-bar";
 import { container, DI_TOKENS } from "@/di";
 import { ProductItem } from "@/models/product";
 import { IProductService } from "@/services/productService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -154,6 +157,7 @@ type ProductGroup = { label: string; count: number; units: number; value: number
 
 export default function ProductReportDashboardScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/reports/products/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -180,10 +184,11 @@ export default function ProductReportDashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load();
       return undefined;
-    }, [load]),
+    }, [load, permissionState]),
   );
 
   const report = React.useMemo(() => {
@@ -315,7 +320,7 @@ export default function ProductReportDashboardScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={permissionState === 'authorized' && loading} />
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -324,7 +329,11 @@ export default function ProductReportDashboardScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => {
@@ -512,7 +521,7 @@ export default function ProductReportDashboardScreen() {
             {report.recentlyAdded.length === 0 ? <Text style={styles.empty}>No products yet.</Text> : null}
           </View>
         </Section>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -549,6 +558,8 @@ const styles = StyleSheet.create({
   tdWide: { flex: 2, minWidth: 0 },
   tdSmall: { flex: 0.8, textAlign: "right" },
   tdNum: { flex: 1.2, textAlign: "right" },
+  centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   tdStatus: { flex: 1.1, alignItems: "flex-end" },
   red: { color: COLORS.red, fontWeight: "700" },
   statusPill: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },

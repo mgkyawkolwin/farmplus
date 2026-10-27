@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import { ChevronLeft, Mail, MapPin, Pencil, Phone } from "lucide-react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { container, DI_TOKENS } from "@/di";
 import { CustomerItem } from "@/models/customer";
 import { ICustomerService } from "@/services/customerService";
 import SnackBar from "@/components/ui/snack-bar";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -31,6 +34,7 @@ const customerService = container.resolve<ICustomerService>(
 export default function CustomerViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const permissionState = usePagePermission('/customers/view');
   const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [customer, setCustomer] = React.useState<CustomerItem | null>(null);
@@ -56,13 +60,35 @@ export default function CustomerViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadCustomer();
       return undefined;
     }, [loadCustomer]),
   );
 
-  if (!customer) {
-    return null;
+  if (permissionState !== 'authorized' || !customer) {
+    return (
+      <SafeAreaView style={styles.page}>
+        <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+        <View style={styles.headerBar}>
+          <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
+            <Icon className="text-foreground" as={ChevronLeft} size={22} />
+          </Button>
+          <Text style={styles.headerTitle}>Customer</Text>
+          <View style={styles.headerButton} />
+        </View>
+        {permissionState === 'denied' ? (
+          <UnauthorizedView />
+        ) : (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#16794B" />
+            <Text className="text-muted-foreground" style={styles.stateText}>
+              {permissionState === 'checking' ? 'Checking permission...' : 'Loading customer...'}
+            </Text>
+          </View>
+        )}
+      </SafeAreaView>
+    );
   }
 
   const createdAt = customer.createdAtUtc
@@ -381,6 +407,8 @@ const COLORS = {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#FFFFFF" },
+  loadingState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",

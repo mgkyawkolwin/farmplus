@@ -28,6 +28,8 @@ import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { normalizeMediaFile } from '@/lib/mediaFile';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
@@ -59,6 +61,7 @@ export default function EditCustomerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
+  const permissionState = usePagePermission('/customers/edit');
   const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = React.useState(false);
@@ -69,6 +72,7 @@ export default function EditCustomerScreen() {
   const [formData, setFormData] = React.useState<CustomerFormState>(emptyFormState);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     if (!customerId) {
       router.back();
       return;
@@ -114,7 +118,7 @@ export default function EditCustomerScreen() {
     return () => {
       isActiveRequest = false;
     };
-  }, [customerId, router]);
+  }, [customerId, permissionState, router]);
 
   const handleInputChange = (field: keyof CustomerFormState, value: string) => {
     setFormData((prev) => ({
@@ -152,6 +156,7 @@ export default function EditCustomerScreen() {
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!customerId) return;
 
     if (!formData.name.trim()) {
@@ -209,7 +214,7 @@ export default function EditCustomerScreen() {
         className="bg-background"
         barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
       />
-      <LoadingOverlay isLoading={loading || pageLoading} />
+      <LoadingOverlay isLoading={loading || (permissionState === 'authorized' && pageLoading)} />
 
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
@@ -221,7 +226,14 @@ export default function EditCustomerScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#4f46e5" />
           <Text className="text-muted-foreground" style={styles.stateText}>

@@ -16,9 +16,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { Icon } from '@/components/ui/icon';
 import { CategoryItem } from '@/models/category';
 import SnackBar from '@/components/ui/snack-bar';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 export default function CategoriesScreen() {
     const router = useRouter();
+    const permissionState = usePagePermission('/categories/categories');
     const service = React.useMemo(() => new CategoryServiceClient(), []);
 
     const [categories, setCategories] = React.useState<CategoryItem[]>([]);
@@ -59,8 +62,9 @@ export default function CategoriesScreen() {
     }, [service]);
 
     React.useEffect(() => {
+        if (permissionState !== 'authorized') return undefined;
         void loadCategories(1, false, false);
-    }, [loadCategories]);
+    }, [loadCategories, permissionState]);
 
     const handleRefresh = React.useCallback(() => {
         void loadCategories(1, false, true);
@@ -153,20 +157,28 @@ export default function CategoriesScreen() {
                     <Icon as={ChevronLeft} size={22} className='text-foreground' />
                 </Button>
                 <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
-                <Button variant='outline' size='sm' onPress={openCreateModal} style={styles.addButton}>
+                <Button variant='outline' size='sm' onPress={openCreateModal} disabled={permissionState !== 'authorized'} style={styles.addButton}>
                     <Icon as={Plus} size={14} color='#0F172A' />
                     <Text style={styles.addButtonText}>New</Text>
                 </Button>
             </View>
 
-            <KeyboardAwareScrollView
-                className='bg-background'
-                style={styles.scrollView}
-                contentContainerStyle={styles.contentContainer}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-                onScroll={handleScroll}
-                scrollEventThrottle={400}
-            >
+            {permissionState === 'checking' ? (
+                <View style={styles.emptyState}>
+                    <ActivityIndicator size="large" />
+                    <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
+                </View>
+            ) : permissionState === 'denied' ? (
+                <UnauthorizedView />
+            ) : (
+              <KeyboardAwareScrollView
+                  className='bg-background'
+                  style={styles.scrollView}
+                  contentContainerStyle={styles.contentContainer}
+                  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={400}
+              >
                 {loading && !refreshing ? (
                     <View style={styles.emptyState}>
                         <ActivityIndicator size="large" />
@@ -254,7 +266,8 @@ export default function CategoriesScreen() {
                         <AlertDescription>{errorMessage}</AlertDescription>
                     </Alert>
                 ) : null}
-            </KeyboardAwareScrollView>
+                            </KeyboardAwareScrollView>
+                        )}
 
             <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
                 <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay} 

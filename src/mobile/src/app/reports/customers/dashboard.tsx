@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -34,6 +35,7 @@ import {
   compactNumber,
 } from "@/components/charts";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import SnackBar from "@/components/ui/snack-bar";
@@ -43,6 +45,7 @@ import { CustomerItem } from "@/models/customer";
 import { Sale } from "@/models/sale";
 import { ICustomerService } from "@/services/customerService";
 import { ISaleService } from "@/services/saleService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -182,6 +185,7 @@ function Kpi({
 
 export default function CustomerReportDashboardScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/reports/customers/dashboard');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -206,10 +210,11 @@ export default function CustomerReportDashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load();
       return undefined;
-    }, [load]),
+    }, [load, permissionState]),
   );
 
   const report = React.useMemo(() => {
@@ -392,7 +397,7 @@ export default function CustomerReportDashboardScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={permissionState === 'authorized' && loading} />
       <View
         className="bg-background border-b border-border"
         style={styles.headerBar}
@@ -410,7 +415,11 @@ export default function CustomerReportDashboardScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -792,7 +801,7 @@ export default function CustomerReportDashboardScreen() {
             ) : null}
           </View>
         </Section>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -914,6 +923,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   empty: {
     padding: 14,
     textAlign: "center",

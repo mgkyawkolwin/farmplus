@@ -11,12 +11,14 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import ShopBanner from '@/components/shopBanner';
 import { useSelectedShopName } from '@/lib/useSelectedShopName';
 import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 
@@ -74,6 +76,7 @@ function SummaryRow({ label, value, strong, color }: { label: string; value: str
 
 export default function SaleViewScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/sales/view');
   const { shopName, shopLoaded } = useSelectedShopName();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const saleId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -105,9 +108,10 @@ export default function SaleViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadSale();
       return undefined;
-    }, [loadSale]),
+    }, [loadSale, permissionState]),
   );
 
   const items = sale?.items ?? [];
@@ -138,6 +142,7 @@ export default function SaleViewScreen() {
   };
 
   const submitVoid = async () => {
+    if (permissionState !== 'authorized') return;
     if (!sale) return;
     if (!voidReason.trim()) {
       SnackBar.Error('Enter a void reason');
@@ -157,6 +162,7 @@ export default function SaleViewScreen() {
   };
 
   const submitPayment = async () => {
+    if (permissionState !== 'authorized') return;
     if (!sale) return;
     if (amountToPay <= 0) {
       SnackBar.Error('Enter an amount greater than zero');
@@ -189,7 +195,14 @@ export default function SaleViewScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading && !sale ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && !sale ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale...</Text>

@@ -20,6 +20,8 @@ import { normalizeMediaFile } from "@/lib/mediaFile";
 import { Supplier } from "@/models/supplier";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
+import UnauthorizedView from "@/components/unauthorized-view";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 type Fields = Pick<
   Supplier,
@@ -44,6 +46,7 @@ const emptyFields: Fields = {
 
 export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const router = useRouter();
+  const permissionState = usePagePermission(supplierId ? '/suppliers/edit' : '/suppliers/new');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [fields, setFields] = React.useState<Fields>(emptyFields);
   const [rowVersion, setRowVersion] = React.useState("");
@@ -58,7 +61,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    if (!supplierId) return;
+    if (!supplierId || permissionState !== 'authorized') return;
     let active = true;
     const load = async () => {
       try {
@@ -87,7 +90,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
     return () => {
       active = false;
     };
-  }, [router, service, supplierId]);
+  }, [permissionState, router, service, supplierId]);
 
   const pickLogo = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -115,6 +118,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   };
 
   const submit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!fields.supplierName.trim()) {
       SnackBar.Error("Supplier name is required.");
       return;
@@ -153,6 +157,14 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
     }
   };
 
+  if (permissionState === 'checking')
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text className="text-muted-foreground">Checking permission...</Text>
+      </View>
+    );
+  if (permissionState === 'denied') return <UnauthorizedView />;
   if (loading)
     return (
       <View style={styles.centered}>

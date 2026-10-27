@@ -45,6 +45,12 @@ public sealed class PermissionAuthorizationFilter : IAsyncActionFilter
             return;
         }
 
+        if (permissionKeys.All(PermissionCatalog.IsAlwaysAccessible))
+        {
+            await next();
+            return;
+        }
+
         var roleId = await _dbContext.Users.AsNoTracking()
             .Where(user => user.Id == userId)
             .Select(user => user.RoleId)
@@ -218,9 +224,12 @@ public sealed class PermissionAuthorizationFilter : IAsyncActionFilter
             return module == "dealers" ? "/dealers/history" : "/customers/sales";
         }
         if (action.Contains("Purchases", StringComparison.OrdinalIgnoreCase) && module == "suppliers") return "/suppliers/purchases";
+        if (controller.Equals("Users", StringComparison.OrdinalIgnoreCase) &&
+            action.Equals("ResetUserPassword", StringComparison.OrdinalIgnoreCase)) return "/users/edit";
         if (action.Equals("GetMe", StringComparison.OrdinalIgnoreCase) ||
             action.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
-            action.Contains("ProfilePicture", StringComparison.OrdinalIgnoreCase)) return "/profile";
+            action.Contains("ProfilePicture", StringComparison.OrdinalIgnoreCase) ||
+            action.Contains("UpdateProfile", StringComparison.OrdinalIgnoreCase)) return "/profile";
         if (action.Contains("ById", StringComparison.OrdinalIgnoreCase))
         {
             var detailPage = module switch

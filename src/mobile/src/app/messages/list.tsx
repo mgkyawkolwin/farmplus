@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, CheckCheck, ChevronLeft } from 'lucide-react-native';
+import { Bell, CheckCheck, ChevronLeft, Mail } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -35,6 +35,10 @@ function formatDate(value: string) {
         hour: '2-digit',
         minute: '2-digit',
       });
+}
+
+function getPreview(text: string) {
+  return text.replace(/\s+/g, ' ').trim().slice(0, 50);
 }
 
 export default function MessagesListScreen() {
@@ -87,6 +91,11 @@ export default function MessagesListScreen() {
     }
   };
 
+  const openMessage = async (message: CustomerMessage) => {
+    await markRead(message);
+    router.push(`/messages/${encodeURIComponent(message.id)}` as Parameters<typeof router.push>[0]);
+  };
+
   const unreadCount = messages.filter((message) => !message.isRead).length;
 
   return (
@@ -132,25 +141,27 @@ export default function MessagesListScreen() {
             <Pressable
               key={message.id}
               accessibilityRole="button"
-              accessibilityLabel={`${message.isRead ? 'Read' : 'Unread'} message, ${formatDate(message.sentAtUtc)}`}
-              onPress={() => void markRead(message)}
+              accessibilityLabel={`${message.title}, ${message.isRead ? 'Read' : 'Unread'}, ${formatDate(message.sentAtUtc)}`}
+              onPress={() => void openMessage(message)}
               style={[styles.messageRow, !message.isRead && styles.unreadMessage]}
             >
               <View style={[styles.messageIcon, !message.isRead && styles.messageIconUnread]}>
-                <Bell size={17} color={!message.isRead ? '#2367A8' : '#64748B'} />
+                <Mail size={17} color={!message.isRead ? '#2367A8' : '#64748B'} />
               </View>
               <View style={styles.messageBody}>
                 <View style={styles.messageHeader}>
-                  <Text className="text-foreground" style={styles.messageLabel}>
-                    {message.audience === 'Broadcast' ? 'Announcement' : 'Message'}
+                  <Text className="text-foreground" style={styles.messageTitle} numberOfLines={1}>
+                    {message.title || (message.audience === 'Broadcast' ? 'Announcement' : 'Message')}
                   </Text>
                   <Text className="text-muted-foreground" style={styles.date}>{formatDate(message.sentAtUtc)}</Text>
                 </View>
-                <Text className="text-foreground" style={styles.messageText}>{message.messageText}</Text>
+                <Text className="text-muted-foreground" style={styles.messageText} numberOfLines={1} ellipsizeMode="tail">
+                  {getPreview(message.messageText)}
+                </Text>
                 <View style={styles.messageFooter}>
                   <View style={[styles.statusDot, message.isRead ? styles.readDot : styles.unreadDot]} />
                   <Text style={[styles.statusLabel, message.isRead ? styles.readLabel : styles.unreadLabel]}>
-                    {message.isRead ? 'Read' : 'Unread · tap to mark read'}
+                    {message.isRead ? 'Read' : 'Unread'}
                   </Text>
                 </View>
               </View>
@@ -178,8 +189,8 @@ const styles = StyleSheet.create({
   messageIconUnread: { backgroundColor: '#EAF3FB' },
   messageBody: { flex: 1, gap: 8 },
   messageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  messageLabel: { flex: 1, fontSize: 13, fontWeight: '800' },
-  date: { fontSize: 10, textAlign: 'right' },
+  messageTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
+  date: { fontSize: 10, textAlign: 'right', flexShrink: 0 },
   messageText: { fontSize: 13, lineHeight: 19 },
   messageFooter: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },

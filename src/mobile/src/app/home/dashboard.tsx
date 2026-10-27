@@ -458,6 +458,7 @@ export default function DashboardScreen() {
   if (permissionState === "checking") {
     return (
       <SafeAreaView className="bg-background" style={styles.page}>
+        <HomeTopBar />
         <View style={styles.accessState}>
           <Text style={styles.accessText}>Loading...</Text>
         </View>
@@ -468,6 +469,7 @@ export default function DashboardScreen() {
   if (permissionState === "denied") {
     return (
       <SafeAreaView className="bg-background" style={styles.page}>
+        <HomeTopBar />
         <UnauthorizedView />
       </SafeAreaView>
     );

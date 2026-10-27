@@ -17,10 +17,12 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import { ProductItem } from '@/models/product';
 import { getInventoryProducts } from '@/services/inventoryService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 function stockOf(product: ProductItem) {
   return Math.max(0, product.currentStock ?? 0);
@@ -76,6 +78,7 @@ export function InventoryDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const permissionState = usePagePermission('/inventory/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -94,14 +97,15 @@ export function InventoryDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadInventory();
       return undefined;
-    }, [loadInventory]),
+    }, [loadInventory, permissionState]),
   );
 
   useSelectedShopChanged(() => {
-    void loadInventory();
+    if (permissionState === 'authorized') void loadInventory();
   });
 
   const totalStock = products.reduce((total, product) => total + stockOf(product), 0);
@@ -134,7 +138,14 @@ export function InventoryDashboardContent({
         </View>
       ) : null}
 
-      {loading && products.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && products.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading inventory...</Text>

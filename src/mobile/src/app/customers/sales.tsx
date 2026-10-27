@@ -16,11 +16,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import LoadingOverlay from "@/components/loadingOverlay";
 import SnackBar from "@/components/ui/snack-bar";
 import { container, DI_TOKENS } from "@/di";
 import { Sale } from "@/models/sale";
 import { ICustomerService } from "@/services/customerService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -47,6 +49,7 @@ function formatDate(value: string) {
 
 export default function CustomerSalesScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/customers/sales');
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -89,10 +92,11 @@ export default function CustomerSalesScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadSales();
       return undefined;
-    }, [loadSales]),
+    }, [loadSales, permissionState]),
   );
 
   const loadMore = () => {
@@ -121,7 +125,14 @@ export default function CustomerSalesScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading && sales.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && sales.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>

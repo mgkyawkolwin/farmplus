@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { PermissionPage } from '@/models/rolePermission';
 import { RoleItem } from '@/models/role';
 import { IRoleService } from '@/services/roleService';
@@ -22,6 +24,7 @@ const permissionService = new RolePermissionServiceClient();
 
 export default function RolePermissionsScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/rolepermissions');
   const [roles, setRoles] = React.useState<RoleItem[]>([]);
   const [pages, setPages] = React.useState<PermissionPage[]>([]);
   const [roleId, setRoleId] = React.useState('');
@@ -42,6 +45,7 @@ export default function RolePermissionsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       let active = true;
       setLoading(true);
       Promise.all([roleService.getRoles(1, 100), permissionService.getCatalog()])
@@ -67,7 +71,7 @@ export default function RolePermissionsScreen() {
           if (active) setLoading(false);
         });
       return () => { active = false; };
-    }, [roleId]),
+    }, [permissionState, roleId]),
   );
 
   const groups = React.useMemo(() => {
@@ -121,12 +125,24 @@ export default function RolePermissionsScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>Role Permissions</Text>
-        <Button variant="ghost" onPress={save} disabled={!roleId || saving} style={styles.headerButton}>
+        <Button
+          variant="ghost"
+          onPress={save}
+          disabled={permissionState !== 'authorized' || !roleId || saving}
+          style={styles.headerButton}
+        >
           <Icon className="text-foreground" as={Save} size={19} />
         </Button>
       </View>
 
-      {loading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#2367A8" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#2367A8" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading permissions...</Text>
@@ -186,8 +202,10 @@ export default function RolePermissionsScreen() {
       )}
 
       <Modal transparent visible={rolePickerVisible} animationType="slide" onRequestClose={() => setRolePickerVisible(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setRolePickerVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
           <View style={styles.rolePicker}>
+            <View style={styles.sheetHandle} />
             <Text className="text-foreground" style={styles.pickerTitle}>Select Role</Text>
             <ScrollView>
               {roles.map((role) => (
@@ -204,7 +222,7 @@ export default function RolePermissionsScreen() {
               ))}
             </ScrollView>
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -234,8 +252,9 @@ const styles = StyleSheet.create({
   stateText: { marginTop: 8, textAlign: 'center' },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   createRoleButton: { marginTop: 16 },
-  modalBackdrop: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#00000066' },
-  rolePicker: { maxHeight: '70%', padding: 16, borderRadius: 8, backgroundColor: '#FFFFFF' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
+  rolePicker: { maxHeight: '70%', padding: 20, paddingBottom: 28, borderTopLeftRadius: 12, borderTopRightRadius: 12, backgroundColor: '#FFFFFF' },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12, backgroundColor: '#CBD5E1' },
   pickerTitle: { marginBottom: 10, fontSize: 16, fontWeight: '700' },
   roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
 });

@@ -36,6 +36,12 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // Sets utf8mb4 globally for the database, all tables, and string columns
+        modelBuilder.HasCharSet("utf8mb4");
+
+        // Sets utf8mb4_unicode_ci globally as the collation
+        modelBuilder.UseCollation("utf8mb4_unicode_ci");
+        
         modelBuilder.Entity<PurchaseEntity>()
             .HasMany(purchase => purchase.Items)
             .WithOne()

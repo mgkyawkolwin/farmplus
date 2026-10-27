@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -35,6 +36,7 @@ import {
   compactNumber,
 } from "@/components/charts";
 import LoadingOverlay from "@/components/loadingOverlay";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -44,6 +46,7 @@ import { DealerItem } from "@/models/dealer";
 import { Sale } from "@/models/sale";
 import { DealerServiceClient } from "@/services/dealerService";
 import { ISaleService } from "@/services/saleService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const dealerService = new DealerServiceClient();
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
@@ -180,6 +183,7 @@ type DealerStats = {
 
 export default function DealerReportDashboardScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/reports/dealers/dashboard');
   const [dealers, setDealers] = React.useState<DealerItem[]>([]);
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -222,10 +226,11 @@ export default function DealerReportDashboardScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void load();
       return undefined;
-    }, [load]),
+    }, [load, permissionState]),
   );
 
   const report = React.useMemo(() => {
@@ -405,7 +410,7 @@ export default function DealerReportDashboardScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={permissionState === 'authorized' && loading} />
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -414,7 +419,11 @@ export default function DealerReportDashboardScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => {
@@ -621,7 +630,7 @@ export default function DealerReportDashboardScreen() {
             {report.recentDealers.length === 0 ? <Text style={styles.empty}>No dealers yet.</Text> : null}
           </View>
         </Section>
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }
@@ -664,5 +673,7 @@ const styles = StyleSheet.create({
   red: { color: COLORS.red, fontWeight: "700" },
   statusPill: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  stateText: { marginTop: 8, textAlign: "center" },
   empty: { padding: 14, textAlign: "center", fontSize: 12, color: COLORS.muted },
 });

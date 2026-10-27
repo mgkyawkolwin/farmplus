@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import ShopBanner from '@/components/shopBanner';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { getSelectedShopId } from '@/lib/authStorage';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { CustomerItem } from '@/models/customer';
 import { ProductItem } from '@/models/product';
 import { ICustomerService } from '@/services/customerService';
@@ -55,6 +57,7 @@ function InputRow({ label, children }: { label: string; children: React.ReactNod
 
 export default function NewSaleScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/sales/new');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [customerId, setCustomerId] = React.useState(WALK_IN);
@@ -84,14 +87,15 @@ export default function NewSaleScreen() {
   }, []);
 
   React.useEffect(() => {
-    void loadShopName();
-  }, [loadShopName]);
+    if (permissionState === 'authorized') void loadShopName();
+  }, [loadShopName, permissionState]);
 
   useSelectedShopChanged(() => {
-    void loadShopName();
+    if (permissionState === 'authorized') void loadShopName();
   });
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     let active = true;
     Promise.all([
       customerService.getCustomers(1, 1000, undefined, true),
@@ -106,7 +110,7 @@ export default function NewSaleScreen() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [permissionState]);
 
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
   const subtotal = selectedProducts.reduce((sum, line) =>
@@ -151,6 +155,7 @@ export default function NewSaleScreen() {
   };
 
   const submitSale = async () => {
+    if (permissionState !== 'authorized') return;
     if (selectedProducts.length === 0) {
       SnackBar.Error('Add at least one product');
       return;
@@ -199,7 +204,14 @@ export default function NewSaleScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>

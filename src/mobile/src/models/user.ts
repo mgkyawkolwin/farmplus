@@ -5,10 +5,15 @@ export default class User {
     email?: string;
     address?: string;
     city?: string;
+    phone?: string;
+    nationalId?: string;
+    passportNumber?: string;
+    isActive?: boolean;
     profilePictureUrl?: string;
     token?: string;
     rowVersion?: string;
     roleId?: string;
+    roleName?: string;
 }
 
 export interface UserListPayload {
@@ -26,6 +31,9 @@ export interface CreateUserRequest {
     password: string;
     address?: string;
     city?: string;
+    phone?: string;
+    nationalId?: string;
+    passportNumber?: string;
     roleId?: string;
 }
 
@@ -34,6 +42,24 @@ export interface UpdateUserRequest {
     email: string;
     address?: string;
     city?: string;
+    phone?: string;
+    nationalId?: string;
+    passportNumber?: string;
+    isActive?: boolean;
     rowVersion: string;
     roleId?: string;
+}
+
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+}
+
+export interface UpdateProfileRequest {
+    email: string;
+    phone?: string;
+    nationalId?: string;
+    passportNumber?: string;
+    address?: string;
+    city?: string;
 }

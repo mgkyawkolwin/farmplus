@@ -16,9 +16,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { Icon } from '@/components/ui/icon';
 import { UnitItem } from '@/models/unit';
 import SnackBar from '@/components/ui/snack-bar';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 export default function UnitsScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/units/units');
   const service = React.useMemo(() => new UnitServiceClient(), []);
 
   const [units, setUnits] = React.useState<UnitItem[]>([]);
@@ -59,8 +62,9 @@ export default function UnitsScreen() {
   }, [service]);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     void loadUnits(1, false, false);
-  }, [loadUnits]);
+  }, [loadUnits, permissionState]);
 
   const handleRefresh = React.useCallback(() => {
     void loadUnits(1, false, true);
@@ -153,21 +157,35 @@ export default function UnitsScreen() {
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
         <Text className='text-foreground' style={styles.headerTitle}>Unit</Text>
-        <Button variant='default' size='sm' onPress={openCreateModal} style={styles.addButton}>
+        <Button
+          variant='default'
+          size='sm'
+          onPress={openCreateModal}
+          disabled={permissionState !== 'authorized'}
+          style={styles.addButton}
+        >
           <Icon as={Plus} size={14} className='text-primary-foreground' />
           <Text className='text-primary-foreground' style={styles.addButtonText}>Add</Text>
         </Button>
       </View>
 
-      <KeyboardAwareScrollView
-        className='bg-background'
-        style={styles.scrollView}
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        onScroll={handleScroll}
-        scrollEventThrottle={400}
-      >
-        {loading && !refreshing ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" />
+          <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : (
+        <KeyboardAwareScrollView
+          className='bg-background'
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          onScroll={handleScroll}
+          scrollEventThrottle={400}
+        >
+          {loading && !refreshing ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" />
             <Text className='text-muted-foreground' style={styles.emptyText}>Loading units...</Text>
@@ -233,13 +251,14 @@ export default function UnitsScreen() {
             </View>
           </View>
         )}
-        {loadingMore ? (
-          <View style={styles.loadMoreRow}>
-            <ActivityIndicator size='small' />
-            <Text className='text-muted-foreground'>Loading more...</Text>
-          </View>
-        ) : null}
-      </KeyboardAwareScrollView>
+          {loadingMore ? (
+            <View style={styles.loadMoreRow}>
+              <ActivityIndicator size='small' />
+              <Text className='text-muted-foreground'>Loading more...</Text>
+            </View>
+          ) : null}
+        </KeyboardAwareScrollView>
+      )}
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
         <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}

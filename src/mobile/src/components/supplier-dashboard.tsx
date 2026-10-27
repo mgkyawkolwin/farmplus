@@ -18,8 +18,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { Supplier } from '@/models/supplier';
 import { SupplierServiceClient } from '@/services/supplierService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const supplierService = new SupplierServiceClient();
 
@@ -102,6 +104,7 @@ export function SupplierDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const permissionState = usePagePermission('/suppliers/dashboard');
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -120,10 +123,11 @@ export function SupplierDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadSuppliers();
       return undefined;
-    }, [loadSuppliers])
+    }, [loadSuppliers, permissionState])
   );
 
   const recentSuppliers = React.useMemo(
@@ -163,7 +167,14 @@ export function SupplierDashboardContent({
         </View>
       ) : null}
 
-      {loading && suppliers.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && suppliers.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading suppliers...</Text>

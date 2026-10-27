@@ -36,7 +36,9 @@ public class RolePermissionService : IRolePermissionService
             .Where(permission => permission.RoleId == roleId)
             .Select(permission => permission.PermissionKey)
             .ToListAsync();
-        return keys.Contains("*") ? PermissionCatalog.Pages.Select(page => page.Key).ToList() : keys;
+        return keys.Contains("*")
+            ? PermissionCatalog.Pages.Select(page => page.Key).ToList()
+            : keys.Where(PermissionCatalog.Contains).ToList();
     }
 
     public async Task<CurrentUserPermissionsDto> GetCurrentPermissionsAsync()
@@ -48,7 +50,7 @@ public class RolePermissionService : IRolePermissionService
 
         if (!Guid.TryParse(_currentUserService.UserId, out var userId))
         {
-            return new CurrentUserPermissionsDto([], false);
+            return new CurrentUserPermissionsDto(PermissionCatalog.AlwaysAccessiblePages, false);
         }
 
         var roleId = await _dbContext.Users.AsNoTracking()
@@ -57,14 +59,20 @@ public class RolePermissionService : IRolePermissionService
             .SingleOrDefaultAsync();
         if (!roleId.HasValue)
         {
-            return new CurrentUserPermissionsDto([], false);
+            return new CurrentUserPermissionsDto(PermissionCatalog.AlwaysAccessiblePages, false);
         }
 
         var keys = await _dbContext.RolePermissions.AsNoTracking()
             .Where(permission => permission.RoleId == roleId.Value)
             .Select(permission => permission.PermissionKey)
             .ToListAsync();
-        var effectiveKeys = keys.Contains("*") ? PermissionCatalog.Pages.Select(page => page.Key).ToList() : keys;
+        var roleKeys = keys.Contains("*")
+            ? PermissionCatalog.Pages.Select(page => page.Key)
+            : keys.Where(PermissionCatalog.Contains);
+        var effectiveKeys = roleKeys
+            .Concat(PermissionCatalog.AlwaysAccessiblePages)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         return new CurrentUserPermissionsDto(effectiveKeys, false);
     }
 

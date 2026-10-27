@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import SnackBar from "@/components/ui/snack-bar";
 import LoadingOverlay from "@/components/loadingOverlay";
 import { container, DI_TOKENS } from "@/di";
@@ -25,6 +26,7 @@ import { useSelectedShopChanged } from "@/lib/selectedShop";
 import { getSelectedShopId } from "@/lib/authStorage";
 import { ShopServiceClient } from "@/services/shopService";
 import ShopBanner from "@/components/shopBanner";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const purchaseService = container.resolve<IPurchaseService>(
   DI_TOKENS.IPurchaseService,
@@ -81,6 +83,7 @@ function Field({
 
 export default function PurchaseListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/purchases/list');
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -90,6 +93,7 @@ export default function PurchaseListScreen() {
   const [shopName, setShopName] = React.useState<string | null>(null);
 
   const loadShopName = React.useCallback(async () => {
+    if (permissionState !== 'authorized') return;
     try {
       const [shopId, shops] = await Promise.all([
         getSelectedShopId(),
@@ -99,10 +103,11 @@ export default function PurchaseListScreen() {
     } catch {
       setShopName(null);
     }
-  }, []);
+  }, [permissionState]);
 
   const fetchPurchases = React.useCallback(
     async (nextPage = 1, append = false) => {
+      if (permissionState !== 'authorized') return;
       try {
         const result = await purchaseService.getPurchases(nextPage, PAGE_SIZE);
         setPurchases((current) => (append ? [...current, ...result] : result));
@@ -117,24 +122,26 @@ export default function PurchaseListScreen() {
         setLoadingMore(false);
       }
     },
-    [],
+    [permissionState],
   );
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void fetchPurchases();
       void loadShopName();
       return undefined;
-    }, [fetchPurchases, loadShopName]),
+    }, [fetchPurchases, loadShopName, permissionState]),
   );
 
   // The API scopes purchases to the selected shop, so reload when it changes.
   useSelectedShopChanged(() => {
+    if (permissionState !== 'authorized') return;
     setLoading(true);
     void fetchPurchases();
     void loadShopName();
-  });
+  }, [permissionState, fetchPurchases, loadShopName]);
 
   const loadMore = () => {
     if (loading || loadingMore || !hasMore) return;
@@ -152,6 +159,7 @@ export default function PurchaseListScreen() {
         <Button
           variant="ghost"
           onPress={() => router.back()}
+          disabled={permissionState !== 'authorized'}
           style={styles.headerButton}
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
@@ -172,6 +180,14 @@ export default function PurchaseListScreen() {
         </Button>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <>
       <View style={styles.shopBannerWrap}>
         <ShopBanner
           label="Showing purchases for"
@@ -287,6 +303,7 @@ export default function PurchaseListScreen() {
           {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
         </ScrollView>
       )}
+      </>}
     </SafeAreaView>
   );
 }

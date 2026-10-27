@@ -11,18 +11,21 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import { getInventoryProducts } from '@/services/inventoryService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 type AdjustmentMode = 'set' | 'add' | 'remove';
 
 export default function InventoryAdjustmentScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/inventory/adjustment');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [selectedProduct, setSelectedProduct] = React.useState<ProductItem | null>(null);
   const [mode, setMode] = React.useState<AdjustmentMode>('add');
@@ -33,6 +36,7 @@ export default function InventoryAdjustmentScreen() {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     let active = true;
     getInventoryProducts().then((result) => {
       if (active) setProducts(result);
@@ -42,7 +46,7 @@ export default function InventoryAdjustmentScreen() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [permissionState]);
 
   const currentStock = selectedProduct?.currentStock ?? 0;
   const amount = Number(quantity);
@@ -56,6 +60,7 @@ export default function InventoryAdjustmentScreen() {
   );
 
   const saveAdjustment = async () => {
+    if (permissionState !== 'authorized') return;
     if (!selectedProduct) {
       SnackBar.Error('Choose a product first');
       return;
@@ -100,7 +105,14 @@ export default function InventoryAdjustmentScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading products...</Text>

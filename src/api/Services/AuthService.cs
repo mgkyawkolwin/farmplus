@@ -189,6 +189,11 @@ public class AuthService : IAuthService
             throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
         }
 
+        if (!user.IsActive)
+        {
+            throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
+        }
+
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
         if (verificationResult == PasswordVerificationResult.Failed)
         {
@@ -215,6 +220,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
+                IsActive = user.IsActive,
                 ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
                 Token = token
             }
@@ -322,6 +328,11 @@ public class AuthService : IAuthService
         }
         else
         {
+            if (!user.IsActive)
+            {
+                throw new CustomException(_localizer[$"Template.Incorrect", "Username or password"]);
+            }
+
             var updated = false;
             if (!string.IsNullOrEmpty(tokenInfo.Name) && user.UserName != tokenInfo.Name)
             {
@@ -351,6 +362,7 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
+                IsActive = user.IsActive,
                 ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
                 Token = token
             }

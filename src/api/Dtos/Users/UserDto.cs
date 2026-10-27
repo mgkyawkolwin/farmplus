@@ -8,7 +8,12 @@ public sealed record UserDto : DtoBase
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? City { get; set; }
+    public string? Phone { get; set; }
+    public string? NationalId { get; set; }
+    public string? PassportNumber { get; set; }
+    public bool IsActive { get; set; } = true;
     public Guid? RoleId { get; set; }
+    public string? RoleName { get; set; }
     public double? Rating { get; set; }
     public int? RatingCount { get; set; }
     public string? ProfilePictureUrl { get; set; }

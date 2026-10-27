@@ -20,7 +20,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { container, DI_TOKENS } from "@/di";
+import { usePagePermission } from "@/lib/usePagePermission";
 import { ProductItem } from "@/models/product";
 import { IProductService } from "@/services/productService";
 import SnackBar from "@/components/ui/snack-bar";
@@ -60,6 +62,7 @@ function SummaryTile({ label, value, accent, valueStyle }: SummaryTileProps) {
 export default function ProductViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const permissionState = usePagePermission('/products/view');
   const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [product, setProduct] = React.useState<ProductItem | null>(null);
@@ -85,9 +88,10 @@ export default function ProductViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadProduct();
       return undefined;
-    }, [loadProduct]),
+    }, [loadProduct, permissionState]),
   );
 
   const otherImages = React.useMemo(() => {
@@ -102,14 +106,23 @@ export default function ProductViewScreen() {
     return urls.filter((url) => url !== product.coverImageUrl);
   }, [product]);
 
-  if (!product) {
+  if (permissionState !== 'authorized' || !product) {
     return (
       <SafeAreaView style={styles.page}>
         <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
-          <Text style={styles.loadingText}>Loading product...</Text>
+        <View style={styles.headerBar}>
+          <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
+            <Icon className="text-foreground" as={ChevronLeft} size={22} />
+          </Button>
+          <Text style={styles.headerTitle}>Product</Text>
+          <View style={styles.headerButton} />
         </View>
+        {permissionState === 'denied' ? <UnauthorizedView /> : (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={COLORS.green} />
+            <Text style={styles.loadingText}>{permissionState === 'checking' ? 'Checking permission...' : 'Loading product...'}</Text>
+          </View>
+        )}
       </SafeAreaView>
     );
   }

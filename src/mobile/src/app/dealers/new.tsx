@@ -16,10 +16,13 @@ import { Text } from '@/components/ui/text';
 import { DealerServiceClient } from '@/services/dealerService';
 import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 export default function NewDealerScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const permissionState = usePagePermission('/dealers/new');
   const service = React.useMemo(() => new DealerServiceClient(), []);
 
   const [loading, setLoading] = React.useState(false);
@@ -76,6 +79,7 @@ export default function NewDealerScreen() {
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!formData.dealerName.trim()) {
       SnackBar.Error('Dealer name is required.');
       return;
@@ -124,7 +128,14 @@ export default function NewDealerScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAwareScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.permissionState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground">Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <KeyboardAwareScrollView
         contentContainerStyle={styles.contentContainer}
         enableOnAndroid={true}
         extraScrollHeight={40}
@@ -254,7 +265,7 @@ export default function NewDealerScreen() {
             )}
           </Button>
         </View>
-      </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>}
     </SafeAreaView>
   );
 }
@@ -271,6 +282,7 @@ const styles = StyleSheet.create({
   backButton: { minWidth: 40 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
   headerSpacer: { width: 40 },
+  permissionState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
   contentContainer: { flexGrow: 1, padding: 20, paddingBottom: 40 },
   logoSection: { alignItems: 'center', marginBottom: 24 },
   logoImage: {

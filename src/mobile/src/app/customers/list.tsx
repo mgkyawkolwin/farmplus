@@ -27,7 +27,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { container, DI_TOKENS } from "@/di";
+import { usePagePermission } from "@/lib/usePagePermission";
 import { CustomerItem } from "@/models/customer";
 import { ICustomerService } from "@/services/customerService";
 import LoadingOverlay from "@/components/loadingOverlay";
@@ -61,6 +63,7 @@ function formatMoney(amount: number | undefined) {
 
 export default function CustomerListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/customers/list');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -112,6 +115,7 @@ export default function CustomerListScreen() {
   );
 
   const fetchCustomers = React.useCallback(async () => {
+    if (permissionState !== 'authorized') return;
     setLoading(true);
     setCustomers([]);
     try {
@@ -134,17 +138,17 @@ export default function CustomerListScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, pageSize, searchText]);
+  }, [activeFilter, pageSize, permissionState, searchText]);
 
   React.useEffect(() => {
-    fetchCustomers();
+    if (permissionState === 'authorized') fetchCustomers();
   }, [fetchCustomers]);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchCustomers();
+      if (permissionState === 'authorized') fetchCustomers();
       return undefined;
-    }, [fetchCustomers]),
+    }, [fetchCustomers, permissionState]),
   );
 
   const onRefresh = React.useCallback(() => {
@@ -210,12 +214,21 @@ export default function CustomerListScreen() {
           accessibilityRole="button"
           accessibilityLabel="New customer"
           onPress={() => router.push("/customers/new")}
+          disabled={permissionState !== 'authorized'}
           style={styles.addButton}
         >
           <Plus size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={COLORS.green} />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <>
       <View style={styles.toolbar}>
         <View style={styles.searchBox}>
           <Icon className="text-muted-foreground" as={Search} size={16} />
@@ -425,6 +438,7 @@ export default function CustomerListScreen() {
           </ScrollView>
         </>
       )}
+      </>}
     </SafeAreaView>
   );
 }

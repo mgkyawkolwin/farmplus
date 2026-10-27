@@ -159,7 +159,7 @@ public class ProductsController : BaseController
 
     [HttpPatch("{id:guid}/cover-image")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadCoverImage(Guid id, [FromForm] IFormFile file)
+    public async Task<IActionResult> UploadCoverImage(Guid id, IFormFile file)
     {
         try
         {
@@ -182,7 +182,7 @@ public class ProductsController : BaseController
 
     [HttpPatch("{id:guid}/medias")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadProductMedia(Guid id, [FromForm] IFormFile file)
+    public async Task<IActionResult> UploadProductMedia(Guid id, IFormFile file)
     {
         try
         {

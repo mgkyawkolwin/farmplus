@@ -18,8 +18,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { DealerItem } from '@/models/dealer';
 import { DealerServiceClient } from '@/services/dealerService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const dealerService = new DealerServiceClient();
 
@@ -102,6 +104,7 @@ export function DealerDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const permissionState = usePagePermission('/dealers/dashboard');
   const [dealers, setDealers] = React.useState<DealerItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -120,10 +123,11 @@ export function DealerDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadDealers();
       return undefined;
-    }, [loadDealers])
+    }, [loadDealers, permissionState])
   );
 
   const recentDealers = React.useMemo(
@@ -163,7 +167,14 @@ export function DealerDashboardContent({
         </View>
       ) : null}
 
-      {loading && dealers.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && dealers.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading dealers...</Text>

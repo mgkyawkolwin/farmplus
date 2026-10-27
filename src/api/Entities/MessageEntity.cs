@@ -7,6 +7,10 @@ namespace FarmPlus.Api.Entities;
 public class MessageEntity : EntityBase<Guid>
 {
     [Required]
+    [MaxLength(200)]
+    public required string Title { get; set; }
+
+    [Required]
     [MaxLength(20)]
     public required string Audience { get; set; }
 

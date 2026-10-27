@@ -11,15 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { BrandServiceClient } from '@/services/brandService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
 import { BrandItem } from '@/models/brand';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
-import { RolePermissionServiceClient } from '@/services/rolePermissionService';
-
-const permissionService = new RolePermissionServiceClient();
+import { usePagePermission } from '@/lib/usePagePermission';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -31,10 +29,10 @@ function formatDate(value?: string) {
 
 export default function BrandsScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/brands/brands');
   const service = React.useMemo(() => new BrandServiceClient(), []);
 
   const [brands, setBrands] = React.useState<BrandItem[]>([]);
-  const [permissionState, setPermissionState] = React.useState<'checking' | 'authorized' | 'denied'>('checking');
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('all');
   const [loading, setLoading] = React.useState(true);
@@ -46,24 +44,6 @@ export default function BrandsScreen() {
   const [modalVisible, setModalVisible] = React.useState(false);
   const [editingBrand, setEditingBrand] = React.useState<BrandItem | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      let active = true;
-      setPermissionState('checking');
-      permissionService.getCurrentPermissions().then((permissions) => {
-        if (!active) return;
-        setPermissionState(
-          permissions.isExempt || permissions.permissionKeys.includes('/brands/brands')
-            ? 'authorized'
-            : 'denied',
-        );
-      }).catch(() => {
-        if (active) setPermissionState('denied');
-      });
-      return () => { active = false; };
-    }, []),
-  );
 
   const loadBrands = React.useCallback(async (requestedPage = 1, append = false, isRefresh = false) => {
     try {
@@ -189,23 +169,6 @@ export default function BrandsScreen() {
     }
   };
 
-  if (permissionState === 'checking') {
-    return (
-      <SafeAreaView className='bg-background' style={[styles.page, styles.permissionState]}>
-        <ActivityIndicator size='large' color='#16794B' />
-        <Text className='text-muted-foreground' style={styles.permissionText}>Checking permissions...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (permissionState === 'denied') {
-    return (
-      <SafeAreaView className='bg-background' style={styles.page}>
-        <UnauthorizedView />
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView className='bg-background' style={styles.page}>
       <View className='bg-background border-b border-border' style={styles.headerBar}>
@@ -218,6 +181,15 @@ export default function BrandsScreen() {
         </View>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={[styles.emptyState, styles.permissionState]}>
+          <ActivityIndicator size='large' color='#16794B' />
+          <Text className='text-muted-foreground' style={styles.permissionText}>Checking permissions...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : (
+        <>
       <View style={styles.toolbar}>
         <View style={styles.searchBox}>
           <Search size={15} color='#64748B' />
@@ -375,6 +347,8 @@ export default function BrandsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 }

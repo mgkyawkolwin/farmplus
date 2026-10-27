@@ -14,9 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Purchase } from "@/models/purchase";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const PAGE_SIZE = 20;
 
@@ -26,6 +28,7 @@ function formatMoney(value: number) {
 
 export default function SupplierPurchasesScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/suppliers/purchases');
   const { supplierId } = useLocalSearchParams<{ supplierId?: string }>();
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
@@ -69,10 +72,11 @@ export default function SupplierPurchasesScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadPurchases();
       return undefined;
-    }, [loadPurchases]),
+    }, [loadPurchases, permissionState]),
   );
 
   const loadMore = () => {
@@ -100,7 +104,14 @@ export default function SupplierPurchasesScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading && purchases.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text className="text-muted-foreground">Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && purchases.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#4f46e5" />
         </View>

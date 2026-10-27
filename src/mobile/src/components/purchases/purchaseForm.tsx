@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { container, DI_TOKENS } from '@/di';
@@ -38,6 +39,7 @@ import { IProductService } from '@/services/productService';
 import { IPurchaseService } from '@/services/purchaseService';
 import { ShopServiceClient } from '@/services/shopService';
 import { SupplierServiceClient } from '@/services/supplierService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
@@ -70,6 +72,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
+  const permissionState = usePagePermission(mode === 'create' ? '/purchases/new' : '/purchases/edit');
   const purchaseId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [products, setProducts] = React.useState<ProductItem[]>([]);
@@ -90,6 +93,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
   const [loadingProducts, setLoadingProducts] = React.useState(false);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     let active = true;
     const loadForm = async () => {
       try {
@@ -139,7 +143,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
     }
     void loadForm();
     return () => { active = false; };
-  }, [mode, purchaseId, router]);
+  }, [mode, permissionState, purchaseId, router]);
 
   const subtotal = items.reduce((sum, item) => {
     const quantity = Number(item.quantity) || 0;
@@ -160,7 +164,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
   const productById = React.useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
 
   const loadMoreProducts = async () => {
-    if (loadingProducts || !hasMoreProducts) return;
+    if (permissionState !== 'authorized' || loadingProducts || !hasMoreProducts) return;
     setLoadingProducts(true);
     try {
       const nextPage = productPage + 1;
@@ -197,6 +201,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     const normalizedPurchaseDate = normalizeDate(purchaseDate);
     if (shopMissing) {
       SnackBar.Error('Select a shop from the top bar before recording a purchase');
@@ -276,7 +281,14 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.loadingText}>Loading purchase details...</Text>

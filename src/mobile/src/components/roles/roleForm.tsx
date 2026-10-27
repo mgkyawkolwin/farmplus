@@ -14,7 +14,9 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import SnackBar from '@/components/ui/snack-bar';
 import LoadingOverlay from '@/components/loadingOverlay';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { container, DI_TOKENS } from '@/di';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { IRoleService } from '@/services/roleService';
 
 const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
@@ -24,13 +26,14 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
   const roleId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const permissionState = usePagePermission(mode === 'create' ? '/roles/new' : '/roles/edit');
   const [role, setRole] = React.useState('');
   const [rowVersion, setRowVersion] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(mode === 'edit');
 
   React.useEffect(() => {
-    if (mode !== 'edit') return;
+    if (mode !== 'edit' || permissionState !== 'authorized') return;
     if (!roleId) {
       router.back();
       return;
@@ -51,7 +54,7 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
     });
 
     return () => { active = false; };
-  }, [mode, roleId, router]);
+  }, [mode, permissionState, roleId, router]);
 
   const handleSubmit = async () => {
     const normalizedRole = role.trim();
@@ -90,7 +93,14 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text className="text-muted-foreground" style={styles.loadingText}>Loading role details...</Text>

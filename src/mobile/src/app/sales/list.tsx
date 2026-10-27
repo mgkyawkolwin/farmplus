@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import LoadingOverlay from "@/components/loadingOverlay";
 import SnackBar from "@/components/ui/snack-bar";
 import ShopBanner from "@/components/shopBanner";
@@ -23,6 +24,7 @@ import { useSelectedShopName } from "@/lib/useSelectedShopName";
 import { container, DI_TOKENS } from "@/di";
 import { Sale } from "@/models/sale";
 import { ISaleService } from "@/services/saleService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const PAGE_SIZE = 20;
@@ -87,6 +89,7 @@ function Field({
 
 export default function SalesListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/sales/list');
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
   const { shopName, shopLoaded } = useSelectedShopName();
   const [sales, setSales] = React.useState<Sale[]>([]);
@@ -123,10 +126,11 @@ export default function SalesListScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadSales();
       return undefined;
-    }, [loadSales]),
+    }, [loadSales, permissionState]),
   );
 
   const loadMore = () => {
@@ -157,6 +161,14 @@ export default function SalesListScreen() {
         <View style={styles.headerButton} />
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <>
       <View style={styles.shopBannerWrap}>
         <ShopBanner
           label="Showing sales for"
@@ -308,6 +320,7 @@ export default function SalesListScreen() {
           {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
         </ScrollView>
       )}
+      </>}
     </SafeAreaView>
   );
 }

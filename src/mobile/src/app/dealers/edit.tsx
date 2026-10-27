@@ -26,6 +26,8 @@ import { normalizeMediaFile } from "@/lib/mediaFile";
 import { DealerItem } from "@/models/dealer";
 import { DealerServiceClient } from "@/services/dealerService";
 import SnackBar from "@/components/ui/snack-bar";
+import UnauthorizedView from "@/components/unauthorized-view";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 type DealerFormState = {
   dealerName: string;
@@ -53,6 +55,7 @@ export default function EditDealerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
+  const permissionState = usePagePermission('/dealers/edit');
   const dealerId = Array.isArray(params.id) ? params.id[0] : params.id;
   const service = React.useMemo(() => new DealerServiceClient(), []);
 
@@ -70,6 +73,7 @@ export default function EditDealerScreen() {
     React.useState<DealerFormState>(emptyFormState);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     if (!dealerId) {
       router.back();
       return;
@@ -108,7 +112,7 @@ export default function EditDealerScreen() {
     return () => {
       active = false;
     };
-  }, [dealerId, router, service]);
+  }, [dealerId, permissionState, router, service]);
 
   const updateField = (field: keyof DealerFormState, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -149,6 +153,7 @@ export default function EditDealerScreen() {
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!dealerId || !formData.dealerName.trim()) {
       SnackBar.Error("Dealer name is required.");
       return;
@@ -192,7 +197,7 @@ export default function EditDealerScreen() {
         className="bg-background"
         barStyle={colorScheme === "light" ? "light-content" : "dark-content"}
       />
-      <LoadingOverlay isLoading={saving || pageLoading} />
+      <LoadingOverlay isLoading={saving || (permissionState === 'authorized' && pageLoading)} />
 
       <View
         className="bg-background border-b border-border"
@@ -211,7 +216,14 @@ export default function EditDealerScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#4f46e5" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#4f46e5" />
           <Text className="text-muted-foreground" style={styles.stateText}>

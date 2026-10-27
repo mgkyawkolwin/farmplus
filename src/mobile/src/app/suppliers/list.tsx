@@ -18,9 +18,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import { Supplier } from "@/models/supplier";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const PAGE_SIZE = 20;
 
@@ -34,6 +36,7 @@ const COLORS = {
 
 export default function SupplierListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/suppliers/list');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -65,10 +68,11 @@ export default function SupplierListScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadSuppliers();
       return undefined;
-    }, [loadSuppliers]),
+    }, [loadSuppliers, permissionState]),
   );
 
   const loadMore = () => {
@@ -96,13 +100,21 @@ export default function SupplierListScreen() {
           accessibilityRole="button"
           accessibilityLabel="New supplier"
           onPress={() => router.push("/suppliers/new")}
+          disabled={permissionState !== 'authorized'}
           style={styles.addButton}
         >
           <Plus size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
-      <ScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={COLORS.green} />
+          <Text style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         refreshControl={
@@ -233,7 +245,7 @@ export default function SupplierListScreen() {
             <ActivityIndicator size="small" color={COLORS.green} />
           </View>
         ) : null}
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   );
 }

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import CustomError from '@/lib/customError';
+import { useAuthContext } from '@/lib/authContextProvider';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { IAuthService } from '../../services/authService';
@@ -20,6 +21,7 @@ const authService = container.resolve<IAuthService>(DI_TOKENS.IAuthService);
 export default function SignInScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const { setAuthUser } = useAuthContext();
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +34,11 @@ export default function SignInScreen() {
 
     setIsSubmitting(true);
     try {
-      await authService.signIn(userName.trim(), password);
+      const response = await authService.signIn(userName.trim(), password);
+      // API returns { token, user: { id, userName, ... } }; persist the user so authUser.id is available.
+      if (response.data?.user) {
+        setAuthUser(response.data.user);
+      }
       router.replace('/home/dashboard');
     } catch (error) {
       SnackBar.Error(error instanceof CustomError ? error.message : 'Unable to sign in. Please try again.');

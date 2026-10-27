@@ -29,13 +29,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { DealerItem } from '@/models/dealer';
 import { DealerServiceClient } from '@/services/dealerService';
 import SnackBar from '@/components/ui/snack-bar';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 export default function DealerViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const permissionState = usePagePermission('/dealers/view');
   const dealerId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const service = React.useMemo(() => new DealerServiceClient(), []);
@@ -62,20 +65,30 @@ export default function DealerViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadDealer();
       return undefined;
-    }, [loadDealer]),
+    }, [loadDealer, permissionState]),
   );
 
-  if (!dealer) {
+  if (permissionState !== 'authorized' || !dealer) {
     return (
       <SafeAreaView style={styles.page}>
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
-          <Text className="text-muted-foreground" style={styles.loadingText}>
-            Loading dealer...
-          </Text>
+        <View style={styles.headerBar}>
+          <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
+            <Icon className="text-foreground" as={ChevronLeft} size={22} />
+          </Button>
+          <Text style={styles.headerTitle}>Dealer</Text>
+          <View style={styles.headerButton} />
         </View>
+        {permissionState === 'denied' ? <UnauthorizedView /> : (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={COLORS.green} />
+            <Text className="text-muted-foreground" style={styles.loadingText}>
+              {permissionState === 'checking' ? 'Checking permission...' : 'Loading dealer...'}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
     );
   }

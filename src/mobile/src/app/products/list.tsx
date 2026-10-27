@@ -25,7 +25,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { container, DI_TOKENS } from '@/di';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
@@ -44,6 +46,7 @@ const COLORS = {
 
 export default function ProductListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/products/list');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -88,6 +91,7 @@ export default function ProductListScreen() {
   );
 
   const fetchProducts = React.useCallback(async () => {
+    if (permissionState !== 'authorized') return;
     setLoading(true);
     setProducts([]);
     try {
@@ -106,17 +110,17 @@ export default function ProductListScreen() {
     } finally {
       setLoading(false);
     }
-  }, [pageSize, searchText]);
+  }, [pageSize, permissionState, searchText]);
 
   React.useEffect(() => {
-    fetchProducts();
+    if (permissionState === 'authorized') fetchProducts();
   }, [fetchProducts]);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchProducts();
+      if (permissionState === 'authorized') fetchProducts();
       return undefined;
-    }, [fetchProducts]),
+    }, [fetchProducts, permissionState]),
   );
 
   const onRefresh = React.useCallback(() => {
@@ -153,12 +157,21 @@ export default function ProductListScreen() {
           accessibilityRole="button"
           accessibilityLabel="New product"
           onPress={() => router.push('/products/new')}
+          disabled={permissionState !== 'authorized'}
           style={styles.addButton}
         >
           <Plus size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={COLORS.green} />
+          <Text style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <>
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Search size={16} color={COLORS.muted} />
@@ -298,6 +311,7 @@ export default function ProductListScreen() {
           ) : null}
         </ScrollView>
       )}
+      </>}
     </SafeAreaView>
   );
 }

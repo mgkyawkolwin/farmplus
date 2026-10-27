@@ -9,11 +9,13 @@ import { ChevronLeft, Package, Pencil, Trash2 } from 'lucide-react-native';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import SnackBar from '@/components/ui/snack-bar';
 import ShopBanner from '@/components/shopBanner';
 import { container, DI_TOKENS } from '@/di';
 import { Purchase } from '@/models/purchase';
 import { IPurchaseService } from '@/services/purchaseService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
 
@@ -61,6 +63,7 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
 
 export default function PurchaseViewScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/purchases/view');
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const purchaseId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -87,15 +90,17 @@ export default function PurchaseViewScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       void loadPurchase();
       return undefined;
-    }, [loadPurchase]),
+    }, [loadPurchase, permissionState]),
   );
 
   const items = purchase?.items ?? [];
   const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const confirmDelete = () => {
+    if (permissionState !== 'authorized') return;
     if (!purchase) return;
     Alert.alert('Delete purchase', `Delete the purchase from ${purchase.supplierName}? Stock will be adjusted.`, [
       { text: 'Cancel', style: 'cancel' },
@@ -128,7 +133,14 @@ export default function PurchaseViewScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading && !purchase ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && !purchase ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading purchase...</Text>

@@ -20,6 +20,7 @@ import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { Checkbox } from "@/components/ui/checkbox";
+import UnauthorizedView from "@/components/unauthorized-view";
 import DropdownModel, { DropdownModelItem } from "@/components/dropdownModel";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -31,6 +32,7 @@ import { BrandServiceClient } from "@/services/brandService";
 import { CategoryServiceClient } from "@/services/categoryService";
 import { UnitServiceClient } from "@/services/unitService";
 import { normalizeMediaFile } from "@/lib/mediaFile";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -38,6 +40,7 @@ const productService = container.resolve<IProductService>(
 
 export default function NewProductScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/products/new');
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
   const [loading, setLoading] = React.useState(false);
   const [loadingOptions, setLoadingOptions] = React.useState(false);
@@ -102,8 +105,8 @@ export default function NewProductScreen() {
   }, [brandService, categoryService, unitService]);
 
   React.useEffect(() => {
-    void loadDropdownOptions();
-  }, [loadDropdownOptions]);
+    if (permissionState === 'authorized') void loadDropdownOptions();
+  }, [loadDropdownOptions, permissionState]);
 
   const pickCoverImage = async () => {
     const permissionResult =
@@ -183,6 +186,7 @@ export default function NewProductScreen() {
   };
 
   const handleSubmit = async () => {
+    if (permissionState !== 'authorized') return;
     if (!formData.name.trim()) {
       SnackBar.Error("Name is required");
       return;
@@ -258,7 +262,14 @@ export default function NewProductScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <KeyboardAwareScrollView
+      {permissionState === 'checking' ? (
+        <View style={styles.permissionState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.permissionText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <KeyboardAwareScrollView
         contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 40 }}
         enableOnAndroid={true}
         extraScrollHeight={40}
@@ -439,13 +450,15 @@ export default function NewProductScreen() {
             )}
           </Button>
         </View>
-      </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   page: { flex: 1 },
+  permissionState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  permissionText: { marginTop: 8, textAlign: 'center' },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",

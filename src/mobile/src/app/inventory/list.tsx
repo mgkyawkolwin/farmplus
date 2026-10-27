@@ -18,10 +18,12 @@ import { ChevronLeft, Package, Search } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import UnauthorizedView from "@/components/unauthorized-view";
 import LoadingOverlay from "@/components/loadingOverlay";
 import SnackBar from "@/components/ui/snack-bar";
 import { ProductItem } from "@/models/product";
 import { getInventoryProducts } from "@/services/inventoryService";
+import { usePagePermission } from "@/lib/usePagePermission";
 
 type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 type StatusFilter = "All" | StockStatus;
@@ -40,6 +42,7 @@ function categoryName(product: ProductItem) {
 
 export default function InventoryStockListScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/inventory/list');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -63,10 +66,11 @@ export default function InventoryStockListScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadProducts();
       return undefined;
-    }, [loadProducts]),
+    }, [loadProducts, permissionState]),
   );
 
   const categories = ["All", ...new Set(products.map(categoryName))];
@@ -101,6 +105,14 @@ export default function InventoryStockListScreen() {
         <View style={styles.headerButton} />
       </View>
 
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : <>
       <View style={styles.searchContainer}>
         <Icon className="text-muted-foreground" as={Search} size={16} />
         <TextInput
@@ -310,6 +322,7 @@ export default function InventoryStockListScreen() {
           })}
         </ScrollView>
       )}
+      </>}
     </SafeAreaView>
   );
 }

@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
 import ShopBanner from '@/components/shopBanner';
@@ -18,6 +19,7 @@ import { useSelectedShopName } from '@/lib/useSelectedShopName';
 import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
+import { usePagePermission } from '@/lib/usePagePermission';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 
@@ -40,6 +42,7 @@ function PreviewRow({ label, value, strong }: { label: string; value: string; st
 
 export default function SaleEditScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/sales/edit');
   const { shopName, shopLoaded } = useSelectedShopName();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const saleId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -51,6 +54,7 @@ export default function SaleEditScreen() {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     let active = true;
     if (!saleId) {
       router.back();
@@ -76,7 +80,7 @@ export default function SaleEditScreen() {
     });
 
     return () => { active = false; };
-  }, [saleId, router]);
+  }, [permissionState, saleId, router]);
 
   const numericTaxRate = Number(taxRate) || 0;
   const numericDiscount = Number(discount) || 0;
@@ -87,6 +91,7 @@ export default function SaleEditScreen() {
   const balance = round2(netTotal - paidAmount);
 
   const save = async () => {
+    if (permissionState !== 'authorized') return;
     if (!sale) return;
     if (numericTaxRate < 0 || numericTaxRate > 100) {
       SnackBar.Error('Tax rate must be between 0 and 100');
@@ -124,7 +129,14 @@ export default function SaleEditScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
         </View>

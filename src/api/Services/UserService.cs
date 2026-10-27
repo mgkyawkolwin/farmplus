@@ -20,7 +20,9 @@ public interface IUserService
     Task<UserDto?> UpdateUserAsync(Guid id, UpdateUserRequestDto request, Guid currentUserId);
     Task<bool> DeleteUserAsync(Guid id);
     Task<bool> ChangePasswordAsync(Guid id, ChangePasswordRequestDto request);
+    Task<bool> ResetUserPasswordAsync(Guid id, ResetUserPasswordRequestDto request, Guid currentUserId);
     Task<UserDto?> UploadProfilePictureAsync(Guid id, IFormFile file, Guid currentUserId);
+    Task<UserDto?> UpdateProfileAsync(Guid id, UpdateProfileRequestDto request, Guid currentUserId);
 }
 
 public class UserService : IUserService
@@ -72,8 +74,16 @@ public class UserService : IUserService
                 Email = user.Email,
                 Address = user.Address,
                 City = user.City,
+                Phone = user.Phone,
+                NationalId = user.NationalId,
+                PassportNumber = user.PassportNumber,
+                IsActive = user.IsActive,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 RoleId = user.RoleId,
+                RoleName = _dbContext.Roles
+                    .Where(role => role.Id == user.RoleId)
+                    .Select(role => role.Role)
+                    .FirstOrDefault(),
                 RowVersion = user.RowVersion
             })
             .ToListAsync();
@@ -86,8 +96,13 @@ public class UserService : IUserService
             Email = user.Email,
             Address = user.Address,
             City = user.City,
+            Phone = user.Phone,
+            NationalId = user.NationalId,
+            PassportNumber = user.PassportNumber,
+            IsActive = user.IsActive,
             ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
             RoleId = user.RoleId,
+            RoleName = user.RoleName,
             RowVersion = user.RowVersion
         }).ToList();
 
@@ -107,6 +122,9 @@ public class UserService : IUserService
         ValidationHelper.ValidateRequiredString(_localizer, "UserName", request.UserName);
         ValidationHelper.ValidateEmail(_localizer, "Email", request.Email);
         ValidationHelper.ValidateRequiredString(_localizer, "Password", request.Password);
+        ValidateMaxLength("Phone", request.Phone, 20);
+        ValidateMaxLength("National ID", request.NationalId, 30);
+        ValidateMaxLength("Passport number", request.PassportNumber, 30);
 
         var normalizedUserName = request.UserName.Trim();
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -125,6 +143,9 @@ public class UserService : IUserService
             Email = normalizedEmail,
             Address = request.Address,
             City = request.City,
+            Phone = NormalizeOptional(request.Phone),
+            NationalId = NormalizeOptional(request.NationalId),
+            PassportNumber = NormalizeOptional(request.PassportNumber),
             CreatedAtUtc = DateTime.UtcNow,
             CreatedById = currentUserId,
             UpdatedAtUtc = DateTime.UtcNow,
@@ -172,6 +193,16 @@ public class UserService : IUserService
             _dbContext.Entry(user).Property(u => u.RowVersion).OriginalValue = request.RowVersion;
             user.Address = request.Address;
             user.City = request.City;
+            ValidateMaxLength("Phone", request.Phone, 20);
+            ValidateMaxLength("National ID", request.NationalId, 30);
+            ValidateMaxLength("Passport number", request.PassportNumber, 30);
+            user.Phone = NormalizeOptional(request.Phone);
+            user.NationalId = NormalizeOptional(request.NationalId);
+            user.PassportNumber = NormalizeOptional(request.PassportNumber);
+            if (request.IsActive.HasValue)
+            {
+                user.IsActive = request.IsActive.Value;
+            }
             user.UpdatedAtUtc = DateTime.UtcNow;
             user.UpdatedById = currentUserId;
             await _dbContext.SaveChangesAsync();
@@ -183,6 +214,52 @@ public class UserService : IUserService
             throw new CustomException(_localizer["Error.Concurrency"]);
         }
     }
+
+    public async Task<UserDto?> UpdateProfileAsync(Guid id, UpdateProfileRequestDto request, Guid currentUserId)
+    {
+        _logger.LogDebug("CALLED: UpdateProfileAsync(id={Id})", id);
+
+        ValidationHelper.ValidateEmail(_localizer, "Email", request.Email);
+        ValidateMaxLength("Email", request.Email, 50);
+        ValidateMaxLength("Phone", request.Phone, 20);
+        ValidateMaxLength("National ID", request.NationalId, 30);
+        ValidateMaxLength("Passport number", request.PassportNumber, 30);
+        ValidateMaxLength("Address", request.Address, 500);
+        ValidateMaxLength("City", request.City, 100);
+
+        var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id)
+            ?? throw new CustomException(_localizer[$"Template.NotFound", "User"]);
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        if (await _dbContext.Users.AnyAsync(u => u.Id != id && u.Email == normalizedEmail))
+        {
+            throw new CustomException(_localizer[$"Template.AlreadyExists", "Email"]);
+        }
+
+        user.Email = normalizedEmail;
+        user.Phone = NormalizeOptional(request.Phone);
+        user.NationalId = NormalizeOptional(request.NationalId);
+        user.PassportNumber = NormalizeOptional(request.PassportNumber);
+        user.Address = NormalizeOptional(request.Address);
+        user.City = NormalizeOptional(request.City);
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        user.UpdatedById = currentUserId;
+
+        await _dbContext.SaveChangesAsync();
+
+        return MapToDto(user);
+    }
+
+    private static void ValidateMaxLength(string fieldName, string? value, int maxLength)
+    {
+        if (value != null && value.Trim().Length > maxLength)
+        {
+            throw new CustomException($"{fieldName} must not exceed {maxLength} characters.");
+        }
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public async Task<bool> DeleteUserAsync(Guid id)
     {
@@ -213,6 +290,20 @@ public class UserService : IUserService
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         user.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ResetUserPasswordAsync(Guid id, ResetUserPasswordRequestDto request, Guid currentUserId)
+    {
+        ValidationHelper.ValidateRequiredString(_localizer, "NewPassword", request.NewPassword);
+
+        var user = await GetTenantUsers().SingleOrDefaultAsync(u => u.Id == id)
+            ?? throw new CustomException(_localizer[$"Template.NotFound", "User"]);
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        user.UpdatedById = currentUserId;
         await _dbContext.SaveChangesAsync();
         return true;
     }
@@ -258,6 +349,10 @@ public class UserService : IUserService
             Email = user.Email,
             Address = user.Address,
             City = user.City,
+            Phone = user.Phone,
+            NationalId = user.NationalId,
+            PassportNumber = user.PassportNumber,
+            IsActive = user.IsActive,
             ProfilePictureUrl = ResolvePictureUrl(user.ProfilePictureUrl),
             RoleId = user.RoleId,
             RowVersion = user.RowVersion

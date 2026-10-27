@@ -6,5 +6,9 @@ public sealed record UpdateUserRequestDto : UpdateRequestBase<Guid>
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? City { get; set; }
+    public string? Phone { get; set; }
+    public string? NationalId { get; set; }
+    public string? PassportNumber { get; set; }
+    public bool? IsActive { get; set; }
     public Guid? RoleId { get; set; }
 }

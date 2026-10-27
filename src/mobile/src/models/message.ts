@@ -1,6 +1,7 @@
 export interface CustomerMessage {
   id: string;
   messageId: string;
+  title: string;
   messageText: string;
   audience: "Single" | "Broadcast" | string;
   sentAtUtc: string;

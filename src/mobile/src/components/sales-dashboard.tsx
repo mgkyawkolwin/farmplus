@@ -153,6 +153,15 @@ export function SalesDashboardContent({
   if (permissionState === 'checking') {
     return (
       <View style={styles.page}>
+        {showHeader ? (
+          <View className="bg-background border-b border-border" style={styles.headerBar}>
+            <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
+              <Icon className="text-foreground" as={ChevronLeft} size={22} />
+            </Button>
+            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <View style={styles.headerButton} />
+          </View>
+        ) : null}
         <View style={styles.accessState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.accessText}>Loading...</Text>
@@ -164,6 +173,15 @@ export function SalesDashboardContent({
   if (permissionState === 'denied') {
     return (
       <View style={styles.page}>
+        {showHeader ? (
+          <View className="bg-background border-b border-border" style={styles.headerBar}>
+            <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
+              <Icon className="text-foreground" as={ChevronLeft} size={22} />
+            </Button>
+            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <View style={styles.headerButton} />
+          </View>
+        ) : null}
         <UnauthorizedView />
       </View>
     );

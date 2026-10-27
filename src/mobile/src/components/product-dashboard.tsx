@@ -20,6 +20,8 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { container, DI_TOKENS } from '@/di';
+import UnauthorizedView from '@/components/unauthorized-view';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
@@ -76,6 +78,7 @@ export function ProductsDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const permissionState = usePagePermission('/products/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -94,14 +97,15 @@ export function ProductsDashboardContent({
 
   useFocusEffect(
     React.useCallback(() => {
+      if (permissionState !== 'authorized') return undefined;
       setLoading(true);
       void loadProducts();
       return undefined;
-    }, [loadProducts])
+    }, [loadProducts, permissionState])
   );
 
   useSelectedShopChanged(() => {
-    void loadProducts();
+    if (permissionState === 'authorized') void loadProducts();
   });
 
   const metrics = React.useMemo(() => {
@@ -149,7 +153,14 @@ export function ProductsDashboardContent({
         </View>
       ) : null}
 
-      {loading && products.length === 0 ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading && products.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading products...</Text>

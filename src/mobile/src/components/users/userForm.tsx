@@ -1,20 +1,23 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronDown, ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import SnackBar from '@/components/ui/snack-bar';
 import LoadingOverlay from '@/components/loadingOverlay';
+import UnauthorizedView from '@/components/unauthorized-view';
 import { container, DI_TOKENS } from '@/di';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { IUserService } from '@/services/userService';
 import { UpdateUserRequest } from '@/models/user';
 import { RoleItem } from '@/models/role';
@@ -30,6 +33,10 @@ type UserFormState = {
   password: string;
   address: string;
   city: string;
+  phone: string;
+  nationalId: string;
+  passportNumber: string;
+  isActive: boolean;
   rowVersion: string;
   roleId: string;
 };
@@ -41,6 +48,10 @@ const emptyForm: UserFormState = {
   password: '',
   address: '',
   city: '',
+  phone: '',
+  nationalId: '',
+  passportNumber: '',
+  isActive: true,
   rowVersion: '',
   roleId: '',
 };
@@ -50,13 +61,18 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
   const userId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const permissionState = usePagePermission(mode === 'create' ? '/users/new' : '/users/edit');
   const [form, setForm] = React.useState<UserFormState>(emptyForm);
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(mode === 'edit');
   const [roles, setRoles] = React.useState<RoleItem[]>([]);
   const [rolePickerVisible, setRolePickerVisible] = React.useState(false);
+  const [resetPasswordVisible, setResetPasswordVisible] = React.useState(false);
+  const [resetPasswordValue, setResetPasswordValue] = React.useState('');
+  const [isResettingPassword, setIsResettingPassword] = React.useState(false);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     let active = true;
     roleService.getRoles(1, 100).then((items) => {
       if (active) setRoles(items);
@@ -64,10 +80,10 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
       if (active) SnackBar.Error('Failed to load roles');
     });
     return () => { active = false; };
-  }, []);
+  }, [permissionState]);
 
   React.useEffect(() => {
-    if (mode !== 'edit') return;
+    if (mode !== 'edit' || permissionState !== 'authorized') return;
     if (!userId) {
       router.back();
       return;
@@ -83,6 +99,10 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         password: '',
         address: user.address ?? '',
         city: user.city ?? '',
+        phone: user.phone ?? '',
+        nationalId: user.nationalId ?? '',
+        passportNumber: user.passportNumber ?? '',
+        isActive: user.isActive ?? true,
         rowVersion: user.rowVersion ?? '',
         roleId: user.roleId ?? '',
       });
@@ -96,10 +116,39 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
     });
 
     return () => { active = false; };
-  }, [mode, router, userId]);
+  }, [mode, permissionState, router, userId]);
 
   const updateField = (field: keyof UserFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const closeResetPasswordModal = () => {
+    if (isResettingPassword) return;
+    setResetPasswordVisible(false);
+    setResetPasswordValue('');
+  };
+
+  const handleResetPassword = async () => {
+    if (!userId) {
+      SnackBar.Error('Unable to identify the user');
+      return;
+    }
+    if (!resetPasswordValue.trim()) {
+      SnackBar.Error('New password is required');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await userService.resetPassword(userId, resetPasswordValue);
+      SnackBar.Success('Password reset successfully');
+      setResetPasswordVisible(false);
+      setResetPasswordValue('');
+    } catch (error) {
+      SnackBar.Error(error instanceof Error ? error.message : 'Failed to reset password');
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -134,6 +183,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           password: form.password,
           address: form.address.trim() || undefined,
           city: form.city.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          nationalId: form.nationalId.trim() || undefined,
+          passportNumber: form.passportNumber.trim() || undefined,
           roleId: form.roleId,
         });
         SnackBar.Success('User created successfully');
@@ -144,6 +196,10 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           email: form.email.trim(),
           address: form.address.trim() || undefined,
           city: form.city.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          nationalId: form.nationalId.trim() || undefined,
+          passportNumber: form.passportNumber.trim() || undefined,
+          isActive: form.isActive,
           rowVersion: form.rowVersion,
           roleId: form.roleId,
         };
@@ -172,7 +228,14 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         <View style={styles.headerSpacer} />
       </View>
 
-      {pageLoading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text className="text-muted-foreground" style={styles.loadingText}>Loading user details...</Text>
@@ -264,12 +327,72 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
             />
           </View>
 
+          {mode === 'edit' ? (
+            <View style={styles.statusField}>
+              <View style={styles.statusCopy}>
+                <Label className="text-foreground">Active</Label>
+                <Text className="text-muted-foreground">Inactive users cannot sign in.</Text>
+              </View>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))}
+                disabled={loading}
+                accessibilityLabel="User active status"
+              />
+            </View>
+          ) : null}
+
+          <View style={styles.field}>
+            <Label className="text-foreground">Phone</Label>
+            <Input
+              placeholder="Enter phone number"
+              value={form.phone}
+              onChangeText={(value) => updateField('phone', value)}
+              keyboardType="phone-pad"
+              maxLength={20}
+              editable={!loading}
+              className="mt-2"
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Label className="text-foreground">National ID</Label>
+            <Input
+              placeholder="Enter national ID"
+              value={form.nationalId}
+              onChangeText={(value) => updateField('nationalId', value)}
+              maxLength={30}
+              editable={!loading}
+              className="mt-2"
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Label className="text-foreground">Passport number</Label>
+            <Input
+              placeholder="Enter passport number"
+              value={form.passportNumber}
+              onChangeText={(value) => updateField('passportNumber', value)}
+              maxLength={30}
+              editable={!loading}
+              className="mt-2"
+            />
+          </View>
+
           <View style={styles.field}>
             <Label className="text-foreground">Role <Text className="text-red-500">*</Text></Label>
-            <Pressable style={styles.roleSelect} onPress={() => setRolePickerVisible(true)} disabled={loading}>
+            <Pressable
+              style={styles.roleSelect}
+              onPress={() => setRolePickerVisible(true)}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={`Role: ${roles.find((item) => item.id === form.roleId)?.role ?? 'Choose a role'}`}
+              accessibilityState={{ expanded: rolePickerVisible }}
+            >
               <Text className="text-foreground" numberOfLines={1}>
                 {roles.find((item) => item.id === form.roleId)?.role ?? 'Choose a role'}
               </Text>
+              <Icon className="text-muted-foreground" as={ChevronDown} size={18} />
             </Pressable>
             {roles.length === 0 ? <Text className="text-muted-foreground">Create a role before adding users.</Text> : null}
           </View>
@@ -284,11 +407,23 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
               )}
             </Button>
           </View>
+          {mode === 'edit' ? (
+            <Button
+              variant="outline"
+              style={styles.resetPasswordButton}
+              onPress={() => setResetPasswordVisible(true)}
+              disabled={loading}
+            >
+              <Text className="text-foreground">Reset Password</Text>
+            </Button>
+          ) : null}
         </KeyboardAwareScrollView>
       )}
       <Modal transparent visible={rolePickerVisible} animationType="slide" onRequestClose={() => setRolePickerVisible(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setRolePickerVisible(false)}>
-          <View style={styles.rolePicker}>
+        <View style={styles.roleModalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
+          <View className="bg-background" style={styles.rolePicker}>
+            <View style={styles.roleSheetHandle} />
             <Text className="text-foreground" style={styles.rolePickerTitle}>Select Role</Text>
             <ScrollView>
               {roles.map((item) => (
@@ -305,7 +440,49 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
               ))}
             </ScrollView>
           </View>
-        </Pressable>
+        </View>
+      </Modal>
+      <Modal
+        transparent
+        visible={resetPasswordVisible}
+        animationType="slide"
+        onRequestClose={closeResetPasswordModal}
+      >
+        <KeyboardAvoidingView style={styles.resetPasswordOverlay} behavior="padding">
+          <Pressable style={styles.resetPasswordBackdrop} onPress={closeResetPasswordModal} />
+          <View className="bg-background" style={styles.resetPasswordSheet}>
+            <Text className="text-foreground" style={styles.rolePickerTitle}>Reset Password</Text>
+            <Label className="text-foreground">New Password</Label>
+            <Input
+              placeholder="Enter new password"
+              value={resetPasswordValue}
+              onChangeText={setResetPasswordValue}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isResettingPassword}
+            />
+            <View style={styles.resetPasswordActions}>
+              <Button
+                variant="outline"
+                style={styles.actionButton}
+                onPress={closeResetPasswordModal}
+                disabled={isResettingPassword}
+              >
+                <Text className="text-foreground">Cancel</Text>
+              </Button>
+              <Button
+                style={styles.actionButton}
+                onPress={handleResetPassword}
+                disabled={isResettingPassword}
+              >
+                {isResettingPassword ? <ActivityIndicator color="#fff" size="small" /> : (
+                  <Text className="text-background font-semibold">Reset</Text>
+                )}
+              </Button>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -325,10 +502,18 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 40 },
   formContent: { flexGrow: 1, padding: 20, paddingBottom: 40 },
   field: { marginBottom: 20 },
-  roleSelect: { minHeight: 44, justifyContent: 'center', marginTop: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6 },
-  modalBackdrop: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#00000066' },
-  rolePicker: { maxHeight: '70%', padding: 16, borderRadius: 8, backgroundColor: '#FFFFFF' },
+  statusField: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  statusCopy: { gap: 4 },
+  roleSelect: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6 },
+  roleModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
+  rolePicker: { maxHeight: '70%', padding: 20, paddingBottom: 28, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  roleSheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12, backgroundColor: '#CBD5E1' },
   rolePickerTitle: { marginBottom: 10, fontSize: 16, fontWeight: '700' },
+  resetPasswordOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
+  resetPasswordBackdrop: { ...StyleSheet.absoluteFillObject },
+  resetPasswordSheet: { padding: 20, paddingBottom: 32, borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 10 },
+  resetPasswordActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  resetPasswordButton: { width: '100%', marginTop: 12 },
   roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   actionButton: { flex: 1 },

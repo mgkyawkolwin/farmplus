@@ -143,7 +143,7 @@ public class CustomersController : BaseController
 
     [HttpPatch("{id:guid}/profilePicture")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadProfilePicture(Guid id, [FromForm] IFormFile file)
+    public async Task<IActionResult> UploadProfilePicture(Guid id, IFormFile file)
     {
         try
         {

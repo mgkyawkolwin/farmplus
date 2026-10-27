@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import UnauthorizedView from '@/components/unauthorized-view';
 import LoadingOverlay from '@/components/loadingOverlay';
 import ShopBanner from '@/components/shopBanner';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { getSelectedShopId } from '@/lib/authStorage';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
+import { usePagePermission } from '@/lib/usePagePermission';
 import { DealerItem } from '@/models/dealer';
 import { ProductItem } from '@/models/product';
 import { DealerServiceClient } from '@/services/dealerService';
@@ -54,6 +56,7 @@ function InputRow({ label, children }: { label: string; children: React.ReactNod
 
 export default function DealerSaleScreen() {
   const router = useRouter();
+  const permissionState = usePagePermission('/dealers/sales');
   const params = useLocalSearchParams<{ dealerId?: string | string[] }>();
   const dealerId = Array.isArray(params.dealerId) ? params.dealerId[0] : params.dealerId;
 
@@ -82,14 +85,16 @@ export default function DealerSaleScreen() {
   }, []);
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     void loadShopName();
-  }, [loadShopName]);
+  }, [loadShopName, permissionState]);
 
   useSelectedShopChanged(() => {
-    void loadShopName();
+    if (permissionState === 'authorized') void loadShopName();
   });
 
   React.useEffect(() => {
+    if (permissionState !== 'authorized') return undefined;
     if (!dealerId) {
       router.back();
       return;
@@ -108,7 +113,7 @@ export default function DealerSaleScreen() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [dealerId, router]);
+  }, [dealerId, permissionState, router]);
 
   const subtotal = selectedProducts.reduce((sum, line) =>
     sum + (Number(line.quantity) || 0) * (line.product.salePrice ?? 0), 0,
@@ -143,6 +148,7 @@ export default function DealerSaleScreen() {
   };
 
   const submitSale = async () => {
+    if (permissionState !== 'authorized') return;
     if (!dealerId) return;
     if (selectedProducts.length === 0) {
       SnackBar.Error('Add at least one product');
@@ -192,7 +198,14 @@ export default function DealerSaleScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      {loading ? (
+      {permissionState === 'checking' ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color="#16794B" />
+          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+        </View>
+      ) : permissionState === 'denied' ? (
+        <UnauthorizedView />
+      ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
