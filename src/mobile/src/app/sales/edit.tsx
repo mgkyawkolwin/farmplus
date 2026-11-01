@@ -22,6 +22,7 @@ import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 
@@ -46,6 +47,7 @@ function PreviewRow({ label, value, strong, theme }: { label: string; value: str
 
 export default function SaleEditScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/edit');
@@ -70,7 +72,7 @@ export default function SaleEditScreen() {
     saleService.getSaleById(saleId).then((result) => {
       if (!active) return;
       if (result.status === 'Voided') {
-        SnackBar.Error('A voided sale cannot be edited');
+        SnackBar.Error(t('sales.messages.voidedCannotEdit'));
         router.back();
         return;
       }
@@ -79,14 +81,14 @@ export default function SaleEditScreen() {
       setDiscount(String(result.discount ?? 0));
     }).catch((error) => {
       if (!active) return;
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to load sale');
+      SnackBar.Error(error instanceof Error ? error.message : t('sales.messages.failedLoad'));
       router.back();
     }).finally(() => {
       if (active) setLoading(false);
     });
 
     return () => { active = false; };
-  }, [permissionState, saleId, router]);
+  }, [permissionState, saleId, router, t]);
 
   const numericTaxRate = Number(taxRate) || 0;
   const numericDiscount = Number(discount) || 0;
@@ -100,25 +102,25 @@ export default function SaleEditScreen() {
     if (permissionState !== 'authorized') return;
     if (!sale) return;
     if (numericTaxRate < 0 || numericTaxRate > 100) {
-      SnackBar.Error('Tax rate must be between 0 and 100');
+      SnackBar.Error(t('sales.messages.taxRateInvalid'));
       return;
     }
     if (numericDiscount < 0 || numericDiscount > subTotal) {
-      SnackBar.Error('Discount cannot be negative or exceed the subtotal');
+      SnackBar.Error(t('sales.messages.discountInvalid'));
       return;
     }
     if (netTotal < paidAmount) {
-      SnackBar.Error('Net total cannot be less than the amount already paid');
+      SnackBar.Error(t('sales.messages.netTotalTooLow'));
       return;
     }
 
     setSaving(true);
     try {
       await saleService.updateSale(sale.id, numericTaxRate, numericDiscount);
-      SnackBar.Success('Sale updated');
+      SnackBar.Success(t('sales.messages.saleUpdated'));
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to update sale');
+      SnackBar.Error(error instanceof Error ? error.message : t('sales.messages.failedUpdate'));
     } finally {
       setSaving(false);
     }
@@ -131,17 +133,17 @@ export default function SaleEditScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Edit Sale</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('sales.edit.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('sales.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('sales.unauthorized.title')} message={t('sales.unauthorized.description')} />
       ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
@@ -150,17 +152,17 @@ export default function SaleEditScreen() {
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <ShopBanner
-              label="Shop"
+              label={t('sales.shop.title')}
               name={shopName}
-              emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+              emptyText={shopLoaded ? t('sales.shop.noShopSelectedFirst') : undefined}
             />
 
             <Text style={[styles.hint, { color: theme.mutedForeground }]}>
-              Sale #{sale.id.slice(0, 8).toUpperCase()} · {sale.customerName}. Products and quantities cannot be changed; void the sale and create a new one instead.
+              {t('sales.edit.readOnlyNotice', { id: sale.id.slice(0, 8).toUpperCase(), customer: sale.customerName })}
             </Text>
 
             <View style={styles.field}>
-              <Label className="text-foreground">Tax %</Label>
+              <Label className="text-foreground">{t('sales.fields.taxPercent')}</Label>
               <Input
                 value={taxRate}
                 onChangeText={(value) => setTaxRate(value.replace(/[^0-9.]/g, ''))}
@@ -170,7 +172,7 @@ export default function SaleEditScreen() {
             </View>
 
             <View style={styles.field}>
-              <Label className="text-foreground">Discount</Label>
+              <Label className="text-foreground">{t('sales.fields.discount')}</Label>
               <Input
                 value={discount}
                 onChangeText={(value) => setDiscount(value.replace(/[^0-9.]/g, ''))}
@@ -180,16 +182,16 @@ export default function SaleEditScreen() {
             </View>
 
             <View style={[styles.preview, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <PreviewRow label="Subtotal" value={money(subTotal)} theme={theme} />
-              <PreviewRow label="Tax amount" value={money(taxAmount)} theme={theme} />
-              <PreviewRow label="Discount" value={`- ${money(numericDiscount)}`} theme={theme} />
-              <PreviewRow label="Net total" value={money(netTotal)} strong theme={theme} />
-              <PreviewRow label="Paid" value={money(paidAmount)} theme={theme} />
-              <PreviewRow label="Balance" value={money(balance)} strong theme={theme} />
+              <PreviewRow label={t('sales.fields.subtotal')} value={money(subTotal)} theme={theme} />
+              <PreviewRow label={t('sales.fields.taxAmount')} value={money(taxAmount)} theme={theme} />
+              <PreviewRow label={t('sales.fields.discount')} value={`- ${money(numericDiscount)}`} theme={theme} />
+              <PreviewRow label={t('sales.fields.netTotal')} value={money(netTotal)} strong theme={theme} />
+              <PreviewRow label={t('sales.fields.paid')} value={money(paidAmount)} theme={theme} />
+              <PreviewRow label={t('sales.fields.balance')} value={money(balance)} strong theme={theme} />
             </View>
 
             <Button onPress={save} disabled={saving}>
-              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">Save Changes</Text>}
+              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">{t('sales.actions.saveChanges')}</Text>}
             </Button>
           </ScrollView>
         </KeyboardAvoidingView>

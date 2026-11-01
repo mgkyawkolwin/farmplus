@@ -24,6 +24,7 @@ import SnackBar from "@/components/ui/snack-bar";
 import { ProductItem } from "@/models/product";
 import { getInventoryProducts } from "@/services/inventoryService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 type StatusFilter = "All" | StockStatus;
@@ -42,6 +43,7 @@ function categoryName(product: ProductItem) {
 
 export default function InventoryStockListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const permissionState = usePagePermission('/inventory/list');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -56,13 +58,13 @@ export default function InventoryStockListScreen() {
       setProducts(await getInventoryProducts());
     } catch (error) {
       SnackBar.Error(
-        error instanceof Error ? error.message : "Unable to load stock list",
+            error instanceof Error ? error.message : t('inventory.messages.unableLoadList'),
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -84,6 +86,12 @@ export default function InventoryStockListScreen() {
       selectedStatus === "All" || getStockStatus(product) === selectedStatus;
     return matchesName && matchesCategory && matchesStatus;
   });
+  const displayStatus = (status: StatusFilter) => {
+    if (status === 'All') return t('inventory.filters.all');
+    if (status === 'In Stock') return t('inventory.status.inStock');
+    if (status === 'Low Stock') return t('inventory.status.lowStock');
+    return t('inventory.status.outOfStock');
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
@@ -100,7 +108,7 @@ export default function InventoryStockListScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Inventory List
+          {t('inventory.list.title')}
         </Text>
         <View style={styles.headerButton} />
       </View>
@@ -108,17 +116,17 @@ export default function InventoryStockListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('inventory.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('inventory.unauthorized.title')} message={t('inventory.unauthorized.description')} />
       ) : <>
       <View style={styles.searchContainer}>
         <Icon className="text-muted-foreground" as={Search} size={16} />
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search product name"
+          placeholder={t('inventory.list.searchPlaceholder')}
           placeholderTextColor="#9CA3AF"
           style={styles.searchInput}
           autoCapitalize="none"
@@ -128,7 +136,7 @@ export default function InventoryStockListScreen() {
 
       <View style={styles.filterSection}>
         <Text className="text-muted-foreground" style={styles.filterLabel}>
-          Category
+          {t('inventory.filters.category')}
         </Text>
         <ScrollView
           horizontal
@@ -150,7 +158,11 @@ export default function InventoryStockListScreen() {
                   className={selected ? "text-background" : "text-foreground"}
                   style={styles.categoryChipText}
                 >
-                  {category}
+                  {category === 'All'
+                    ? t('inventory.filters.all')
+                    : category === 'Uncategorized'
+                      ? t('inventory.empty.noUncategorized')
+                      : category}
                 </Text>
               </Pressable>
             );
@@ -158,7 +170,7 @@ export default function InventoryStockListScreen() {
         </ScrollView>
 
         <Text className="text-muted-foreground" style={styles.filterLabel}>
-          Stock Status
+          {t('inventory.filters.stockStatus')}
         </Text>
         <ScrollView
           horizontal
@@ -190,7 +202,7 @@ export default function InventoryStockListScreen() {
                     className={selected ? "text-background" : "text-foreground"}
                     style={styles.statusChipText}
                   >
-                    {status}
+                    {displayStatus(status)}
                   </Text>
                 </Pressable>
               );
@@ -203,16 +215,16 @@ export default function InventoryStockListScreen() {
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading stock...
+            {t('inventory.list.loading')}
           </Text>
         </View>
       ) : filteredProducts.length === 0 ? (
         <View style={styles.centeredState}>
           <Text className="text-foreground" style={styles.stateTitle}>
-            No stock items found
+            {t('inventory.empty.noStockItems')}
           </Text>
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Try changing your search or filters.
+            {t('inventory.empty.adjustFilters')}
           </Text>
         </View>
       ) : (
@@ -229,26 +241,26 @@ export default function InventoryStockListScreen() {
           }
         >
           <Text className="text-muted-foreground" style={styles.resultCount}>
-            {filteredProducts.length} products
+            {t('inventory.list.productCount', { count: filteredProducts.length })}
           </Text>
           <View style={styles.tableHeader}>
             <Text
               className="text-muted-foreground"
               style={[styles.headerCell, styles.productColumn]}
             >
-              Product
+              {t('inventory.fields.product')}
             </Text>
             <Text
               className="text-muted-foreground"
               style={[styles.headerCell, styles.stockColumn]}
             >
-              Current Stock
+              {t('inventory.fields.currentStock')}
             </Text>
             <Text
               className="text-muted-foreground"
               style={[styles.headerCell, styles.statusColumn]}
             >
-              Status
+              {t('inventory.fields.status')}
             </Text>
           </View>
           {filteredProducts.map((product) => {
@@ -269,6 +281,8 @@ export default function InventoryStockListScreen() {
             return (
               <Pressable
                 key={product.id}
+                accessibilityRole="button"
+                accessibilityLabel={t('inventory.accessibility.product', { name: product.name })}
                 style={styles.stockRow}
                 onPress={() =>
                   router.push(
@@ -313,7 +327,7 @@ export default function InventoryStockListScreen() {
                 <View style={styles.statusColumn}>
                   <View style={[styles.statusBadge, badgeStyle]}>
                     <Text style={[styles.statusBadgeText, badgeTextStyle]}>
-                      {status}
+                      {displayStatus(status)}
                     </Text>
                   </View>
                 </View>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,13 +29,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type ProfileField = 'email' | 'phone' | 'nationalId' | 'passportNumber' | 'address' | 'city';
 type ProfileForm = Record<ProfileField, string>;
 
-const PROFILE_FIELDS: { key: ProfileField; label: string; inputProps?: TextInputProps }[] = [
-  { key: 'email', label: 'Email *', inputProps: { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false } },
-  { key: 'phone', label: 'Phone', inputProps: { keyboardType: 'phone-pad' } },
-  { key: 'nationalId', label: 'National ID', inputProps: { autoCapitalize: 'characters', autoCorrect: false } },
-  { key: 'passportNumber', label: 'Passport number', inputProps: { autoCapitalize: 'characters', autoCorrect: false } },
-  { key: 'address', label: 'Address' },
-  { key: 'city', label: 'City' },
+const PROFILE_FIELDS: { key: ProfileField; labelKey: string; inputProps?: TextInputProps }[] = [
+  { key: 'email', labelKey: 'profile.fields.emailRequired', inputProps: { keyboardType: 'email-address', autoCapitalize: 'none', autoCorrect: false } },
+  { key: 'phone', labelKey: 'profile.fields.phone', inputProps: { keyboardType: 'phone-pad' } },
+  { key: 'nationalId', labelKey: 'profile.fields.nationalId', inputProps: { autoCapitalize: 'characters', autoCorrect: false } },
+  { key: 'passportNumber', labelKey: 'profile.fields.passportNumber', inputProps: { autoCapitalize: 'characters', autoCorrect: false } },
+  { key: 'address', labelKey: 'profile.fields.address' },
+  { key: 'city', labelKey: 'profile.fields.city' },
 ];
 
 const toProfileForm = (source?: AppUser | null): ProfileForm => ({
@@ -48,6 +49,7 @@ const toProfileForm = (source?: AppUser | null): ProfileForm => ({
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { authUser, setAuthUser } = useAuthContext();
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
   const fieldOffsetsY = useRef<Partial<Record<ProfileField, number>>>({});
 
   const userService = useMemo(() => new UserServiceClient(), []);
-  const displayName = authUser?.displayName || authUser?.userName || 'User';
+  const displayName = authUser?.displayName || authUser?.userName || t('profile.user');
 
   // Refresh stored profile values so the form reflects the latest data from the API.
   useEffect(() => {
@@ -104,18 +106,18 @@ export default function ProfileScreen() {
 
   const handleUpdateInfo = async () => {
     if (!authUser?.id) {
-      SnackBar.Error('Unable to identify the signed-in user. Please sign in again.');
+      SnackBar.Error(t('profile.messages.unableIdentifyUser'));
       return;
     }
 
     const email = profileForm.email.trim();
     if (!email) {
-      SnackBar.Error('Email is required.');
+      SnackBar.Error(t('profile.messages.emailRequired'));
       return;
     }
 
     if (!EMAIL_PATTERN.test(email)) {
-      SnackBar.Error('Enter a valid email address.');
+      SnackBar.Error(t('profile.messages.invalidEmail'));
       return;
     }
 
@@ -131,9 +133,9 @@ export default function ProfileScreen() {
       });
       setAuthUser({ ...authUser, ...updatedUser, token: authUser.token });
       setProfileForm(toProfileForm(updatedUser));
-      SnackBar.Success('Profile updated successfully.');
+      SnackBar.Success(t('profile.messages.updated'));
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to update profile.');
+      SnackBar.Error(error instanceof Error ? error.message : t('profile.messages.unableUpdate'));
     } finally {
       setIsUpdatingInfo(false);
     }
@@ -218,28 +220,28 @@ export default function ProfileScreen() {
 
   const handleChangePassword = async () => {
     if (!authUser?.id) {
-      SnackBar.Error('Unable to identify the signed-in user. Please sign in again.');
+      SnackBar.Error(t('profile.messages.unableIdentifyUser'));
       return;
     }
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      SnackBar.Error('Complete all password fields.');
+      SnackBar.Error(t('profile.messages.completePasswordFields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      SnackBar.Error('New password and confirmation do not match.');
+      SnackBar.Error(t('profile.messages.passwordMismatch'));
       return;
     }
 
     try {
       setIsChangingPassword(true);
       await userService.changePassword(authUser.id, { currentPassword, newPassword });
-      SnackBar.Success('Password changed successfully.');
+      SnackBar.Success(t('profile.messages.passwordChanged'));
       setIsPasswordSheetVisible(false);
       resetPasswordForm();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to change password.');
+      SnackBar.Error(error instanceof Error ? error.message : t('profile.messages.unableChangePassword'));
     } finally {
       setIsChangingPassword(false);
     }
@@ -251,9 +253,9 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.topBarButton} onPress={() => router.back()} activeOpacity={0.7}>
           <Icon className="text-foreground" as={ChevronLeft} size={24} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Profile</Text>
+        <Text style={styles.topBarTitle}>{t('profile.title')}</Text>
         <Button variant="destructive" style={styles.signOutButton} onPress={handleSignOut}>
-          <Text>Sign Out</Text>
+          <Text>{t('profile.signOut')}</Text>
         </Button>
       </View>
 
@@ -285,7 +287,7 @@ export default function ProfileScreen() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={[styles.email, { color: theme.mutedForeground }]}>{authUser?.email ?? 'No email provided'}</Text>
+            <Text style={[styles.email, { color: theme.mutedForeground }]}>{authUser?.email ?? t('profile.noEmail')}</Text>
           </View>
         </View>
 
@@ -295,8 +297,8 @@ export default function ProfileScreen() {
             formOffsetY.current = event.nativeEvent.layout.y;
           }}
         >
-          <Text style={styles.sectionTitle}>Update Info</Text>
-          {PROFILE_FIELDS.map(({ key, label, inputProps }) => (
+          <Text style={styles.sectionTitle}>{t('profile.updateInfo')}</Text>
+          {PROFILE_FIELDS.map(({ key, labelKey, inputProps }) => (
             <View
               key={key}
               style={styles.fieldGroup}
@@ -304,7 +306,7 @@ export default function ProfileScreen() {
                 fieldOffsetsY.current[key] = event.nativeEvent.layout.y;
               }}
             >
-              <Text style={styles.fieldLabel}>{label}</Text>
+              <Text style={styles.fieldLabel}>{t(labelKey)}</Text>
               <Input
                 value={profileForm[key]}
                 onChangeText={(text) => updateProfileField(key, text)}
@@ -315,12 +317,12 @@ export default function ProfileScreen() {
             </View>
           ))}
           <Button style={styles.actionButton} onPress={handleUpdateInfo} disabled={isUpdatingInfo}>
-            <Text>{isUpdatingInfo ? 'Saving...' : 'Save Info'}</Text>
+            <Text>{isUpdatingInfo ? t('profile.saving') : t('profile.saveInfo')}</Text>
           </Button>
         </View>
 
         <Button variant="outline" style={styles.actionButton} onPress={() => setIsPasswordSheetVisible(true)}>
-          <Text>Change Password</Text>
+          <Text>{t('profile.changePassword')}</Text>
         </Button>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -341,7 +343,7 @@ export default function ProfileScreen() {
               disabled={isUploading}
               onPress={() => pickFromSheet('library')}
             >
-              <Text>Choose From Gallery</Text>
+              <Text>{t('profile.chooseFromGallery')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -349,7 +351,7 @@ export default function ProfileScreen() {
               disabled={isUploading}
               onPress={() => pickFromSheet('camera')}
             >
-              <Text>Use Camera</Text>
+              <Text>{t('profile.useCamera')}</Text>
             </Button>
           </View>
         </View>
@@ -365,9 +367,9 @@ export default function ProfileScreen() {
           <Pressable style={styles.sheetBackdrop} onPress={closePasswordSheet} />
           <View className="bg-background" style={styles.sheet}>
             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
-            <Text style={styles.sheetTitle}>Change Password</Text>
+            <Text style={styles.sheetTitle}>{t('profile.changePassword')}</Text>
 
-            <Text style={styles.fieldLabel}>Current password</Text>
+            <Text style={styles.fieldLabel}>{t('profile.currentPassword')}</Text>
             <Input
               value={currentPassword}
               onChangeText={setCurrentPassword}
@@ -377,7 +379,7 @@ export default function ProfileScreen() {
               editable={!isChangingPassword}
             />
 
-            <Text style={styles.fieldLabel}>New password</Text>
+            <Text style={styles.fieldLabel}>{t('profile.newPassword')}</Text>
             <Input
               value={newPassword}
               onChangeText={setNewPassword}
@@ -387,7 +389,7 @@ export default function ProfileScreen() {
               editable={!isChangingPassword}
             />
 
-            <Text style={styles.fieldLabel}>Confirm new password</Text>
+            <Text style={styles.fieldLabel}>{t('profile.confirmNewPassword')}</Text>
             <Input
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -404,14 +406,14 @@ export default function ProfileScreen() {
                 onPress={closePasswordSheet}
                 disabled={isChangingPassword}
               >
-                <Text>Cancel</Text>
+                <Text>{t('profile.cancel')}</Text>
               </Button>
               <Button
                 style={styles.passwordActionButton}
                 onPress={handleChangePassword}
                 disabled={isChangingPassword}
               >
-                <Text>{isChangingPassword ? 'Changing...' : 'Change'}</Text>
+                <Text>{isChangingPassword ? t('profile.changing') : t('profile.change')}</Text>
               </Button>
             </View>
           </View>

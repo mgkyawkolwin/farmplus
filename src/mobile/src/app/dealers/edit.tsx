@@ -29,6 +29,7 @@ import SnackBar from "@/components/ui/snack-bar";
 import UnauthorizedView from "@/components/unauthorized-view";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 type DealerFormState = {
   dealerName: string;
@@ -54,6 +55,7 @@ const emptyFormState: DealerFormState = {
 
 export default function EditDealerScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -102,7 +104,7 @@ export default function EditDealerScreen() {
         setIsActive(dealer.isActive);
       } catch (error) {
         if (active) {
-          SnackBar.Error("Failed to load dealer details.");
+          SnackBar.Error(t('dealers.messages.detailsFailed'));
           router.back();
         }
       } finally {
@@ -114,7 +116,7 @@ export default function EditDealerScreen() {
     return () => {
       active = false;
     };
-  }, [dealerId, permissionState, router, service]);
+  }, [dealerId, permissionState, router, service, t]);
 
   const updateField = (field: keyof DealerFormState, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -123,7 +125,7 @@ export default function EditDealerScreen() {
   const pickLogo = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('dealers.messages.photosPermission'));
       return;
     }
 
@@ -157,7 +159,7 @@ export default function EditDealerScreen() {
   const handleSubmit = async () => {
     if (permissionState !== 'authorized') return;
     if (!dealerId || !formData.dealerName.trim()) {
-      SnackBar.Error("Dealer name is required.");
+      SnackBar.Error(t('dealers.messages.dealerNameRequired'));
       return;
     }
 
@@ -182,11 +184,11 @@ export default function EditDealerScreen() {
         await service.uploadDealerLogo(dealerId, logoFile);
       }
 
-      SnackBar.Success("Dealer updated successfully.");
+      SnackBar.Success(t('dealers.messages.updateSuccess'));
       router.back();
     } catch (error) {
       SnackBar.Error(
-        error instanceof Error ? error.message : "Unable to update dealer.",
+        error instanceof Error ? error.message : t('dealers.messages.updateFailed'),
       );
     } finally {
       setSaving(false);
@@ -210,7 +212,7 @@ export default function EditDealerScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Edit Dealer
+          {t('dealers.actions.editDealer')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -218,15 +220,15 @@ export default function EditDealerScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading dealer details...
+            {t('dealers.messages.loadingDetails')}
           </Text>
         </View>
       ) : (
@@ -258,7 +260,7 @@ export default function EditDealerScreen() {
                 style={styles.removeButton}
                 disabled={saving}
               >
-                <Text className="text-destructive">Remove logo</Text>
+                <Text className="text-destructive">{t('dealers.actions.removeLogo')}</Text>
               </Button>
             ) : null}
           </View>
@@ -271,7 +273,7 @@ export default function EditDealerScreen() {
 
           <View style={styles.switchRow}>
             <Text className="text-foreground" style={styles.switchLabel}>
-              Active Dealer
+              {t('dealers.fields.activeDealer')}
             </Text>
             <Button
               variant={isActive ? "default" : "outline"}
@@ -284,7 +286,7 @@ export default function EditDealerScreen() {
                   isActive ? "text-primary-foreground" : "text-foreground"
                 }
               >
-                {isActive ? "Active" : "Inactive"}
+                {isActive ? t('dealers.status.active') : t('dealers.status.inactive')}
               </Text>
             </Button>
           </View>
@@ -296,7 +298,7 @@ export default function EditDealerScreen() {
               onPress={() => router.back()}
               disabled={saving}
             >
-              <Text className="text-foreground">Cancel</Text>
+              <Text className="text-foreground">{t('dealers.actions.cancel')}</Text>
             </Button>
             <Button
               style={styles.actionButton}
@@ -307,7 +309,7 @@ export default function EditDealerScreen() {
                 <ActivityIndicator color={theme.primaryForeground} size="small" />
               ) : (
                 <Text className="font-semibold" style={{ color: theme.primaryForeground }}>
-                  Save Changes
+                  {t('dealers.actions.saveChanges')}
                 </Text>
               )}
             </Button>
@@ -327,6 +329,7 @@ function DealerFields({
   disabled: boolean;
   onChange: (field: keyof DealerFormState, value: string) => void;
 }) {
+  const { t } = useTranslation();
   const fields: Array<{
     field: Exclude<keyof DealerFormState, "rowVersion">;
     label: string;
@@ -335,29 +338,29 @@ function DealerFields({
   }> = [
     {
       field: "dealerName",
-      label: "Dealer Name *",
-      placeholder: "Enter dealer name",
+      label: `${t('dealers.fields.dealerName')} *`,
+      placeholder: t('dealers.placeholders.dealerName'),
     },
     {
       field: "email",
-      label: "Email",
-      placeholder: "Enter email address",
+      label: t('dealers.fields.email'),
+      placeholder: t('dealers.placeholders.emailAddress'),
       keyboardType: "email-address",
     },
     {
       field: "phoneNumber",
-      label: "Phone",
-      placeholder: "Enter phone number",
+      label: t('dealers.fields.phone'),
+      placeholder: t('dealers.placeholders.phone'),
       keyboardType: "phone-pad",
     },
-    { field: "address", label: "Address", placeholder: "Enter address" },
+    { field: "address", label: t('dealers.fields.address'), placeholder: t('dealers.placeholders.address') },
     {
       field: "stateDivision",
-      label: "State / Division",
-      placeholder: "Enter state or division",
+      label: t('dealers.fields.stateDivision'),
+      placeholder: t('dealers.placeholders.stateDivision'),
     },
-    { field: "city", label: "City", placeholder: "Enter city" },
-    { field: "country", label: "Country", placeholder: "Enter country" },
+    { field: "city", label: t('dealers.fields.city'), placeholder: t('dealers.placeholders.city') },
+    { field: "country", label: t('dealers.fields.country'), placeholder: t('dealers.placeholders.country') },
   ];
 
   return (

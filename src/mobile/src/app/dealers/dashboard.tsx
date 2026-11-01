@@ -14,7 +14,7 @@ export default function DealerDashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <DealerDashboardContent showHeader title="Dealer Dashboard" onBack={() => router.back()} />
+      <DealerDashboardContent showHeader onBack={() => router.back()} />
     </SafeAreaView>
   );
 }

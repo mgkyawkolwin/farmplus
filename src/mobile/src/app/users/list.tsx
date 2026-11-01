@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Mail, MapPin, Phone, Plus, UserRound } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 
@@ -31,6 +32,7 @@ const PAGE_SIZE = 20;
 
 export default function UserListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/users/list');
@@ -49,7 +51,7 @@ export default function UserListScreen() {
       setPage(nextPage);
     } catch {
       if (!append) setUsers([]);
-      SnackBar.Error('Failed to load users');
+      SnackBar.Error(t('users.messages.failedLoadUsers'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -79,7 +81,7 @@ export default function UserListScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Users</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('users.title')}</Text>
         <Button
           variant="ghost"
           onPress={() => router.push('/users/new' as Parameters<typeof router.push>[0])}
@@ -92,19 +94,19 @@ export default function UserListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('users.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && users.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading users...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('users.loadingUsers')}</Text>
         </View>
       ) : users.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text className="text-foreground" style={styles.stateTitle}>No users found</Text>
-          <Text className="text-muted-foreground" style={styles.stateText}>Add a user to get started.</Text>
+          <Text className="text-foreground" style={styles.stateTitle}>{t('users.noUsersFound')}</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('users.addFirstUser')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -127,7 +129,7 @@ export default function UserListScreen() {
             <Pressable
               key={user.id}
               accessibilityRole="button"
-              accessibilityLabel={`Edit ${user.displayName || user.userName}`}
+              accessibilityLabel={t('users.accessibility.editUser', { name: user.displayName || user.userName || t('users.unnamedUser') })}
               onPress={() => router.push(`/users/edit?id=${encodeURIComponent(user.id)}` as Parameters<typeof router.push>[0])}
               style={[styles.userRow, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
@@ -137,7 +139,7 @@ export default function UserListScreen() {
               <View style={styles.userDetails}>
                 <View style={styles.nameLine}>
                   <Text className="text-foreground" style={styles.userName} numberOfLines={1}>
-                    {user.displayName || user.userName || 'Unnamed user'}
+                    {user.displayName || user.userName || t('users.unnamedUser')}
                   </Text>
                   <View style={[user.isActive === false ? styles.inactiveBadge : styles.activeBadge, { backgroundColor: theme.secondary }]}>
                     <Text
@@ -146,12 +148,12 @@ export default function UserListScreen() {
                         { color: user.isActive === false ? theme.destructive : theme.chart2 },
                       ]}
                     >
-                      {user.isActive === false ? 'Inactive' : 'Active'}
+                      {t(user.isActive === false ? 'users.inactive' : 'users.active')}
                     </Text>
                   </View>
                 </View>
                 <Text className="text-muted-foreground" style={styles.userMeta} numberOfLines={1}>
-                  {[user.userName, user.roleName].filter(Boolean).join(' · ') || 'No role assigned'}
+                  {[user.userName, user.roleName].filter(Boolean).join(' · ') || t('users.noRoleAssigned')}
                 </Text>
                 <View style={styles.detailRow}>
                   <Icon className="text-muted-foreground" as={Mail} size={14} />

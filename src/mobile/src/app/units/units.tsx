@@ -20,9 +20,11 @@ import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function UnitsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/units/units');
@@ -57,13 +59,13 @@ export default function UnitsScreen() {
       setPage(requestedPage);
       setHasMore(data.length >= 20);
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to load units.');
+      setErrorMessage(error?.message || t('units.messages.unableLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [service]);
+  }, [service, t]);
 
   React.useEffect(() => {
     if (permissionState !== 'authorized') return undefined;
@@ -109,7 +111,7 @@ export default function UnitsScreen() {
 
   const handleSubmit = async () => {
     if (!editingUnit?.unit || editingUnit.unit.trim() === '') {
-      SnackBar.Error('Unit name is required.');
+      SnackBar.Error(t('units.messages.nameRequired'));
       return;
     }
 
@@ -119,15 +121,15 @@ export default function UnitsScreen() {
 
       if (editingUnit.id) {
         await service.updateUnit(editingUnit);
-        SnackBar.Success(`Unit "${editingUnit.unit}" updated successfully.`);
+        SnackBar.Success(t('units.messages.updated', { name: editingUnit.unit }));
       } else {
         await service.createUnit(editingUnit.unit, editingUnit.isActive);
-        SnackBar.Success(`Unit "${editingUnit.unit}" created successfully.`);
+        SnackBar.Success(t('units.messages.created', { name: editingUnit.unit }));
       }
       await loadUnits(1, false, false);
       closeModal();
     } catch (error: any) {
-      SnackBar.Error(error?.message || 'Unable to save unit.');
+      SnackBar.Error(error?.message || t('units.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -135,11 +137,11 @@ export default function UnitsScreen() {
 
   const confirmDelete = (unit: UnitItem) => {
     RNAlert.alert(
-      'Delete unit',
-      `Are you sure you want to delete "${unit.unit}"?`,
+      t('units.deleteTitle'),
+      t('units.deleteConfirmation', { name: unit.unit }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => handleDelete(unit) },
+        { text: t('categories.actions.cancel'), style: 'cancel' },
+        { text: t('categories.actions.delete'), style: 'destructive', onPress: () => handleDelete(unit) },
       ]
     );
   };
@@ -147,10 +149,10 @@ export default function UnitsScreen() {
   const handleDelete = async (unit: UnitItem) => {
     try {
       await service.deleteUnit(unit.id);
-      SnackBar.Success(`Unit "${unit.unit}" deleted successfully.`);
+      SnackBar.Success(t('units.messages.deleted', { name: unit.unit }));
       await loadUnits(1, false, false);
     } catch (error: any) {
-      SnackBar.Error(error?.message || `Unable to delete unit "${unit.unit}".`);
+      SnackBar.Error(error?.message || t('units.messages.deleteFailed', { name: unit.unit }));
     }
   };
 
@@ -160,7 +162,7 @@ export default function UnitsScreen() {
         <Button variant='ghost' onPress={() => router.back()} style={styles.backButton}>
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
-        <Text className='text-foreground' style={styles.headerTitle}>Unit</Text>
+        <Text className='text-foreground' style={styles.headerTitle}>{t('menu.items.unit')}</Text>
         <Button
           variant='default'
           size='sm'
@@ -169,14 +171,14 @@ export default function UnitsScreen() {
           style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
           <Icon as={Plus} size={14} color={theme.primaryForeground} />
-          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>Add</Text>
+          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>{t('sales.actions.add')}</Text>
         </Button>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
+          <Text className='text-muted-foreground' style={styles.emptyText}>{t('categories.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -192,26 +194,26 @@ export default function UnitsScreen() {
           {loading && !refreshing ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text className='text-muted-foreground' style={styles.emptyText}>Loading units...</Text>
+            <Text className='text-muted-foreground' style={styles.emptyText}>{t('units.loading')}</Text>
           </View>
         ) : units.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className='text-muted-foreground' style={styles.emptyText}>No units yet.</Text>
+            <Text className='text-muted-foreground' style={styles.emptyText}>{t('units.emptyList')}</Text>
           </View>
         ) : (
           <View>
             <View style={styles.sectionHeading}>
-              <Text className='text-foreground' style={styles.sectionTitle}>All Units</Text>
-              <Text className='text-muted-foreground' style={styles.sectionCount}>{units.length} {units.length === 1 ? 'record' : 'records'}</Text>
+              <Text className='text-foreground' style={styles.sectionTitle}>{t('units.allUnits')}</Text>
+              <Text className='text-muted-foreground' style={styles.sectionCount}>{t('categories.recordCount', { count: units.length })}</Text>
             </View>
 
             <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
               <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
                 <View style={styles.nameColumn}>
-                  <Text className='text-muted-foreground' style={styles.headerCell}>Unit</Text>
+                  <Text className='text-muted-foreground' style={styles.headerCell}>{t('menu.items.unit')}</Text>
                 </View>
                 <View style={styles.statusColumn}>
-                  <Text className='text-muted-foreground' style={styles.headerCell}>Status</Text>
+                  <Text className='text-muted-foreground' style={styles.headerCell}>{t('categories.status')}</Text>
                 </View>
                 <View style={styles.actionsColumn} />
               </View>
@@ -226,7 +228,7 @@ export default function UnitsScreen() {
                   <View style={styles.statusColumn}>
                     <View style={[styles.statusPill, { backgroundColor: theme.secondary }]}>
                       <Text style={[styles.statusText, { color: unit.isActive ? theme.chart2 : theme.destructive }]}>
-                        {unit.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        {unit.isActive ? t('customers.labels.active') : t('customers.labels.inactive')}
                       </Text>
                     </View>
                   </View>
@@ -236,7 +238,7 @@ export default function UnitsScreen() {
                       hitSlop={8}
                       style={styles.iconButton}
                       accessibilityRole='button'
-                      accessibilityLabel={`Edit ${unit.unit}`}
+                      accessibilityLabel={t('units.accessibility.editUnit', { name: unit.unit })}
                     >
                       <Pencil size={16} color={theme.primary} />
                     </Pressable>
@@ -245,7 +247,7 @@ export default function UnitsScreen() {
                       hitSlop={8}
                       style={styles.iconButton}
                       accessibilityRole='button'
-                      accessibilityLabel={`Delete ${unit.unit}`}
+                      accessibilityLabel={t('units.accessibility.deleteUnit', { name: unit.unit })}
                     >
                       <Trash2 size={16} color={theme.destructive} />
                     </Pressable>
@@ -258,7 +260,7 @@ export default function UnitsScreen() {
           {loadingMore ? (
             <View style={styles.loadMoreRow}>
               <ActivityIndicator size='small' color={theme.primary} />
-              <Text className='text-muted-foreground'>Loading more...</Text>
+              <Text className='text-muted-foreground'>{t('categories.loadingMore')}</Text>
             </View>
           ) : null}
         </KeyboardAwareScrollView>
@@ -269,15 +271,15 @@ export default function UnitsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
             <View style={styles.modalHeader}>
-              <Text variant='h4' className='text-foreground'>{editingUnit ? 'Edit unit' : 'Add unit'}</Text>
+              <Text variant='h4' className='text-foreground'>{editingUnit ? t('units.editTitle') : t('units.addTitle')}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
                 <Icon as={X} size={20} color={theme.mutedForeground} />
               </Pressable>
             </View>
 
-            <Label className='text-foreground' style={styles.label}>Unit name</Label>
+            <Label className='text-foreground' style={styles.label}>{t('units.fields.unitName')}</Label>
             <Input
-              placeholder='Enter unit name'
+              placeholder={t('units.placeholders.unitName')}
               value={editingUnit?.unit}
               onChangeText={(text) => setEditingUnit((prev: UnitItem | null) => ({ ...prev, unit: text } as (UnitItem | null)))}
               autoCapitalize='words'
@@ -285,7 +287,7 @@ export default function UnitsScreen() {
             />
 
             <View style={styles.switchRow}>
-              <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+              <Text className='text-foreground' style={styles.switchLabel}>{t('categories.fields.active')}</Text>
               <Switch
                 value={editingUnit?.isActive}
                 onValueChange={(value) => setEditingUnit((prev: UnitItem | null) => ({ ...prev, isActive: value } as (UnitItem | null)))}
@@ -296,10 +298,10 @@ export default function UnitsScreen() {
 
             <View style={styles.modalActions}>
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
-                <Text className='text-foreground'>Cancel</Text>
+                <Text className='text-foreground'>{t('categories.actions.cancel')}</Text>
               </Button>
               <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
-                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
+                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>{t('categories.actions.save')}</Text>}
               </Button>
             </View>
           </View>

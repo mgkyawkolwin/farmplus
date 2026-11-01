@@ -44,9 +44,11 @@ import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function DealersScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/dealers');
@@ -92,14 +94,14 @@ export default function DealersScreen() {
         setPage(requestedPage);
         setHasMore(data.length >= 20);
       } catch (error: any) {
-        setErrorMessage(error?.message || 'Unable to load dealers.');
+        setErrorMessage(error?.message || t('dealers.messages.unableLoad'));
       } finally {
         setLoading(false);
         setRefreshing(false);
         setLoadingMore(false);
       }
     },
-    [service],
+    [service, t],
   );
 
   React.useEffect(() => {
@@ -174,7 +176,7 @@ export default function DealersScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error('Permission to access photos is required.');
+      SnackBar.Error(t('dealers.messages.photosPermission'));
       return;
     }
 
@@ -216,7 +218,7 @@ export default function DealersScreen() {
 
   const handleSubmit = async () => {
     if (!editingDealer?.dealerName || editingDealer.dealerName.trim() === '') {
-      SnackBar.Error('Dealer name is required.');
+      SnackBar.Error(t('dealers.messages.dealerNameRequired'));
       return;
     }
 
@@ -248,12 +250,14 @@ export default function DealersScreen() {
       }
 
       SnackBar.Success(
-        `Dealer "${editingDealer.dealerName}" ${editingDealer.id ? 'updated' : 'created'} successfully.`,
+        t(editingDealer.id ? 'dealers.messages.updated' : 'dealers.messages.created', {
+          name: editingDealer.dealerName,
+        }),
       );
       await loadDealers(1, false, false);
       closeModal();
     } catch (error: any) {
-      SnackBar.Error(error?.message || 'Unable to save dealer.');
+      SnackBar.Error(error?.message || t('dealers.messages.unableSave'));
     } finally {
       setSaving(false);
     }
@@ -261,12 +265,12 @@ export default function DealersScreen() {
 
   const confirmDelete = (dealer: DealerItem) => {
     RNAlert.alert(
-      'Delete dealer',
-      `Are you sure you want to delete "${dealer.dealerName}"?`,
+      t('dealers.messages.deleteTitle'),
+      t('dealers.messages.deleteConfirmation', { name: dealer.dealerName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('dealers.actions.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('dealers.actions.delete'),
           style: 'destructive',
           onPress: () => handleDelete(dealer),
         },
@@ -277,11 +281,11 @@ export default function DealersScreen() {
   const handleDelete = async (dealer: DealerItem) => {
     try {
       await service.deleteDealer(dealer.id);
-      SnackBar.Success(`Dealer "${dealer.dealerName}" deleted successfully.`);
+      SnackBar.Success(t('dealers.messages.deleted', { name: dealer.dealerName }));
       await loadDealers(1, false, false);
     } catch (error: any) {
       SnackBar.Error(
-        error?.message || `Unable to delete dealer "${dealer.dealerName}".`,
+        error?.message || t('dealers.messages.deleteFailed', { name: dealer.dealerName }),
       );
     }
   };
@@ -302,11 +306,11 @@ export default function DealersScreen() {
           <Icon as={ChevronLeft} size={22} className="text-foreground" />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Dealers
+          {t('dealers.list.title')}
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New dealer"
+          accessibilityLabel={t('dealers.accessibility.newDealer')}
           onPress={() => router.push('/dealers/new')}
           disabled={permissionState !== 'authorized'}
           style={[styles.addButton, { backgroundColor: theme.primary }]}
@@ -318,10 +322,10 @@ export default function DealersScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : (
       <KeyboardAwareScrollView
         style={styles.scrollView}
@@ -340,16 +344,16 @@ export default function DealersScreen() {
           <View style={styles.centeredState}>
             <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.stateText}>
-              Loading dealers...
+              {t('dealers.list.loading')}
             </Text>
           </View>
         ) : dealers.length === 0 ? (
           <View style={styles.centeredState}>
             <Text className="text-foreground" style={styles.stateTitle}>
-              No dealers found
+              {t('dealers.empty.noDealers')}
             </Text>
             <Text className="text-muted-foreground" style={styles.stateText}>
-              Add a dealer to get started.
+              {t('dealers.empty.addDealer')}
             </Text>
           </View>
         ) : (
@@ -357,9 +361,9 @@ export default function DealersScreen() {
             <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
               <Text
                 style={[styles.headerCell, styles.headerInfo]}
-              >{`Dealer · ${dealers.length}${hasMore ? '+' : ''}`}</Text>
+              >{t('dealers.list.totalHeader', { count: dealers.length, more: hasMore ? '+' : '' })}</Text>
               <Text style={[styles.headerCell, styles.statusColumn]}>
-                Status
+                {t('dealers.fields.status')}
               </Text>
               <View style={styles.headerChevronSpace} />
             </View>
@@ -372,7 +376,7 @@ export default function DealersScreen() {
                 <Pressable
                   key={dealer.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Dealer ${dealer.dealerName}`}
+                  accessibilityLabel={t('dealers.accessibility.dealer', { name: dealer.dealerName })}
                   style={[styles.row, { borderBottomColor: theme.border, backgroundColor: theme.card }]}
                   onPress={() =>
                     router.push({
@@ -431,7 +435,7 @@ export default function DealersScreen() {
                           { color: dealer.isActive ? theme.chart2 : theme.destructive },
                         ]}
                       >
-                        {dealer.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        {dealer.isActive ? t('dealers.labels.active') : t('dealers.labels.inactive')}
                       </Text>
                     </View>
                   </View>
@@ -450,7 +454,7 @@ export default function DealersScreen() {
           <View style={styles.loadMoreRow}>
             <ActivityIndicator size="small" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.loadMoreText}>
-              Loading more...
+              {t('dealers.list.loadingMore')}
             </Text>
           </View>
         ) : null}
@@ -477,7 +481,7 @@ export default function DealersScreen() {
             >
               <View style={styles.modalHeader}>
                 <Text variant="h4" className="text-foreground">
-                  {editingDealer?.id ? 'Edit Dealer' : 'Add Dealer'}
+                  {editingDealer?.id ? t('dealers.actions.editDealer') : t('dealers.actions.addDealer')}
                 </Text>
                 <Pressable onPress={closeModal} style={styles.closeButton}>
                   <Icon as={X} size={20} color={theme.mutedForeground} />
@@ -485,10 +489,10 @@ export default function DealersScreen() {
               </View>
 
               <Label className="text-foreground" style={styles.label}>
-                Dealer Name
+                {t('dealers.fields.dealerName')}
               </Label>
               <Input
-                placeholder="Enter dealer name"
+                placeholder={t('dealers.placeholders.dealerName')}
                 value={editingDealer?.dealerName}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -501,10 +505,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                Email
+                {t('dealers.fields.email')}
               </Label>
               <Input
-                placeholder="Enter email"
+                placeholder={t('dealers.placeholders.email')}
                 value={editingDealer?.email}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -517,10 +521,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                Phone
+                {t('dealers.fields.phone')}
               </Label>
               <Input
-                placeholder="Enter phone number"
+                placeholder={t('dealers.placeholders.phone')}
                 value={editingDealer?.phoneNumber}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -533,10 +537,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                Address
+                {t('dealers.fields.address')}
               </Label>
               <Input
-                placeholder="Enter address"
+                placeholder={t('dealers.placeholders.address')}
                 value={editingDealer?.address}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -548,10 +552,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                State / Division
+                {t('dealers.fields.stateDivision')}
               </Label>
               <Input
-                placeholder="Enter state or division"
+                placeholder={t('dealers.placeholders.stateDivision')}
                 value={editingDealer?.stateDivision}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -563,10 +567,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                City
+                {t('dealers.fields.city')}
               </Label>
               <Input
-                placeholder="Enter city"
+                placeholder={t('dealers.placeholders.city')}
                 value={editingDealer?.city}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -578,10 +582,10 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                Country
+                {t('dealers.fields.country')}
               </Label>
               <Input
-                placeholder="Enter country"
+                placeholder={t('dealers.placeholders.country')}
                 value={editingDealer?.country}
                 onChangeText={(text) =>
                   setEditingDealer(
@@ -593,7 +597,7 @@ export default function DealersScreen() {
               />
 
               <Label className="text-foreground" style={styles.label}>
-                Dealer Logo
+                {t('dealers.fields.dealerLogo')}
               </Label>
               {logoImage ? (
                 <View style={[styles.logoPreviewContainer, { borderColor: theme.border }]}>
@@ -608,7 +612,7 @@ export default function DealersScreen() {
                     onPress={removeLogo}
                     style={styles.removeLogoButton}
                   >
-                    <Text className="text-destructive">Remove</Text>
+                    <Text className="text-destructive">{t('dealers.actions.remove')}</Text>
                   </Button>
                 </View>
               ) : null}
@@ -619,13 +623,13 @@ export default function DealersScreen() {
                 style={styles.pickerButton}
               >
                 <Text className="text-foreground">
-                  {logoImage ? 'Change logo' : 'Choose logo'}
+                  {logoImage ? t('dealers.actions.changeLogo') : t('dealers.actions.chooseLogo')}
                 </Text>
               </Button>
 
               <View style={styles.switchRow}>
                 <Text className="text-foreground" style={styles.switchLabel}>
-                  Is Active
+                  {t('dealers.fields.isActive')}
                 </Text>
                   <Switch
                   value={editingDealer?.isActive}
@@ -647,7 +651,7 @@ export default function DealersScreen() {
                   onPress={closeModal}
                   style={styles.modalButton}
                 >
-                  <Text className="text-foreground">Cancel</Text>
+                  <Text className="text-foreground">{t('dealers.actions.cancel')}</Text>
                 </Button>
                 <Button
                   variant="default"
@@ -659,7 +663,7 @@ export default function DealersScreen() {
                   {saving ? (
                     <ActivityIndicator size="small" color={theme.primaryForeground} />
                   ) : (
-                    <Text style={{ color: theme.primaryForeground }}>Save</Text>
+                    <Text style={{ color: theme.primaryForeground }}>{t('dealers.actions.save')}</Text>
                   )}
                 </Button>
               </View>

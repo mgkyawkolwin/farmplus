@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Leaf, ShieldCheck } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { THEME } from '@/lib/theme';
 const authService = container.resolve<IAuthService>(DI_TOKENS.IAuthService);
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -32,22 +34,22 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!userName.trim() || !password || !confirmedPassword) {
-      SnackBar.Error('Complete all required fields.');
+      SnackBar.Error(t('auth.register.messages.completeFields'));
       return;
     }
 
     if (password !== confirmedPassword) {
-      SnackBar.Error('Passwords do not match.');
+      SnackBar.Error(t('auth.register.messages.passwordMismatch'));
       return;
     }
 
     setIsSubmitting(true);
     try {
       await authService.register(userName.trim(), userName.trim(), password);
-      SnackBar.Success('Account created. Sign in with your new credentials.');
+      SnackBar.Success(t('auth.register.messages.accountCreated'));
       router.replace('/auth/signin');
     } catch (error) {
-      SnackBar.Error(error instanceof CustomError ? error.message : 'Unable to create your account. Please try again.');
+      SnackBar.Error(error instanceof CustomError ? error.message : t('auth.register.messages.createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -65,20 +67,20 @@ export default function RegisterScreen() {
             <Icon as={Leaf} size={23} color={theme.primaryForeground} />
           </View>
           <Text style={[styles.brandName, { color: theme.foreground }]}>FARM PLUS</Text>
-          <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>BUSINESS MANAGEMENT</Text>
+          <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>{t('auth.brandCaption')}</Text>
         </View>
 
         <View style={styles.heading}>
-          <Text style={[styles.eyebrow, { color: theme.primary }]}>GET STARTED</Text>
-          <Text variant="h2" style={[styles.title, { color: theme.foreground }]}>Create your account</Text>
-          <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>Set up your secure Farm Plus workspace access.</Text>
+          <Text style={[styles.eyebrow, { color: theme.primary }]}>{t('auth.register.eyebrow')}</Text>
+          <Text variant="h2" style={[styles.title, { color: theme.foreground }]}>{t('auth.register.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>{t('auth.register.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Label>Username <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label>{t('auth.register.username')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Choose a username"
+              placeholder={t('auth.register.usernamePlaceholder')}
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="username"
@@ -91,9 +93,9 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label>Password <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label>{t('auth.register.password')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Create a password"
+              placeholder={t('auth.register.passwordPlaceholder')}
               secureTextEntry
               textContentType="newPassword"
               autoComplete="new-password"
@@ -105,9 +107,9 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label>Confirm password <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label>{t('auth.register.confirmPassword')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Re-enter your password"
+              placeholder={t('auth.register.confirmPasswordPlaceholder')}
               secureTextEntry
               textContentType="newPassword"
               autoComplete="new-password"
@@ -120,7 +122,7 @@ export default function RegisterScreen() {
           </View>
 
           <Button style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleRegister} disabled={isSubmitting}>
-            <Text style={[styles.primaryButtonText, { color: theme.primaryForeground }]}>{isSubmitting ? 'Creating account…' : 'Create Account'}</Text>
+            <Text style={[styles.primaryButtonText, { color: theme.primaryForeground }]}>{isSubmitting ? t('auth.register.creatingAccount') : t('auth.register.createAccount')}</Text>
           </Button>
         </View>
 
@@ -129,14 +131,14 @@ export default function RegisterScreen() {
           style={styles.signInButton}
           onPress={() => router.replace('/auth/signin')}
         >
-          <Text style={[styles.signInButtonText, { color: theme.primary }]}>Already have an account? Sign in</Text>
+          <Text style={[styles.signInButtonText, { color: theme.primary }]}>{t('auth.register.alreadyHaveAccount')}</Text>
         </Button>
 
         <View style={[styles.securityNote, { borderTopColor: theme.border }]}>
           <Icon as={ShieldCheck} size={16} color={theme.mutedForeground} />
-          <Text style={[styles.securityText, { color: theme.mutedForeground }]}>Your account is protected with secure sign-in.</Text>
+          <Text style={[styles.securityText, { color: theme.mutedForeground }]}>{t('auth.securityNote')}</Text>
         </View>
-        <Text style={[styles.footer, { color: theme.mutedForeground }]}>Farm Plus · Business tools for growing businesses</Text>
+        <Text style={[styles.footer, { color: theme.mutedForeground }]}>{t('auth.footer')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

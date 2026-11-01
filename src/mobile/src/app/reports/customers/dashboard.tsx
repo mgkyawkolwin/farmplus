@@ -46,6 +46,7 @@ import { Sale } from "@/models/sale";
 import { ICustomerService } from "@/services/customerService";
 import { ISaleService } from "@/services/saleService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -114,6 +115,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -125,7 +127,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -185,6 +187,7 @@ function Kpi({
 
 export default function CustomerReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/customers/dashboard');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [sales, setSales] = React.useState<Sale[]>([]);
@@ -200,13 +203,13 @@ export default function CustomerReportDashboardScreen() {
       customerResult.status === "rejected" &&
       saleResult.status === "rejected"
     ) {
-      SnackBar.Error("Unable to load customer report");
+      SnackBar.Error(t('reports.common.loadFailed'));
     }
     setCustomers(customerResult.status === "fulfilled" ? customerResult.value : []);
     setSales(saleResult.status === "fulfilled" ? saleResult.value : []);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -289,7 +292,7 @@ export default function CustomerReportDashboardScreen() {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
       return {
         key: monthKey(date),
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+        label: date.toLocaleDateString(i18n.language, { month: "short" }),
         revenue: 0,
         collected: 0,
         newCustomers: 0,
@@ -390,7 +393,7 @@ export default function CustomerReportDashboardScreen() {
       recentCustomers,
       activeCustomers: customers.filter((c) => c.isActive !== false).length,
     };
-  }, [customers, sales]);
+  }, [customers, sales, i18n.language]);
 
   const inactiveCustomers = customers.length - report.activeCustomers;
   const collectionRate = percent(report.totalPaid, report.totalRevenue);
@@ -410,15 +413,15 @@ export default function CustomerReportDashboardScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Customer Report
+          {t('reports.customers.title')}
         </Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -432,105 +435,104 @@ export default function CustomerReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Customer analytics</Text>
-          <Text style={styles.title}>Customer overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.customers.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.customers.overview')}</Text>
           <Text style={styles.subtitle}>
-            Based on the latest {count(sales.length)} sales · dealer and voided
-            sales excluded
+            {t('reports.customers.subtitle', { count: count(sales.length) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
           <Kpi
-            label="Total customers"
+            label={t('reports.customers.kpi.totalCustomers')}
             value={count(customers.length)}
-            caption={`${count(inactiveCustomers)} inactive`}
+            caption={t('reports.customers.caption.inactive', { count: count(inactiveCustomers) })}
             icon={Users}
             tone="blue"
           />
           <Kpi
-            label="Active customers"
+            label={t('reports.customers.kpi.activeCustomers')}
             value={count(report.activeCustomers)}
-            caption={`${percent(report.activeCustomers, customers.length)}% of base`}
+            caption={t('reports.customers.caption.baseShare', { percent: percent(report.activeCustomers, customers.length) })}
             icon={UserRoundCheck}
             tone="green"
           />
           <Kpi
-            label="New · 30 days"
+            label={t('reports.customers.kpi.new30')}
             value={count(report.newLast30)}
-            caption="Customers added"
+            caption={t('reports.customers.caption.customersAdded')}
             icon={UserPlus}
             tone="blue"
           />
           <Kpi
-            label="Revenue · month"
+            label={t('reports.customers.kpi.revenueMonth')}
             value={money(report.thisMonth)}
             caption={
               report.growth === null
-                ? "No prior month"
-                : `${report.growth >= 0 ? "+" : ""}${report.growth}% vs last month`
+                ? t('reports.customers.caption.noPriorMonth')
+                : t('reports.customers.caption.growth', { growth: `${report.growth >= 0 ? "+" : ""}${report.growth}` })
             }
             icon={TrendingUp}
             tone={report.growth !== null && report.growth < 0 ? "red" : "green"}
           />
           <Kpi
-            label="Lifetime revenue"
+            label={t('reports.customers.kpi.lifetimeRevenue')}
             value={money(report.totalRevenue)}
-            caption={`${count(report.orders)} orders`}
+            caption={t('reports.customers.caption.orders', { count: count(report.orders) })}
             icon={ShoppingCart}
             tone="green"
           />
           <Kpi
-            label="Avg order value"
+            label={t('reports.customers.kpi.avgOrderValue')}
             value={money(report.avgOrder)}
-            caption="Per sale"
+            caption={t('reports.customers.caption.perSale')}
             icon={Receipt}
             tone="blue"
           />
           <Kpi
-            label="Receivables"
+            label={t('reports.customers.kpi.receivables')}
             value={money(report.receivables)}
-            caption={`${count(report.partialInvoices + report.unpaidInvoices)} open invoices`}
+            caption={t('reports.customers.caption.openInvoices', { count: count(report.partialInvoices + report.unpaidInvoices) })}
             icon={HandCoins}
             tone="amber"
           />
           <Kpi
-            label="Collection rate"
+            label={t('reports.customers.kpi.collectionRate')}
             value={`${collectionRate}%`}
-            caption={`${money(report.totalPaid)} collected`}
+            caption={t('reports.customers.caption.collected', { amount: money(report.totalPaid) })}
             icon={Percent}
             tone={collectionRate >= 80 ? "green" : "amber"}
           />
           <Kpi
-            label="Repeat rate"
+            label={t('reports.customers.kpi.repeatRate')}
             value={`${percent(report.repeatBuyers, report.buyers)}%`}
-            caption={`${count(report.repeatBuyers)} of ${count(report.buyers)} buyers`}
+            caption={t('reports.customers.caption.buyers', { repeat: count(report.repeatBuyers), total: count(report.buyers) })}
             icon={Repeat}
             tone="green"
           />
           <Kpi
-            label="Top-5 share"
+            label={t('reports.customers.kpi.top5Share')}
             value={`${report.top5Share}%`}
-            caption="Of registered revenue"
+            caption={t('reports.customers.caption.registeredRevenue')}
             icon={AlertTriangle}
             tone={report.top5Share >= 60 ? "red" : "blue"}
           />
         </View>
 
         <Section
-          title="Revenue trend"
-          subtitle="Last 12 months · billed vs collected"
+          title={t('reports.customers.section.revenueTrend')}
+          subtitle={t('reports.customers.subtitleSection.billedCollected12Months')}
         >
           <LineChart
             labels={report.months.map((m) => m.label)}
             series={[
               {
-                name: "Billed",
+                name: t('reports.customers.series.billed'),
                 color: COLORS.green,
                 values: report.months.map((m) => m.revenue),
               },
               {
-                name: "Collected",
+                name: t('reports.customers.series.collected'),
                 color: COLORS.blue,
                 values: report.months.map((m) => m.collected),
               },
@@ -539,8 +541,8 @@ export default function CustomerReportDashboardScreen() {
         </Section>
 
         <Section
-          title="Customer growth"
-          subtitle="Last 12 months · new vs buying customers"
+          title={t('reports.customers.section.customerGrowth')}
+          subtitle={t('reports.customers.subtitleSection.newBuying12Months')}
         >
           <BarChart
             data={report.months.map((m) => ({
@@ -548,43 +550,43 @@ export default function CustomerReportDashboardScreen() {
               values: [m.newCustomers, m.buyers.size],
             }))}
             series={[
-              { name: "New customers", color: COLORS.blue },
-              { name: "Buying customers", color: COLORS.green },
+              { name: t('reports.customers.series.newCustomers'), color: COLORS.blue },
+              { name: t('reports.customers.series.buyingCustomers'), color: COLORS.green },
             ]}
           />
         </Section>
 
         <Section
-          title="Customer base"
-          subtitle="Active vs inactive accounts"
+          title={t('reports.customers.section.customerBase')}
+          subtitle={t('reports.customers.subtitleSection.activeInactive')}
         >
           <DonutChart
-            centerLabel="Customers"
+            centerLabel={t('reports.customers.chart.customers')}
             centerValue={count(customers.length)}
             slices={[
               {
-                label: "Active",
+                label: t('reports.customers.chart.active'),
                 value: report.activeCustomers,
                 color: COLORS.green,
               },
-              { label: "Inactive", value: inactiveCustomers, color: COLORS.slate },
+              { label: t('reports.customers.chart.inactive'), value: inactiveCustomers, color: COLORS.slate },
             ]}
             formatValue={count}
           />
         </Section>
 
         <Section
-          title="Buying behaviour"
-          subtitle={`Purchased within ${DORMANT_DAYS} days vs dormant`}
+          title={t('reports.customers.section.buyingBehaviour')}
+          subtitle={t('reports.customers.subtitleSection.boughtDormant', { days: DORMANT_DAYS })}
         >
           <DonutChart
-            centerLabel="Customers"
+            centerLabel={t('reports.customers.chart.customers')}
             centerValue={count(customers.length)}
             slices={[
-              { label: "Active buyers", value: report.activeBuyers, color: COLORS.green },
-              { label: "Dormant", value: report.dormant, color: COLORS.amber },
+              { label: t('reports.customers.chart.activeBuyers'), value: report.activeBuyers, color: COLORS.green },
+              { label: t('reports.customers.chart.dormant'), value: report.dormant, color: COLORS.amber },
               {
-                label: "Never purchased",
+                label: t('reports.customers.chart.neverPurchased'),
                 value: report.neverPurchased,
                 color: COLORS.slate,
               },
@@ -593,53 +595,53 @@ export default function CustomerReportDashboardScreen() {
           />
         </Section>
 
-        <Section title="Revenue source" subtitle="Registered vs walk-in customers">
+        <Section title={t('reports.customers.section.revenueSource')} subtitle={t('reports.customers.subtitleSection.registeredWalkIn')}>
           <DonutChart
-            centerLabel="Revenue"
+            centerLabel={t('reports.customers.chart.revenue')}
             centerValue={compactNumber(report.totalRevenue)}
             slices={[
               {
-                label: "Registered",
+                label: t('reports.customers.chart.registered'),
                 value: report.registeredRevenue,
                 color: COLORS.blue,
               },
-              { label: "Walk-in", value: report.walkInRevenue, color: COLORS.purple },
+              { label: t('reports.customers.chart.walkIn'), value: report.walkInRevenue, color: COLORS.purple },
             ]}
           />
         </Section>
 
-        <Section title="Invoice payment status" subtitle="All customer sales">
+        <Section title={t('reports.customers.section.invoiceStatus')} subtitle={t('reports.customers.subtitleSection.allSales')}>
           <DonutChart
-            centerLabel="Invoices"
+            centerLabel={t('reports.customers.chart.invoices')}
             centerValue={count(report.orders)}
             slices={[
-              { label: "Paid", value: report.paidInvoices, color: COLORS.green },
-              { label: "Partial", value: report.partialInvoices, color: COLORS.amber },
-              { label: "Unpaid", value: report.unpaidInvoices, color: COLORS.red },
+              { label: t('reports.customers.chart.paid'), value: report.paidInvoices, color: COLORS.green },
+              { label: t('reports.customers.chart.partial'), value: report.partialInvoices, color: COLORS.amber },
+              { label: t('reports.customers.chart.unpaid'), value: report.unpaidInvoices, color: COLORS.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Receivables aging" subtitle="Outstanding balance by invoice age">
+        <Section title={t('reports.customers.section.receivablesAging')} subtitle={t('reports.customers.subtitleSection.aging')}>
           <BarChart
-            data={report.aging.map((a) => ({ label: a.label, values: [a.value] }))}
-            series={[{ name: "Outstanding", color: COLORS.amber }]}
+            data={report.aging.map((a, index) => ({ label: t(['reports.common.age0to30', 'reports.common.age31to60', 'reports.common.age61to90', 'reports.common.age90Plus'][index]), values: [a.value] }))}
+            series={[{ name: t('reports.customers.series.outstanding'), color: COLORS.amber }]}
             height={160}
           />
         </Section>
 
         <Section
-          title="Top customers"
-          subtitle="By lifetime revenue"
+          title={t('reports.customers.section.topCustomers')}
+          subtitle={t('reports.customers.subtitleSection.lifetimeRevenue')}
           onViewAll={() => router.push("/customers/list" as Href)}
         >
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Customer</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Orders</Text>
-              <Text style={[styles.th, styles.tdNum]}>Revenue</Text>
-              <Text style={[styles.th, styles.tdNum]}>Balance</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.customers.field.customer')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.customers.field.orders')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.customers.field.revenue')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.customers.field.balance')}</Text>
             </View>
             {report.topByRevenue.map((row) => (
               <Pressable
@@ -672,17 +674,17 @@ export default function CustomerReportDashboardScreen() {
               </Pressable>
             ))}
             {report.topByRevenue.length === 0 ? (
-              <Text style={styles.empty}>No customer sales recorded.</Text>
+              <Text style={styles.empty}>{t('reports.customers.empty.noSales')}</Text>
             ) : null}
           </View>
         </Section>
 
-        <Section title="Top customers by revenue" subtitle="Relative contribution">
+        <Section title={t('reports.customers.section.topCustomersRevenue')} subtitle={t('reports.customers.subtitleSection.relativeContribution')}>
           <RankedBars
             items={report.topByRevenue.slice(0, 5).map((row) => ({
               label: row.name,
               value: row.revenue,
-              caption: `${count(row.orders)} orders · ${percent(row.revenue, report.registeredRevenue)}% of registered revenue`,
+              caption: t('reports.customers.captionText.registeredShare', { count: count(row.orders), percent: percent(row.revenue, report.registeredRevenue) }),
             }))}
             color={COLORS.green}
             formatValue={money}
@@ -690,8 +692,8 @@ export default function CustomerReportDashboardScreen() {
         </Section>
 
         <Section
-          title="Highest receivables"
-          subtitle="Largest outstanding balances"
+          title={t('reports.customers.section.highestReceivables')}
+          subtitle={t('reports.customers.subtitleSection.largestBalances')}
         >
           <RankedBars
             items={report.topByBalance.map((row) => ({
@@ -700,16 +702,16 @@ export default function CustomerReportDashboardScreen() {
             }))}
             color={COLORS.amber}
             formatValue={money}
-            emptyText="No outstanding balances."
+            emptyText={t('reports.customers.empty.noBalances')}
           />
         </Section>
 
-        <Section title="Overdue accounts" subtitle="Unpaid for more than 60 days">
+        <Section title={t('reports.customers.section.overdueAccounts')} subtitle={t('reports.customers.subtitleSection.overdue60Days')}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Customer</Text>
-              <Text style={[styles.th, styles.tdNum]}>Overdue</Text>
-              <Text style={[styles.th, styles.tdNum]}>Last order</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.customers.field.customer')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.customers.field.overdue')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.customers.field.lastOrder')}</Text>
             </View>
             {report.overdueAccounts.map((row) => (
               <Pressable
@@ -734,21 +736,21 @@ export default function CustomerReportDashboardScreen() {
               </Pressable>
             ))}
             {report.overdueAccounts.length === 0 ? (
-              <Text style={styles.empty}>No overdue accounts.</Text>
+              <Text style={styles.empty}>{t('reports.customers.empty.noOverdue')}</Text>
             ) : null}
           </View>
         </Section>
 
         <Section
-          title="Recently added customers"
-          subtitle="Newest accounts"
+          title={t('reports.customers.section.recentCustomers')}
+          subtitle={t('reports.customers.subtitleSection.newestAccounts')}
           onViewAll={() => router.push("/customers/list" as Href)}
         >
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Customer</Text>
-              <Text style={[styles.th, styles.tdNum]}>Added</Text>
-              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.customers.field.customer')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.customers.field.added')}</Text>
+              <Text style={[styles.th, styles.tdStatus]}>{t('reports.customers.field.status')}</Text>
             </View>
             {report.recentCustomers.map((customer) => {
               const active = customer.isActive !== false;
@@ -768,7 +770,7 @@ export default function CustomerReportDashboardScreen() {
                       {customer.name}
                     </Text>
                     <Text style={styles.tdSub} numberOfLines={1}>
-                      {customer.phone || "No phone"}
+                      {customer.phone || t('reports.common.noPhone')}
                     </Text>
                   </View>
                   <Text style={[styles.td, styles.tdNum]}>
@@ -789,7 +791,7 @@ export default function CustomerReportDashboardScreen() {
                           { color: active ? "#047857" : "#B91C1C" },
                         ]}
                       >
-                        {active ? "ACTIVE" : "INACTIVE"}
+                        {active ? t('reports.common.active') : t('reports.common.inactive')}
                       </Text>
                     </View>
                   </View>
@@ -797,7 +799,7 @@ export default function CustomerReportDashboardScreen() {
               );
             })}
             {report.recentCustomers.length === 0 ? (
-              <Text style={styles.empty}>No customers yet.</Text>
+              <Text style={styles.empty}>{t('reports.customers.empty.noCustomers')}</Text>
             ) : null}
           </View>
         </Section>

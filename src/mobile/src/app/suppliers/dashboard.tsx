@@ -14,7 +14,7 @@ export default function SupplierDashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <SupplierDashboardContent showHeader title="Supplier Dashboard" onBack={() => router.back()} />
+      <SupplierDashboardContent showHeader onBack={() => router.back()} />
     </SafeAreaView>
   );
 }

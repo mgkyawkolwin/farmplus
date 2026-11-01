@@ -22,6 +22,7 @@ import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 function money(value: number) {
   return `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })} MMK`;
@@ -29,6 +30,7 @@ function money(value: number) {
 
 export default function SupplierViewScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -43,12 +45,12 @@ export default function SupplierViewScreen() {
       setLoading(true);
       setSupplier(await service.getSupplierById(id));
     } catch {
-      SnackBar.Error("Failed to load supplier details.");
+      SnackBar.Error(t('suppliers.messages.detailsFailed'));
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [id, router, service]);
+  }, [id, router, service, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -65,14 +67,14 @@ export default function SupplierViewScreen() {
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Supplier</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('suppliers.fields.supplier')}</Text>
           <View style={styles.headerButton} />
         </View>
-        {permissionState === 'denied' ? <UnauthorizedView /> : (
+        {permissionState === 'denied' ? <UnauthorizedView title={t('suppliers.unauthorized.title')} message={t('suppliers.unauthorized.description')} /> : (
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground">
-            {permissionState === 'checking' ? 'Checking permission...' : 'Loading supplier...'}
+            {permissionState === 'checking' ? t('suppliers.dashboard.checkingPermission') : t('suppliers.dashboard.loading')}
           </Text>
         </View>
         )}
@@ -89,13 +91,13 @@ export default function SupplierViewScreen() {
     .filter(Boolean)
     .join(", ");
   const detailRows = [
-    { icon: Phone, label: "Phone", value: supplier.phoneNumber || "-" },
-    { icon: Mail, label: "Email", value: supplier.email || "-" },
-    { icon: MapPin, label: "Address", value: location || "-" },
+    { icon: Phone, label: t('suppliers.fields.phone'), value: supplier.phoneNumber || "-" },
+    { icon: Mail, label: t('suppliers.fields.email'), value: supplier.email || "-" },
+    { icon: MapPin, label: t('suppliers.fields.address'), value: location || "-" },
   ];
   const initial = supplier.supplierName?.charAt(0).toUpperCase() || "S";
   const subtitle =
-    [supplier.city, supplier.country].filter(Boolean).join(", ") || "Supplier";
+    [supplier.city, supplier.country].filter(Boolean).join(", ") || t('suppliers.fields.supplier');
   const purchases = supplier.recentPurchases ?? [];
 
   return (
@@ -110,7 +112,7 @@ export default function SupplierViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Supplier</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('suppliers.fields.supplier')}</Text>
         <Button
           variant="ghost"
           onPress={() =>
@@ -157,13 +159,13 @@ export default function SupplierViewScreen() {
                   { color: supplier.isActive ? theme.chart2 : theme.destructive },
                 ]}
               >
-                {supplier.isActive ? "ACTIVE" : "INACTIVE"}
+                {supplier.isActive ? t('suppliers.status.active') : t('suppliers.status.inactive')}
               </Text>
             </View>
           </View>
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Contact & Location</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('suppliers.sections.contactLocation')}</Text>
         <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           {detailRows.map((row, index) => (
             <View
@@ -191,7 +193,7 @@ export default function SupplierViewScreen() {
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Purchases</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('suppliers.sections.recentPurchases')}</Text>
           <Pressable
             accessibilityRole="button"
             hitSlop={8}
@@ -202,14 +204,14 @@ export default function SupplierViewScreen() {
               })
             }
           >
-            <Text style={[styles.viewAll, { color: theme.primary }]}>View all</Text>
+            <Text style={[styles.viewAll, { color: theme.primary }]}>{t('suppliers.actions.viewAll')}</Text>
           </Pressable>
         </View>
         <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
-            <Text style={[styles.headerCell, styles.colDate]}>Date</Text>
-            <Text style={[styles.headerCell, styles.colNumber]}>Items</Text>
-            <Text style={[styles.headerCell, styles.colAmount]}>Total</Text>
+            <Text style={[styles.headerCell, styles.colDate]}>{t('suppliers.fields.date')}</Text>
+            <Text style={[styles.headerCell, styles.colNumber]}>{t('suppliers.fields.items')}</Text>
+            <Text style={[styles.headerCell, styles.colAmount]}>{t('suppliers.fields.total')}</Text>
           </View>
           {purchases.map((purchase, index) => (
             <Pressable
@@ -238,7 +240,7 @@ export default function SupplierViewScreen() {
             </Pressable>
           ))}
           {purchases.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No purchases recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>{t('suppliers.empty.noPurchasesRecorded')}</Text>
           ) : null}
         </View>
       </ScrollView>

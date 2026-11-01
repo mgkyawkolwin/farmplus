@@ -27,9 +27,16 @@ interface LanguageOption {
 
 const LANGUAGES: LanguageOption[] = [
   { code: 'en', labelKey: 'title.english' },
-  { code: 'mm', labelKey: 'title.myanmar' },
+  { code: 'my', labelKey: 'title.myanmar' },
   { code: 'th', labelKey: 'title.thai' },
   { code: 'zh', labelKey: 'title.chinese' },
+  { code: 'lo', labelKey: 'title.laos' },
+  { code: 'km', labelKey: 'title.cambodia' },
+  { code: 'vi', labelKey: 'title.vietnam' },
+  { code: 'ms', labelKey: 'title.malaysia' },
+  { code: 'id', labelKey: 'title.indonesia' },
+  { code: 'hi', labelKey: 'title.india' },
+  { code: 'fil', labelKey: 'title.philippines' },
 ];
 
 export default function SettingsScreen() {
@@ -42,7 +49,8 @@ export default function SettingsScreen() {
 
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
-  const currentLanguage = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
+  const normalizedLanguage = i18n.language === 'mm' ? 'my' : i18n.language;
+  const currentLanguage = LANGUAGES.find((l) => l.code === normalizedLanguage) ?? LANGUAGES[0];
   const appVersion = appConfig.expo?.version ?? '1.0.0';
 
   const handleLanguageSelect = (code: string) => {
@@ -116,7 +124,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <Text className='text-muted-foreground' style={styles.versionText}>
-        Version {appVersion}
+        {t('title.version')} {appVersion}
       </Text>
 
       {/* Language Selection Modal */}

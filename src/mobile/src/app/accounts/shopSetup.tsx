@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Check, CheckCircle, CheckCircle2, CheckCircle2Icon, Circle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { useEffect } from 'react';
 
 export default function ShopSetupScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     useEffect(() => {
@@ -37,54 +39,54 @@ export default function ShopSetupScreen() {
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Creating Your Shop
+                    {t('accounts.shopSetup.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Please wait while we setup your shop and configure everything.
+                    {t('accounts.shopSetup.subtitle')}
                 </Text>
 
                 <View style={{ flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={CheckCircle} size={22} />
                         <Text style={styles.subtitle}>
-                            Creating User Profile
+                            {t('accounts.shopSetup.creatingUserProfile')}
                         </Text>
                     </View>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={CheckCircle} size={22} />
                         <Text style={styles.subtitle}>
-                            Creating Shop Profile
+                            {t('accounts.shopSetup.creatingShopProfile')}
                         </Text>
                     </View>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={CheckCircle} size={22} />
                         <Text style={styles.subtitle}>
-                            Activating Subscription Plan
+                            {t('accounts.shopSetup.activatingPlan')}
                         </Text>
                     </View>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={CheckCircle} size={22} />
                         <Text style={styles.subtitle}>
-                            Setting Default Prefernces
+                            {t('accounts.shopSetup.defaultPreferences')}
                         </Text>
                     </View>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={CheckCircle} size={22} />
                         <Text style={styles.subtitle}>
-                            Setting Default Categories
+                            {t('accounts.shopSetup.defaultCategories')}
                         </Text>
                     </View>
                     <View style={styles.field}>
                         <Icon className="text-foreground" as={Circle} size={22} />
                         <Text style={styles.subtitle}>
-                            Setting Permissions
+                            {t('accounts.shopSetup.permissions')}
                         </Text>
                     </View>
                 </View>
                 <View style={styles.field}>
                     <Progress value={80} className="w-[80%]" />
                     <Text >
-                        80%
+                        {t('accounts.shopSetup.progress', { percent: 80 })}
                     </Text>
                 </View>
 

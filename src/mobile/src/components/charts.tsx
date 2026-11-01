@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 
 import { Text } from "@/components/ui/text";
+import { useTranslation } from 'react-i18next';
 
 export function compactNumber(value: number) {
   const abs = Math.abs(value);
@@ -339,16 +340,17 @@ export function RankedBars({
   items,
   color,
   formatValue,
-  emptyText = "No data available.",
+  emptyText,
 }: {
   items: RankItem[];
   color: string;
   formatValue: (value: number) => string;
   emptyText?: string;
 }) {
+  const { t } = useTranslation();
   const max = Math.max(0, ...items.map((item) => item.value));
   if (items.length === 0 || max <= 0) {
-    return <Text style={styles.empty}>{emptyText}</Text>;
+    return <Text style={styles.empty}>{emptyText ?? t('reports.common.noData')}</Text>;
   }
 
   return (

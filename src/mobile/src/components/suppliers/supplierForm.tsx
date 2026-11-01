@@ -24,6 +24,7 @@ import SnackBar from "@/components/ui/snack-bar";
 import UnauthorizedView from "@/components/unauthorized-view";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 type Fields = Pick<
   Supplier,
@@ -48,6 +49,7 @@ const emptyFields: Fields = {
 
 export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission(supplierId ? '/suppliers/edit' : '/suppliers/new');
@@ -84,7 +86,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         setIsActive(supplier.isActive);
         setLogoUri(supplier.logoUrl);
       } catch {
-        SnackBar.Error("Failed to load supplier details.");
+        SnackBar.Error(t('suppliers.messages.detailsFailed'));
         router.back();
       } finally {
         if (active) setLoading(false);
@@ -94,12 +96,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
     return () => {
       active = false;
     };
-  }, [permissionState, router, service, supplierId]);
+  }, [permissionState, router, service, supplierId, t]);
 
   const pickLogo = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('suppliers.messages.photosPermission'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -124,7 +126,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const submit = async () => {
     if (permissionState !== 'authorized') return;
     if (!fields.supplierName.trim()) {
-      SnackBar.Error("Supplier name is required.");
+      SnackBar.Error(t('suppliers.messages.nameRequired'));
       return;
     }
     try {
@@ -149,12 +151,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         : await service.createSupplier(request);
       if (logoFile) await service.uploadSupplierLogo(supplier.id, logoFile);
       SnackBar.Success(
-        `Supplier ${supplierId ? "updated" : "created"} successfully.`,
+        t(supplierId ? 'suppliers.messages.updated' : 'suppliers.messages.created'),
       );
       router.back();
     } catch (error) {
       SnackBar.Error(
-        error instanceof Error ? error.message : "Unable to save supplier.",
+        error instanceof Error ? error.message : t('suppliers.messages.unableSave'),
       );
     } finally {
       setSaving(false);
@@ -165,10 +167,10 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text className="text-muted-foreground">Checking permission...</Text>
+        <Text className="text-muted-foreground">{t('suppliers.dashboard.checkingPermission')}</Text>
       </View>
     );
-  if (permissionState === 'denied') return <UnauthorizedView />;
+  if (permissionState === 'denied') return <UnauthorizedView title={t('suppliers.unauthorized.title')} message={t('suppliers.unauthorized.description')} />;
   if (loading)
     return (
       <View style={styles.centered}>
@@ -176,15 +178,15 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
       </View>
     );
   const labels: Array<
-    [keyof Fields, string, "default" | "email-address" | "phone-pad"]
+    [keyof Fields, string, string, "default" | "email-address" | "phone-pad"]
   > = [
-    ["supplierName", "Supplier Name *", "default"],
-    ["email", "Email", "email-address"],
-    ["phoneNumber", "Phone", "phone-pad"],
-    ["address", "Address", "default"],
-    ["stateDivision", "State / Division", "default"],
-    ["city", "City", "default"],
-    ["country", "Country", "default"],
+    ["supplierName", `${t('suppliers.fields.supplierName')} *`, t('suppliers.placeholders.supplierName'), "default"],
+    ["email", t('suppliers.fields.email'), t('suppliers.placeholders.email'), "email-address"],
+    ["phoneNumber", t('suppliers.fields.phone'), t('suppliers.placeholders.phone'), "phone-pad"],
+    ["address", t('suppliers.fields.address'), t('suppliers.placeholders.address'), "default"],
+    ["stateDivision", t('suppliers.fields.stateDivision'), t('suppliers.placeholders.stateDivision'), "default"],
+    ["city", t('suppliers.fields.city'), t('suppliers.placeholders.city'), "default"],
+    ["country", t('suppliers.fields.country'), t('suppliers.placeholders.country'), "default"],
   ];
   return (
     <KeyboardAwareScrollView
@@ -194,7 +196,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.logoSection}>
-        <Pressable onPress={pickLogo} disabled={saving}>
+        <Pressable
+          onPress={pickLogo}
+          disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={t('suppliers.actions.chooseLogo')}
+        >
           {logoUri ? (
             <Image source={{ uri: logoUri }} style={[styles.logo, { borderColor: theme.border }]} />
           ) : (
@@ -208,12 +215,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
           )}
         </Pressable>
       </View>
-      {labels.map(([key, label, keyboardType]) => (
+      {labels.map(([key, label, placeholder, keyboardType]) => (
         <View key={key} style={styles.field}>
           <Label className="text-foreground">{label}</Label>
           <Input
             value={fields[key] ?? ""}
-            placeholder={`Enter ${label.replace(" *", "").toLowerCase()}`}
+            placeholder={placeholder}
             keyboardType={keyboardType}
             editable={!saving}
             className="mt-2"
@@ -224,7 +231,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         </View>
       ))}
       <View style={styles.activeRow}>
-        <Text className="text-foreground">Active Supplier</Text>
+        <Text className="text-foreground">{t('suppliers.fields.activeSupplier')}</Text>
         <Button
           variant={isActive ? "default" : "outline"}
           size="sm"
@@ -235,7 +242,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
           <Text
             style={{ color: isActive ? theme.primaryForeground : theme.foreground }}
           >
-            {isActive ? "Active" : "Inactive"}
+            {isActive ? t('suppliers.dashboard.active') : t('suppliers.dashboard.inactive')}
           </Text>
         </Button>
       </View>
@@ -246,13 +253,13 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
           onPress={() => router.back()}
           disabled={saving}
         >
-          <Text className="text-foreground">Cancel</Text>
+          <Text className="text-foreground">{t('suppliers.actions.cancel')}</Text>
         </Button>
         <Button style={[styles.action, { backgroundColor: theme.primary }]} onPress={submit} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color={theme.primaryForeground} />
           ) : (
-            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Save</Text>
+            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('suppliers.actions.save')}</Text>
           )}
         </Button>
       </View>

@@ -5,6 +5,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bot, Send } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,11 +21,12 @@ type ChatMessage = {
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [messageText, setMessageText] = React.useState('');
   const [messages, setMessages] = React.useState<ChatMessage[]>([
     {
       id: 'bot-1',
-      text: 'Hello! Ask me anything about FarmPlus and I will reply here.',
+      text: t('chat.greeting'),
       sender: 'bot',
     },
   ]);
@@ -63,7 +65,7 @@ export default function ChatScreen() {
         body: JSON.stringify(trimmedText),
       });
 
-      const botText = response.data ?? 'No response received.';
+      const botText = response.data ?? t('chat.noResponse');
       const botMessage: ChatMessage = {
         id: `bot-${Date.now()}`,
         text: typeof botText === 'string' ? botText : JSON.stringify(botText),
@@ -72,13 +74,13 @@ export default function ChatScreen() {
 
       setMessages((current) => [...current, botMessage]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to send message.';
-      Alert.alert('Chat Error', message);
+      const message = error instanceof Error ? error.message : t('chat.sendFailedFallback');
+      Alert.alert(t('chat.chatError'), message);
       setMessages((current) => [
         ...current,
         {
           id: `bot-error-${Date.now()}`,
-          text: 'Sorry, I could not send your message. Please try again.',
+          text: t('chat.sendFailed'),
           sender: 'bot',
         },
       ]);
@@ -99,7 +101,7 @@ export default function ChatScreen() {
             <Bot size={24} color="#2563EB" />
           </View>
           <Text style={styles.topBarTitle}>
-            AI Chat
+            {t('chat.aiChat')}
           </Text>
         </View>
       </View>
@@ -120,7 +122,7 @@ export default function ChatScreen() {
             return (
               <View key={message.id} style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowBot]}>
                 {!isUser && (
-                  <Avatar alt="Bot" style={styles.avatar}>
+                  <Avatar alt={t('chat.avatarBot')} style={styles.avatar}>
                     <AvatarFallback>
                       <Text className="text-foreground">B</Text>
                     </AvatarFallback>
@@ -134,7 +136,7 @@ export default function ChatScreen() {
                 </View>
 
                 {isUser && (
-                  <Avatar alt="User" style={styles.avatar}>
+                  <Avatar alt={t('chat.avatarUser')} style={styles.avatar}>
                     <AvatarFallback>
                       <Text className="text-foreground">U</Text>
                     </AvatarFallback>
@@ -145,13 +147,13 @@ export default function ChatScreen() {
           })}
           {typing && (
             <View style={[styles.messageRow, styles.messageRowBot]}>
-              <Avatar alt="Bot" style={styles.avatar}>
+              <Avatar alt={t('chat.avatarBot')} style={styles.avatar}>
                 <AvatarFallback>
                   <Text className="text-foreground">B</Text>
                 </AvatarFallback>
               </Avatar>
               <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
-                <Text style={[styles.messageText, styles.botText]}>AI is typing...</Text>
+                <Text style={[styles.messageText, styles.botText]}>{t('chat.aiTyping')}</Text>
               </View>
             </View>
           )}
@@ -161,7 +163,7 @@ export default function ChatScreen() {
           <Input
             value={messageText}
             onChangeText={setMessageText}
-            placeholder="Type your message..."
+            placeholder={t('chat.placeholder')}
             returnKeyType="send"
             onSubmitEditing={handleSend}
             editable={!sending}

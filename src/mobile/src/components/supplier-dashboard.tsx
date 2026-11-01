@@ -24,6 +24,7 @@ import { Supplier } from '@/models/supplier';
 import { SupplierServiceClient } from '@/services/supplierService';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const supplierService = new SupplierServiceClient();
 
@@ -68,6 +69,7 @@ function Metric({
 }
 
 function RecentSupplierRow({ supplier, theme }: { supplier: Supplier; theme: ThemeColors }) {
+  const { t } = useTranslation();
   const lastUpdated = supplier.updatedAtUtc ?? supplier.createdAtUtc ?? null;
   const isActive = supplier.isActive !== false;
 
@@ -78,7 +80,7 @@ function RecentSupplierRow({ supplier, theme }: { supplier: Supplier; theme: The
         <View style={styles.metaRow}>
           <Icon className="text-muted-foreground" as={MapPin} size={12} />
           <Text className="text-muted-foreground" style={styles.supplierMeta} numberOfLines={1}>
-            {supplier.city || supplier.stateDivision || supplier.country || 'No location'}
+            {supplier.city || supplier.stateDivision || supplier.country || t('suppliers.dashboard.noLocation')}
           </Text>
         </View>
       </View>
@@ -88,7 +90,7 @@ function RecentSupplierRow({ supplier, theme }: { supplier: Supplier; theme: The
       <View style={styles.statusColumn}>
         <View style={[styles.statusPill, { backgroundColor: theme.secondary }]}>
           <Text style={[styles.statusText, { color: isActive ? theme.chart2 : theme.destructive }]}>
-            {isActive ? 'ACTIVE' : 'INACTIVE'}
+            {isActive ? t('suppliers.status.active') : t('suppliers.status.inactive')}
           </Text>
         </View>
       </View>
@@ -98,7 +100,7 @@ function RecentSupplierRow({ supplier, theme }: { supplier: Supplier; theme: The
 
 export function SupplierDashboardContent({
   showHeader = true,
-  title = 'Suppliers',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -106,6 +108,7 @@ export function SupplierDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/dashboard');
@@ -152,12 +155,12 @@ export function SupplierDashboardContent({
     const inactiveSuppliers = suppliers.filter((supplier) => supplier.isActive === false).length;
 
     return [
-      { label: 'Total Suppliers', value: totalSuppliers.toLocaleString('en-US'), icon: Building2, tone: 'blue' as const },
-      { label: 'Active', value: activeSuppliers.toLocaleString('en-US'), icon: UserRoundCheck, tone: 'green' as const },
-      { label: 'Inactive', value: inactiveSuppliers.toLocaleString('en-US'), icon: UserRoundX, tone: 'amber' as const },
-      { label: 'Recent', value: recentSuppliers.length.toLocaleString('en-US'), icon: CalendarDays, tone: 'red' as const },
+      { label: t('suppliers.dashboard.totalSuppliers'), value: totalSuppliers.toLocaleString('en-US'), icon: Building2, tone: 'blue' as const },
+      { label: t('suppliers.dashboard.active'), value: activeSuppliers.toLocaleString('en-US'), icon: UserRoundCheck, tone: 'green' as const },
+      { label: t('suppliers.dashboard.inactive'), value: inactiveSuppliers.toLocaleString('en-US'), icon: UserRoundX, tone: 'amber' as const },
+      { label: t('suppliers.dashboard.recent'), value: recentSuppliers.length.toLocaleString('en-US'), icon: CalendarDays, tone: 'red' as const },
     ];
-  }, [suppliers, recentSuppliers]);
+  }, [suppliers, recentSuppliers, t]);
 
   return (
     <View style={[styles.page, { backgroundColor: theme.background }]}>
@@ -166,7 +169,7 @@ export function SupplierDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title}</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title ?? t('suppliers.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -174,14 +177,14 @@ export function SupplierDashboardContent({
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('suppliers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('suppliers.unauthorized.title')} message={t('suppliers.unauthorized.description')} />
       ) : loading && suppliers.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading suppliers...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('suppliers.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -203,7 +206,7 @@ export function SupplierDashboardContent({
               onPress={() => router.push('/suppliers/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color={theme.primaryForeground} />
-              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>New Supplier</Text>
+              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>{t('suppliers.dashboard.newSupplier')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -211,33 +214,33 @@ export function SupplierDashboardContent({
               onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color={theme.primary} />
-              <Text style={[styles.actionLabel, { color: theme.primary }]}>View Suppliers</Text>
+              <Text style={[styles.actionLabel, { color: theme.primary }]}>{t('suppliers.dashboard.viewSuppliers')}</Text>
             </Button>
           </View>
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Recent Suppliers</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('suppliers.dashboard.recentSuppliers')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={[styles.seeAllButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={[styles.seeAllText, { color: theme.primary }]}>View all</Text>
+                <Text style={[styles.seeAllText, { color: theme.primary }]}>{t('suppliers.dashboard.viewAll')}</Text>
                 <ChevronRight size={14} color={theme.primary} />
               </Button>
             </View>
 
             <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.supplierColumn]}>Supplier</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.updatedColumn]}>Updated</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.statusHeaderColumn]}>Status</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.supplierColumn]}>{t('suppliers.fields.supplier')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.updatedColumn]}>{t('suppliers.dashboard.updated')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.statusHeaderColumn]}>{t('suppliers.dashboard.status')}</Text>
             </View>
             {recentSuppliers.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No suppliers found.</Text>
+                <Text className="text-muted-foreground">{t('suppliers.dashboard.noSuppliersFound')}</Text>
               </View>
             ) : (
               recentSuppliers.map((supplier) => <RecentSupplierRow key={supplier.id} supplier={supplier} theme={theme} />)

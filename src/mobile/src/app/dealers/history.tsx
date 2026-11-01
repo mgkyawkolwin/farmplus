@@ -25,6 +25,7 @@ import { Sale } from '@/models/sale';
 import { DealerServiceClient } from '@/services/dealerService';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const dealerService = new DealerServiceClient();
 const PAGE_SIZE = 20;
@@ -49,6 +50,7 @@ function formatDate(value: string) {
 
 export default function DealerHistoryScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/history');
@@ -90,17 +92,13 @@ export default function DealerHistoryScreen() {
         setSales([]);
         setPayments([]);
       }
-      SnackBar.Error(
-        error instanceof Error
-          ? error.message
-          : `Unable to load dealer ${showingPayments ? 'payments' : 'sales'}`,
-      );
+      SnackBar.Error(error instanceof Error ? error.message : t('dealers.messages.unableLoadHistory'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [dealerId, router, showingPayments]);
+  }, [dealerId, router, showingPayments, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -128,7 +126,7 @@ export default function DealerHistoryScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Dealer {showingPayments ? 'Payments' : 'Sales'}
+          {t(showingPayments ? 'dealers.history.paymentsTitle' : 'dealers.history.salesTitle')}
         </Text>
         <View style={styles.headerButton} />
       </View>
@@ -136,24 +134,24 @@ export default function DealerHistoryScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : loading && itemCount === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading {showingPayments ? 'payments' : 'sales'}...
+            {t(showingPayments ? 'dealers.history.loadingPayments' : 'dealers.history.loadingSales')}
           </Text>
         </View>
       ) : itemCount === 0 ? (
         <View style={styles.centeredState}>
           <Text className="text-foreground" style={styles.stateTitle}>
-            No {showingPayments ? 'payments' : 'sales'} found
+            {t(showingPayments ? 'dealers.empty.noPayments' : 'dealers.empty.noSales')}
           </Text>
           <Text className="text-muted-foreground" style={styles.stateText}>
-            This dealer has no recorded {showingPayments ? 'payments' : 'sales'}.
+            {t(showingPayments ? 'dealers.empty.noPaymentsDescription' : 'dealers.empty.noSalesDescription')}
           </Text>
         </View>
       ) : (
@@ -179,17 +177,17 @@ export default function DealerHistoryScreen() {
             ? payments.map((payment) => (
                 <Pressable key={payment.id} style={[styles.historyCard, { borderColor: theme.border, backgroundColor: theme.card }]} onPress={() => openSale(payment.saleId)}>
                   <View style={styles.cardTopRow}>
-                    <Text className="text-foreground" style={styles.cardTitle}>Payment</Text>
+                    <Text className="text-foreground" style={styles.cardTitle}>{t('dealers.history.payment')}</Text>
                     <Text className="text-muted-foreground" style={styles.cardDate}>{formatDate(payment.paidAt)}</Text>
                     <Icon className="text-muted-foreground" as={ChevronRight} size={16} />
                   </View>
                   <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                     <View>
-                      <Text className="text-muted-foreground" style={styles.label}>Amount Paid</Text>
+                      <Text className="text-muted-foreground" style={styles.label}>{t('dealers.fields.amountPaid')}</Text>
                       <Text style={[styles.amount, { color: theme.chart2 }]}>{formatMoney(payment.amount)}</Text>
                     </View>
                     <View style={styles.amountRight}>
-                      <Text className="text-muted-foreground" style={styles.label}>Balance After</Text>
+                      <Text className="text-muted-foreground" style={styles.label}>{t('dealers.fields.balanceAfter')}</Text>
                       <Text className="text-foreground" style={styles.amount}>{formatMoney(payment.balanceAfter)}</Text>
                     </View>
                   </View>
@@ -206,11 +204,11 @@ export default function DealerHistoryScreen() {
                   </View>
                   <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                     <View>
-                      <Text className="text-muted-foreground" style={styles.label}>Total</Text>
+                      <Text className="text-muted-foreground" style={styles.label}>{t('dealers.fields.total')}</Text>
                       <Text className="text-foreground" style={styles.amount}>{formatMoney(sale.netTotal)}</Text>
                     </View>
                     <View style={styles.amountRight}>
-                      <Text className="text-muted-foreground" style={styles.label}>Balance</Text>
+                      <Text className="text-muted-foreground" style={styles.label}>{t('dealers.fields.balance')}</Text>
                       <Text style={[styles.amount, { color: sale.balance > 0 ? theme.chart4 : theme.chart2 }]}>
                         {formatMoney(sale.balance)}
                       </Text>
@@ -219,7 +217,7 @@ export default function DealerHistoryScreen() {
                 </Pressable>
               ))}
           {loadingMore ? <ActivityIndicator size="small" color={theme.primary} /> : null}
-          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>{t('dealers.history.endOfList')}</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>

@@ -47,6 +47,7 @@ import { Sale } from "@/models/sale";
 import { DealerServiceClient } from "@/services/dealerService";
 import { ISaleService } from "@/services/saleService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const dealerService = new DealerServiceClient();
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
@@ -109,6 +110,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -118,7 +120,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -183,6 +185,7 @@ type DealerStats = {
 
 export default function DealerReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/dealers/dashboard');
   const [dealers, setDealers] = React.useState<DealerItem[]>([]);
   const [sales, setSales] = React.useState<Sale[]>([]);
@@ -216,13 +219,13 @@ export default function DealerReportDashboardScreen() {
     ]);
 
     if (dealerResult.status === "rejected" && saleResult.status === "rejected") {
-      SnackBar.Error("Unable to load dealer report");
+      SnackBar.Error(t('reports.common.loadFailed'));
     }
     setDealers(dealerResult.status === "fulfilled" ? dealerResult.value : []);
     setSales(saleResult.status === "fulfilled" ? saleResult.value : []);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -303,7 +306,7 @@ export default function DealerReportDashboardScreen() {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
       return {
         key: monthKey(date),
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+          label: date.toLocaleDateString(i18n.language, { month: "short" }),
         revenue: 0,
         collected: 0,
         newDealers: 0,
@@ -399,7 +402,7 @@ export default function DealerReportDashboardScreen() {
       activeDealers,
       topLocations,
     };
-  }, [dealers, sales]);
+  }, [dealers, sales, i18n.language]);
 
   const inactiveDealers = dealers.length - report.activeDealers;
   const collectionRate = percent(report.totalPaid, report.totalRevenue);
@@ -415,14 +418,14 @@ export default function DealerReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Dealer Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.dealers.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -433,99 +436,99 @@ export default function DealerReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Dealer analytics</Text>
-          <Text style={styles.title}>Dealer overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.dealers.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.dealers.overview')}</Text>
           <Text style={styles.subtitle}>
-            {count(report.orders)} non-voided dealer sales · filtered to the selected shop when active
+            {t('reports.dealers.subtitle', { count: count(report.orders) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Total dealers" value={count(dealers.length)} caption={`${count(inactiveDealers)} inactive`} icon={BriefcaseBusiness} tone="blue" />
-          <Kpi label="Active dealers" value={count(report.activeDealers)} caption={`${percent(report.activeDealers, dealers.length)}% of base`} icon={UserRoundCheck} tone="green" />
-          <Kpi label="New · 30 days" value={count(report.newLast30)} caption="Dealers added" icon={UserPlus} tone="blue" />
-          <Kpi label="Revenue · month" value={money(report.thisMonth)} caption={report.growth === null ? "No prior month" : `${report.growth >= 0 ? "+" : ""}${report.growth}% vs last month`} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
-          <Kpi label="Lifetime revenue" value={money(report.totalRevenue)} caption={`${count(report.orders)} orders`} icon={ShoppingCart} tone="green" />
-          <Kpi label="Avg order value" value={money(report.avgOrder)} caption="Per dealer sale" icon={Receipt} tone="blue" />
-          <Kpi label="Outstanding" value={money(report.receivables)} caption={`${count(report.partialInvoices + report.unpaidInvoices)} open invoices`} icon={HandCoins} tone="amber" />
-          <Kpi label="Collection rate" value={`${collectionRate}%`} caption={`${money(report.totalPaid)} collected`} icon={Percent} tone={collectionRate >= 80 ? "green" : "amber"} />
-          <Kpi label="Repeat rate" value={`${percent(report.repeatBuyers, report.buyers)}%`} caption={`${count(report.repeatBuyers)} of ${count(report.buyers)} buyers`} icon={Repeat} tone="green" />
-          <Kpi label="Top-5 share" value={`${report.top5Share}%`} caption="Of dealer revenue" icon={AlertTriangle} tone={report.top5Share >= 60 ? "red" : "blue"} />
+          <Kpi label={t('reports.dealers.kpi.totalDealers')} value={count(dealers.length)} caption={t('reports.dealers.caption.inactive', { count: count(inactiveDealers) })} icon={BriefcaseBusiness} tone="blue" />
+          <Kpi label={t('reports.dealers.kpi.activeDealers')} value={count(report.activeDealers)} caption={`${percent(report.activeDealers, dealers.length)}% of base`} icon={UserRoundCheck} tone="green" />
+          <Kpi label={t('reports.dealers.kpi.new30')} value={count(report.newLast30)} caption={t('reports.dealers.caption.dealersAdded')} icon={UserPlus} tone="blue" />
+          <Kpi label={t('reports.dealers.kpi.revenueMonth')} value={money(report.thisMonth)} caption={report.growth === null ? t('reports.dealers.caption.noPriorMonth') : t('reports.dealers.caption.growth', { growth: `${report.growth >= 0 ? "+" : ""}${report.growth}` })} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
+          <Kpi label={t('reports.dealers.kpi.lifetimeRevenue')} value={money(report.totalRevenue)} caption={t('reports.dealers.caption.orders', { count: count(report.orders) })} icon={ShoppingCart} tone="green" />
+          <Kpi label={t('reports.dealers.kpi.avgOrderValue')} value={money(report.avgOrder)} caption={t('reports.dealers.caption.perSale')} icon={Receipt} tone="blue" />
+          <Kpi label={t('reports.dealers.kpi.outstanding')} value={money(report.receivables)} caption={t('reports.dealers.caption.openInvoices', { count: count(report.partialInvoices + report.unpaidInvoices) })} icon={HandCoins} tone="amber" />
+          <Kpi label={t('reports.dealers.kpi.collectionRate')} value={`${collectionRate}%`} caption={t('reports.dealers.caption.collected', { amount: money(report.totalPaid) })} icon={Percent} tone={collectionRate >= 80 ? "green" : "amber"} />
+          <Kpi label={t('reports.dealers.kpi.repeatRate')} value={`${percent(report.repeatBuyers, report.buyers)}%`} caption={t('reports.dealers.caption.buyers', { repeat: count(report.repeatBuyers), total: count(report.buyers) })} icon={Repeat} tone="green" />
+          <Kpi label={t('reports.dealers.kpi.top5Share')} value={`${report.top5Share}%`} caption={t('reports.dealers.caption.dealerRevenue')} icon={AlertTriangle} tone={report.top5Share >= 60 ? "red" : "blue"} />
         </View>
 
-        <Section title="Revenue trend" subtitle="Last 12 months · billed vs collected">
+        <Section title={t('reports.dealers.section.revenueTrend')} subtitle={t('reports.dealers.subtitleSection.billedCollected12Months')}>
           <LineChart
             labels={report.months.map((month) => month.label)}
             series={[
-              { name: "Billed", color: COLORS.green, values: report.months.map((month) => month.revenue) },
-              { name: "Collected", color: COLORS.blue, values: report.months.map((month) => month.collected) },
+              { name: t('reports.dealers.series.billed'), color: COLORS.green, values: report.months.map((month) => month.revenue) },
+              { name: t('reports.dealers.series.collected'), color: COLORS.blue, values: report.months.map((month) => month.collected) },
             ]}
           />
         </Section>
 
-        <Section title="Dealer activity" subtitle="New accounts vs monthly buying dealers">
+        <Section title={t('reports.dealers.section.activity')} subtitle={t('reports.dealers.subtitleSection.activity')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.newDealers, month.buyers.size] }))}
             series={[
-              { name: "New dealers", color: COLORS.blue },
-              { name: "Buying dealers", color: COLORS.green },
+              { name: t('reports.dealers.series.newDealers'), color: COLORS.blue },
+              { name: t('reports.dealers.series.buyingDealers'), color: COLORS.green },
             ]}
           />
         </Section>
 
-        <Section title="Dealer base" subtitle="Active vs inactive accounts">
+        <Section title={t('reports.dealers.section.dealerBase')} subtitle={t('reports.dealers.subtitleSection.activeInactive')}>
           <DonutChart
-            centerLabel="Dealers"
+            centerLabel={t('reports.dealers.chart.dealers')}
             centerValue={count(dealers.length)}
             slices={[
-              { label: "Active", value: report.activeDealers, color: COLORS.green },
-              { label: "Inactive", value: inactiveDealers, color: COLORS.slate },
+              { label: t('reports.dealers.chart.active'), value: report.activeDealers, color: COLORS.green },
+              { label: t('reports.dealers.chart.inactive'), value: inactiveDealers, color: COLORS.slate },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Buying behaviour" subtitle={`Purchased within ${DORMANT_DAYS} days vs dormant`}>
+        <Section title={t('reports.dealers.section.buyingBehaviour')} subtitle={t('reports.dealers.subtitleSection.boughtDormant', { days: DORMANT_DAYS })}>
           <DonutChart
-            centerLabel="Dealers"
+            centerLabel={t('reports.dealers.chart.dealers')}
             centerValue={count(dealers.length)}
             slices={[
-              { label: "Active buyers", value: report.activeBuyers, color: COLORS.green },
-              { label: "Dormant", value: report.dormant, color: COLORS.amber },
-              { label: "Never purchased", value: report.neverPurchased, color: COLORS.slate },
+              { label: t('reports.dealers.chart.activeBuyers'), value: report.activeBuyers, color: COLORS.green },
+              { label: t('reports.dealers.chart.dormant'), value: report.dormant, color: COLORS.amber },
+              { label: t('reports.dealers.chart.neverPurchased'), value: report.neverPurchased, color: COLORS.slate },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Invoice payment status" subtitle="All non-voided dealer sales">
+        <Section title={t('reports.dealers.section.invoiceStatus')} subtitle={t('reports.dealers.subtitleSection.allSales')}>
           <DonutChart
-            centerLabel="Invoices"
+            centerLabel={t('reports.dealers.chart.invoices')}
             centerValue={count(report.orders)}
             slices={[
-              { label: "Paid", value: report.paidInvoices, color: COLORS.green },
-              { label: "Partial", value: report.partialInvoices, color: COLORS.amber },
-              { label: "Unpaid", value: report.unpaidInvoices, color: COLORS.red },
+              { label: t('reports.dealers.chart.paid'), value: report.paidInvoices, color: COLORS.green },
+              { label: t('reports.dealers.chart.partial'), value: report.partialInvoices, color: COLORS.amber },
+              { label: t('reports.dealers.chart.unpaid'), value: report.unpaidInvoices, color: COLORS.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Receivables aging" subtitle="Outstanding balance by invoice age">
+        <Section title={t('reports.dealers.section.receivablesAging')} subtitle={t('reports.dealers.subtitleSection.aging')}>
           <BarChart
-            data={report.aging.map((item) => ({ label: item.label, values: [item.value] }))}
-            series={[{ name: "Outstanding", color: COLORS.amber }]}
+            data={report.aging.map((item, index) => ({ label: t(['reports.common.age0to30', 'reports.common.age31to60', 'reports.common.age61to90', 'reports.common.age90Plus'][index]), values: [item.value] }))}
+            series={[{ name: t('reports.dealers.series.outstanding'), color: COLORS.amber }]}
             height={160}
           />
         </Section>
 
-        <Section title="Top dealers" subtitle="By lifetime revenue" onViewAll={() => router.push(dealerListRoute)}>
+        <Section title={t('reports.dealers.section.topDealers')} subtitle={t('reports.dealers.subtitleSection.lifetimeRevenue')} onViewAll={() => router.push(dealerListRoute)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Dealer</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Orders</Text>
-              <Text style={[styles.th, styles.tdNum]}>Revenue</Text>
-              <Text style={[styles.th, styles.tdNum]}>Balance</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.dealers.field.dealer')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.dealers.field.orders')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.dealers.field.revenue')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.dealers.field.balance')}</Text>
             </View>
             {report.topByRevenue.map((dealer) => (
               <Pressable key={dealer.id} style={styles.tableRow} onPress={() => openDealer(dealer.id)}>
@@ -535,38 +538,38 @@ export default function DealerReportDashboardScreen() {
                 <Text style={[styles.td, styles.tdNum, dealer.balance > 0 ? styles.amber : null]} numberOfLines={1}>{compactNumber(dealer.balance)}</Text>
               </Pressable>
             ))}
-            {report.topByRevenue.length === 0 ? <Text style={styles.empty}>No dealer sales recorded.</Text> : null}
+            {report.topByRevenue.length === 0 ? <Text style={styles.empty}>{t('reports.dealers.empty.noSales')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Revenue concentration" subtitle="Top dealers by share of revenue">
+        <Section title={t('reports.dealers.section.revenueConcentration')} subtitle={t('reports.dealers.subtitleSection.shareRevenue')}>
           <RankedBars
             items={report.topByRevenue.slice(0, 5).map((dealer) => ({
               label: dealer.name,
               value: dealer.revenue,
-              caption: `${count(dealer.orders)} orders · ${percent(dealer.revenue, report.totalRevenue)}% of revenue`,
+              caption: t('reports.dealers.captionText.revenueShare', { count: count(dealer.orders), percent: percent(dealer.revenue, report.totalRevenue) }),
             }))}
             color={COLORS.green}
             formatValue={money}
-            emptyText="No dealer sales recorded."
+            emptyText={t('reports.dealers.empty.noSales')}
           />
         </Section>
 
-        <Section title="Highest receivables" subtitle="Largest outstanding dealer balances">
+        <Section title={t('reports.dealers.section.highestReceivables')} subtitle={t('reports.dealers.subtitleSection.largestBalances')}>
           <RankedBars
             items={report.topByBalance.map((dealer) => ({ label: dealer.name, value: dealer.balance }))}
             color={COLORS.amber}
             formatValue={money}
-            emptyText="No outstanding balances."
+            emptyText={t('reports.dealers.empty.noBalances')}
           />
         </Section>
 
-        <Section title="Overdue accounts" subtitle="Outstanding for more than 60 days">
+        <Section title={t('reports.dealers.section.overdueAccounts')} subtitle={t('reports.dealers.subtitleSection.overdue60Days')}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Dealer</Text>
-              <Text style={[styles.th, styles.tdNum]}>Overdue</Text>
-              <Text style={[styles.th, styles.tdNum]}>Last order</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.dealers.field.dealer')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.dealers.field.overdue')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.dealers.field.lastOrder')}</Text>
             </View>
             {report.overdueAccounts.map((dealer) => (
               <Pressable key={dealer.id} style={styles.tableRow} onPress={() => openDealer(dealer.id)}>
@@ -577,29 +580,29 @@ export default function DealerReportDashboardScreen() {
                 </Text>
               </Pressable>
             ))}
-            {report.overdueAccounts.length === 0 ? <Text style={styles.empty}>No overdue accounts.</Text> : null}
+            {report.overdueAccounts.length === 0 ? <Text style={styles.empty}>{t('reports.dealers.empty.noOverdue')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Dealer locations" subtitle="By revenue and account count">
+        <Section title={t('reports.dealers.section.locations')} subtitle={t('reports.dealers.subtitleSection.locations')}>
           <RankedBars
             items={report.topLocations.map((area) => ({
-              label: area.label,
+              label: area.label === 'No location' ? t('reports.dealers.empty.noLocation') : area.label,
               value: area.revenue,
-              caption: `${count(area.count)} dealers`,
+              caption: t('reports.dealers.captionText.dealerCount', { count: count(area.count) }),
             }))}
             color={COLORS.blue}
             formatValue={money}
-            emptyText="No dealer locations to display."
+            emptyText={t('reports.dealers.empty.noLocations')}
           />
         </Section>
 
-        <Section title="Recently added dealers" subtitle="Newest accounts" onViewAll={() => router.push(dealerListRoute)}>
+        <Section title={t('reports.dealers.section.recentlyAdded')} subtitle={t('reports.dealers.subtitleSection.newestAccounts')} onViewAll={() => router.push(dealerListRoute)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Dealer</Text>
-              <Text style={[styles.th, styles.tdNum]}>Added</Text>
-              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.dealers.field.dealer')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.dealers.field.added')}</Text>
+              <Text style={[styles.th, styles.tdStatus]}>{t('reports.dealers.field.status')}</Text>
             </View>
             {report.recentDealers.map((dealer) => {
               const active = dealer.isActive !== false;
@@ -610,7 +613,7 @@ export default function DealerReportDashboardScreen() {
                     <View style={styles.locationRow}>
                       <MapPin size={10} color={COLORS.muted} />
                       <Text style={styles.tdSub} numberOfLines={1}>
-                        {[dealer.city, dealer.country].filter(Boolean).join(", ") || "No location"}
+                        {[dealer.city, dealer.country].filter(Boolean).join(", ") || t('reports.dealers.empty.noLocation')}
                       </Text>
                     </View>
                   </View>
@@ -620,14 +623,14 @@ export default function DealerReportDashboardScreen() {
                   <View style={styles.tdStatus}>
                     <View style={[styles.statusPill, { backgroundColor: active ? "#D1FAE5" : "#FEE2E2" }]}>
                       <Text style={[styles.statusText, { color: active ? "#047857" : "#B91C1C" }]}>
-                        {active ? "ACTIVE" : "INACTIVE"}
+                        {active ? t('reports.common.active') : t('reports.common.inactive')}
                       </Text>
                     </View>
                   </View>
                 </Pressable>
               );
             })}
-            {report.recentDealers.length === 0 ? <Text style={styles.empty}>No dealers yet.</Text> : null}
+            {report.recentDealers.length === 0 ? <Text style={styles.empty}>{t('reports.dealers.empty.noDealers')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

@@ -4,8 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 
 export default function UnauthorizedView({
+  title = 'Not authorized',
   message = 'You do not have permission to view this page.',
 }: {
+  title?: string;
   message?: string;
 }) {
   return (
@@ -13,7 +15,7 @@ export default function UnauthorizedView({
       <View style={styles.iconContainer}>
         <ShieldX size={28} color="#B42318" />
       </View>
-      <Text style={styles.title}>Not authorized</Text>
+      <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
     </View>
   );

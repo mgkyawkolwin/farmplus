@@ -2,6 +2,7 @@
 
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '@/components/ui/icon';
 import { Settings } from 'lucide-react-native';
 
@@ -10,6 +11,7 @@ import { Text } from '@/components/ui/text';
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View className='bg-background' style={[ styles.container, {  }]}>
@@ -22,22 +24,22 @@ export default function AuthScreen() {
 
       <View className='bg-background' style={styles.centerSection}>
         <Text variant={'h1'} style={styles.title}>
-          Welcome to Farm + POS
+          {t('auth.welcome.title')}
         </Text>
         <Text style={styles.subtitle}>
-          Manage your shop, sales, inventories and customer at one place
+          {t('auth.welcome.subtitle')}
         </Text>
       </View>
 
       <View style={styles.bottomSection}>
         <Button style={styles.button} onPress={() => router.push('./signin')}>
-          <Text>Login</Text>
+          <Text>{t('auth.welcome.login')}</Text>
         </Button>
         <Button style={styles.button} onPress={() => router.push('../home')}>
-          <Text>Connect with Greenway</Text>
+          <Text>{t('auth.welcome.connectGreenway')}</Text>
         </Button>
         <Button variant="secondary" style={styles.button} onPress={() => router.push('../accounts/create')}>
-          <Text>Create New Account</Text>
+          <Text>{t('auth.welcome.createNewAccount')}</Text>
         </Button>
       </View>
     </View>

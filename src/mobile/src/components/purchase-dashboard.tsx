@@ -25,6 +25,7 @@ import { PurchaseServiceClient } from '@/services/purchaseService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { RolePermissionServiceClient } from '@/services/rolePermissionService';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const purchaseService = new PurchaseServiceClient();
 const permissionService = new RolePermissionServiceClient();
@@ -74,7 +75,7 @@ function Metric({
   );
 }
 
-function RecentPurchaseRow({ purchase }: { purchase: Purchase }) {
+function RecentPurchaseRow({ purchase, t }: { purchase: Purchase; t: (key: string) => string }) {
   return (
     <View style={styles.purchaseRow}>
       <View style={styles.purchaseCell}>
@@ -94,7 +95,7 @@ function RecentPurchaseRow({ purchase }: { purchase: Purchase }) {
 
 export function PurchaseDashboardContent({
   showHeader = true,
-  title = 'Purchases',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -102,6 +103,7 @@ export function PurchaseDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const pathname = usePathname();
@@ -174,12 +176,12 @@ export function PurchaseDashboardContent({
     const recentCount = recentPurchases.length;
 
     return [
-      { label: 'Total Purchases', value: totalPurchases.toLocaleString('en-US'), icon: ReceiptText, tone: 'blue' as const },
-      { label: 'Products', value: totalProducts.toLocaleString('en-US'), icon: Package, tone: 'green' as const },
-      { label: 'Net Value', value: formatMoney(totalNet), icon: HandCoins, tone: 'amber' as const },
-      { label: 'Recent', value: recentCount.toLocaleString('en-US'), icon: TrendingUp, tone: 'red' as const },
+      { label: t('purchases.dashboard.totalPurchases'), value: totalPurchases.toLocaleString('en-US'), icon: ReceiptText, tone: 'blue' as const },
+      { label: t('purchases.dashboard.products'), value: totalProducts.toLocaleString('en-US'), icon: Package, tone: 'green' as const },
+      { label: t('purchases.dashboard.netValue'), value: formatMoney(totalNet), icon: HandCoins, tone: 'amber' as const },
+      { label: t('purchases.dashboard.recent'), value: recentCount.toLocaleString('en-US'), icon: TrendingUp, tone: 'red' as const },
     ];
-  }, [purchases, recentPurchases]);
+  }, [purchases, recentPurchases, t]);
 
   if (permissionState === 'checking') {
     return (
@@ -189,13 +191,13 @@ export function PurchaseDashboardContent({
             <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
               <Icon className="text-foreground" as={ChevronLeft} size={22} />
             </Button>
-            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('purchases.dashboard.title')}</Text>
             <View style={styles.headerButton} />
           </View>
         ) : null}
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('purchases.dashboard.loadingPermission')}</Text>
         </View>
       </View>
     );
@@ -209,11 +211,11 @@ export function PurchaseDashboardContent({
             <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
               <Icon className="text-foreground" as={ChevronLeft} size={22} />
             </Button>
-            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('purchases.dashboard.title')}</Text>
             <View style={styles.headerButton} />
           </View>
         ) : null}
-        <UnauthorizedView />
+        <UnauthorizedView title={t('purchases.unauthorized.title')} message={t('purchases.unauthorized.description')} />
       </View>
     );
   }
@@ -225,7 +227,7 @@ export function PurchaseDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+          <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('purchases.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -233,7 +235,7 @@ export function PurchaseDashboardContent({
       {loading && purchases.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading purchases...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('purchases.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -255,7 +257,7 @@ export function PurchaseDashboardContent({
               onPress={() => router.push('/purchases/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color="#FFFFFF" />
-              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>New Purchase</Text>
+              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>{t('purchases.dashboard.newPurchase')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -263,36 +265,36 @@ export function PurchaseDashboardContent({
               onPress={() => router.push('/purchases/list' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color="#16794B" />
-              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>View Purchases</Text>
+              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>{t('purchases.dashboard.viewPurchases')}</Text>
             </Button>
           </View>
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Recent Purchases</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('purchases.dashboard.recentPurchases')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={styles.seeAllButton}
                 onPress={() => router.push('/purchases/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={styles.seeAllText}>View all</Text>
+                <Text style={styles.seeAllText}>{t('purchases.dashboard.viewAll')}</Text>
                 <ChevronRight size={14} color="#16794B" />
               </Button>
             </View>
 
             <View style={styles.tableHeader}>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.purchaseColumn]}>Supplier / Date</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.countColumn]}>Items</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.totalColumn]}>Net Total</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.purchaseColumn]}>{t('purchases.fields.supplier')} / {t('purchases.fields.date')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.countColumn]}>{t('purchases.fields.items')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.totalColumn]}>{t('purchases.fields.netTotal')}</Text>
             </View>
             {recentPurchases.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No purchases found.</Text>
+                <Text className="text-muted-foreground">{t('purchases.dashboard.noPurchases')}</Text>
               </View>
             ) : (
-              recentPurchases.map((purchase) => <RecentPurchaseRow key={purchase.id} purchase={purchase} />)
+              recentPurchases.map((purchase) => <RecentPurchaseRow key={purchase.id} purchase={purchase} t={t} />)
             )}
           </View>
         </ScrollView>

@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { Icon } from '@/components/ui/icon';
 
 export default function CreateAccountScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
   return (
@@ -24,41 +26,41 @@ export default function CreateAccountScreen() {
         <Button variant="ghost">
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
             <Text className="text-foreground" style={styles.backButtonText}>
-              Back
+              {t('accounts.back')}
             </Text>
         </Button>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text variant="h2" style={styles.header}>
-          Create Account
+          {t('accounts.create.title')}
         </Text>
         <Text style={styles.subtitle}>
-          Fill in the detail to create your account
+          {t('accounts.create.subtitle')}
         </Text>
 
         <View style={styles.field}>
-          <Label>Full Name</Label>
-          <Input placeholder="Enter your full name" />
+          <Label>{t('accounts.create.fullName')}</Label>
+          <Input placeholder={t('accounts.create.fullNamePlaceholder')} />
         </View>
 
         <View style={styles.field}>
-          <Label>Email (Optional)</Label>
-          <Input placeholder="Enter your email" keyboardType="email-address" autoCapitalize="none" />
+          <Label>{t('accounts.create.email')}</Label>
+          <Input placeholder={t('accounts.create.emailPlaceholder')} keyboardType="email-address" autoCapitalize="none" />
         </View>
 
         <View style={styles.field}>
-          <Label>Password</Label>
-          <Input placeholder="Enter your password" secureTextEntry />
+          <Label>{t('accounts.create.password')}</Label>
+          <Input placeholder={t('accounts.create.passwordPlaceholder')} secureTextEntry />
         </View>
 
         <View style={styles.field}>
-          <Label>Confirm Password</Label>
-          <Input placeholder="Confirm your password" secureTextEntry />
+          <Label>{t('accounts.create.confirmPassword')}</Label>
+          <Input placeholder={t('accounts.create.confirmPasswordPlaceholder')} secureTextEntry />
         </View>
 
         <Button style={styles.continueButton} onPress={() => router.push('./phone')}>
-          <Text>Continue</Text>
+          <Text>{t('accounts.continue')}</Text>
         </Button>
       </ScrollView>
     </View>

@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Crown, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { Separator } from '@rn-primitives/context-menu';
 
 export default function DoneScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -31,31 +33,31 @@ export default function DoneScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 <Icon className="text-foreground" as={CheckCircle} size={72} />
                 <Text variant="h2" style={styles.header}>
-                    Congratulations!
+                    {t('accounts.done.congratulations')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Your Farm Plus is ready.
+                    {t('accounts.done.readySubtitle')}
                 </Text>
                 <Card className="w-[70%]">
                     <CardContent>
                         <View>
-                            <Text className="text-text-muted text-lg">Shop Name</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.shopName')}</Text>
                             <Text className="text-text text-lg font-bold">ABC Agri Store</Text>
                             <Separator className="bg-text-muted h-1 my-2" />
-                            <Text className="text-text-muted text-lg">Plan</Text>
-                            <Text className="text-text text-lg font-bold">Premium</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.planLabel')}</Text>
+                            <Text className="text-text text-lg font-bold">{t('accounts.plans.premium')}</Text>
                             <Separator className="bg-text-muted h-1 my-2" />
-                            <Text className="text-text-muted text-lg">License</Text>
-                            <Text className="text-text text-lg font-bold">1 Year (365 Days)</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.license')}</Text>
+                            <Text className="text-text text-lg font-bold">{t('accounts.oneYearDays')}</Text>
                             <Separator className="bg-text-muted h-1 my-2" />
-                            <Text className="text-text-muted text-lg">Valid Until</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.done.validUntil')}</Text>
                             <Text className="text-text text-lg font-bold">08 May 2027</Text>
                         </View>
                     </CardContent>
                 </Card>
 
                 <Button style={styles.continueButton} onPress={() => router.push('../home/dashboard')}>
-                    <Text>Go To Dashboard</Text>
+                    <Text>{t('accounts.done.goToDashboard')}</Text>
                 </Button>
             </ScrollView>
         </View>

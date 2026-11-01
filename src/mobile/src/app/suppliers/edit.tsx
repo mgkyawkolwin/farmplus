@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { SupplierForm } from "@/components/suppliers/supplierForm";
+import { useTranslation } from 'react-i18next';
 
 export default function EditSupplierScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -32,7 +34,7 @@ export default function EditSupplierScreen() {
             fontWeight: "600",
           }}
         >
-          Edit Supplier
+          {t('suppliers.actions.edit')}
         </Text>
         <View style={{ width: 40 }} />
       </View>

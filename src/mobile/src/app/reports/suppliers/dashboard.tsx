@@ -47,6 +47,7 @@ import { Supplier } from "@/models/supplier";
 import { IPurchaseService } from "@/services/purchaseService";
 import { SupplierServiceClient } from "@/services/supplierService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const supplierService = new SupplierServiceClient();
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
@@ -109,6 +110,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -118,7 +120,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -142,6 +144,7 @@ function Kpi({
   tone: Tone;
 }) {
   const palette = TONES[tone];
+  const { t } = useTranslation();
   return (
     <View
       style={[
@@ -188,6 +191,7 @@ type PurchasedProduct = {
 
 export default function SupplierReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/suppliers/dashboard');
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
@@ -221,13 +225,13 @@ export default function SupplierReportDashboardScreen() {
     ]);
 
     if (supplierResult.status === "rejected" && purchaseResult.status === "rejected") {
-      SnackBar.Error("Unable to load supplier report");
+      SnackBar.Error(t('reports.common.loadFailed'));
     }
     setSuppliers(supplierResult.status === "fulfilled" ? supplierResult.value : []);
     setPurchases(purchaseResult.status === "fulfilled" ? purchaseResult.value : []);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -321,7 +325,7 @@ export default function SupplierReportDashboardScreen() {
       const totals = monthlyPurchases.get(key);
       return {
         key,
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+          label: date.toLocaleDateString(i18n.language, { month: "short" }),
         spend: totals?.spend ?? 0,
         orders: totals?.orders ?? 0,
         suppliers: totals?.suppliers.size ?? 0,
@@ -385,7 +389,7 @@ export default function SupplierReportDashboardScreen() {
       recentPurchases,
       orders: supplierPurchases.length,
     };
-  }, [purchases, suppliers]);
+  }, [purchases, suppliers, i18n.language]);
 
   const inactiveSuppliers = suppliers.length - report.activeSuppliers;
   const repeatRate = percent(report.repeatSuppliers, report.buyingSuppliers);
@@ -403,14 +407,14 @@ export default function SupplierReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Supplier Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.suppliers.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -421,83 +425,83 @@ export default function SupplierReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Supplier analytics</Text>
-          <Text style={styles.title}>Supplier overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.suppliers.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.suppliers.overview')}</Text>
           <Text style={styles.subtitle}>
-            {count(report.orders)} purchases · filtered to the selected shop when active
+            {t('reports.suppliers.subtitle', { count: count(report.orders) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Total suppliers" value={count(suppliers.length)} caption={`${count(inactiveSuppliers)} inactive`} icon={Building} tone="blue" />
-          <Kpi label="Active suppliers" value={count(report.activeSuppliers)} caption={`${percent(report.activeSuppliers, suppliers.length)}% of base`} icon={UserRoundCheck} tone="green" />
-          <Kpi label="New · 30 days" value={count(report.newLast30)} caption="Suppliers added" icon={UserPlus} tone="blue" />
-          <Kpi label="Spend · month" value={money(report.thisMonth)} caption={report.growth === null ? "No prior month" : `${report.growth >= 0 ? "+" : ""}${report.growth}% vs last month`} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
-          <Kpi label="Lifetime spend" value={money(report.totalSpend)} caption={`${count(report.orders)} purchase orders`} icon={ShoppingCart} tone="green" />
-          <Kpi label="Avg purchase" value={money(report.avgOrder)} caption="Per order" icon={ClipboardList} tone="blue" />
-          <Kpi label="Units purchased" value={count(report.totalUnits)} caption="Across all purchase lines" icon={Package} tone="blue" />
-          <Kpi label="Repeat supplier rate" value={`${repeatRate}%`} caption={`${count(report.repeatSuppliers)} of ${count(report.buyingSuppliers)} suppliers`} icon={Repeat} tone="green" />
-          <Kpi label="Buying suppliers" value={count(report.buyingSuppliers)} caption={`${count(report.neverPurchased)} never purchased`} icon={UserRoundCheck} tone="green" />
-          <Kpi label="Top-5 share" value={`${report.top5Share}%`} caption="Of purchasing spend" icon={AlertTriangle} tone={report.top5Share >= 60 ? "red" : "blue"} />
+          <Kpi label={t('reports.suppliers.kpi.totalSuppliers')} value={count(suppliers.length)} caption={t('reports.suppliers.caption.inactive', { count: count(inactiveSuppliers) })} icon={Building} tone="blue" />
+          <Kpi label={t('reports.suppliers.kpi.activeSuppliers')} value={count(report.activeSuppliers)} caption={t('reports.suppliers.caption.baseShare', { percent: percent(report.activeSuppliers, suppliers.length) })} icon={UserRoundCheck} tone="green" />
+          <Kpi label={t('reports.suppliers.kpi.new30')} value={count(report.newLast30)} caption={t('reports.suppliers.caption.suppliersAdded')} icon={UserPlus} tone="blue" />
+          <Kpi label={t('reports.suppliers.kpi.spendMonth')} value={money(report.thisMonth)} caption={report.growth === null ? t('reports.suppliers.caption.noPriorMonth') : t('reports.suppliers.caption.growth', { growth: `${report.growth >= 0 ? "+" : ""}${report.growth}` })} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
+          <Kpi label={t('reports.suppliers.kpi.lifetimeSpend')} value={money(report.totalSpend)} caption={t('reports.suppliers.caption.orderCount', { count: count(report.orders) })} icon={ShoppingCart} tone="green" />
+          <Kpi label={t('reports.suppliers.kpi.avgPurchase')} value={money(report.avgOrder)} caption={t('reports.suppliers.caption.perOrder')} icon={ClipboardList} tone="blue" />
+          <Kpi label={t('reports.suppliers.kpi.unitsPurchased')} value={count(report.totalUnits)} caption={t('reports.suppliers.caption.allPurchaseLines')} icon={Package} tone="blue" />
+          <Kpi label={t('reports.suppliers.kpi.repeatRate')} value={`${repeatRate}%`} caption={t('reports.suppliers.caption.repeatSuppliers', { repeat: count(report.repeatSuppliers), total: count(report.buyingSuppliers) })} icon={Repeat} tone="green" />
+          <Kpi label={t('reports.suppliers.kpi.buyingSuppliers')} value={count(report.buyingSuppliers)} caption={t('reports.suppliers.caption.neverPurchased', { count: count(report.neverPurchased) })} icon={UserRoundCheck} tone="green" />
+          <Kpi label={t('reports.suppliers.kpi.top5Share')} value={`${report.top5Share}%`} caption={t('reports.suppliers.caption.purchasingSpend')} icon={AlertTriangle} tone={report.top5Share >= 60 ? "red" : "blue"} />
         </View>
 
-        <Section title="Purchase spend trend" subtitle="Last 12 months · purchase spend">
+        <Section title={t('reports.suppliers.section.spendTrend')} subtitle={t('reports.suppliers.subtitleSection.spendTrend')}>
           <LineChart
             labels={report.months.map((month) => month.label)}
-            series={[{ name: "Purchase spend", color: COLORS.green, values: report.months.map((month) => month.spend) }]}
+            series={[{ name: t('reports.suppliers.series.purchaseSpend'), color: COLORS.green, values: report.months.map((month) => month.spend) }]}
           />
         </Section>
 
-        <Section title="Supplier activity" subtitle="New suppliers vs monthly purchasing suppliers">
+        <Section title={t('reports.suppliers.section.supplierActivity')} subtitle={t('reports.suppliers.subtitleSection.supplierActivity')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.newSuppliers, month.suppliers] }))}
             series={[
-              { name: "New suppliers", color: COLORS.blue },
-              { name: "Buying suppliers", color: COLORS.green },
+              { name: t('reports.suppliers.series.newSuppliers'), color: COLORS.blue },
+              { name: t('reports.suppliers.series.buyingSuppliers'), color: COLORS.green },
             ]}
           />
         </Section>
 
-        <Section title="Supplier base" subtitle="Active vs inactive accounts">
+        <Section title={t('reports.suppliers.section.supplierBase')} subtitle={t('reports.suppliers.subtitleSection.activeInactive')}>
           <DonutChart
-            centerLabel="Suppliers"
+            centerLabel={t('reports.suppliers.chart.suppliers')}
             centerValue={count(suppliers.length)}
             slices={[
-              { label: "Active", value: report.activeSuppliers, color: COLORS.green },
-              { label: "Inactive", value: inactiveSuppliers, color: COLORS.slate },
+              { label: t('reports.suppliers.chart.active'), value: report.activeSuppliers, color: COLORS.green },
+              { label: t('reports.suppliers.chart.inactive'), value: inactiveSuppliers, color: COLORS.slate },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Purchasing coverage" subtitle={`Ordered within ${DORMANT_DAYS} days vs dormant or never used`}>
+        <Section title={t('reports.suppliers.section.coverage')} subtitle={t('reports.suppliers.subtitleSection.coverage', { days: DORMANT_DAYS })}>
           <DonutChart
-            centerLabel="Suppliers"
+            centerLabel={t('reports.suppliers.chart.suppliers')}
             centerValue={count(suppliers.length)}
             slices={[
-              { label: "Active suppliers", value: report.activeBuyers, color: COLORS.green },
-              { label: "Dormant", value: report.dormant, color: COLORS.amber },
-              { label: "Never purchased", value: report.neverPurchased, color: COLORS.slate },
+              { label: t('reports.suppliers.chart.activeSuppliers'), value: report.activeBuyers, color: COLORS.green },
+              { label: t('reports.suppliers.chart.dormant'), value: report.dormant, color: COLORS.amber },
+              { label: t('reports.suppliers.chart.neverPurchased'), value: report.neverPurchased, color: COLORS.slate },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Purchase order volume" subtitle="Purchase orders by month">
+        <Section title={t('reports.suppliers.section.orderVolume')} subtitle={t('reports.suppliers.subtitleSection.ordersByMonth')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.orders] }))}
-            series={[{ name: "Purchase orders", color: COLORS.purple }]}
+            series={[{ name: t('reports.suppliers.series.purchaseOrders'), color: COLORS.purple }]}
             height={160}
           />
         </Section>
 
-        <Section title="Top suppliers" subtitle="By lifetime purchase spend" onViewAll={() => router.push(supplierListRoute)}>
+        <Section title={t('reports.suppliers.section.topSuppliers')} subtitle={t('reports.suppliers.subtitleSection.lifetimeSpend')} onViewAll={() => router.push(supplierListRoute)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Supplier</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Orders</Text>
-              <Text style={[styles.th, styles.tdNum]}>Spend</Text>
-              <Text style={[styles.th, styles.tdNum]}>Units</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.suppliers.field.supplier')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.suppliers.field.orders')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.suppliers.field.spend')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.suppliers.field.units')}</Text>
             </View>
             {report.topBySpend.map((supplier) => (
               <Pressable key={supplier.id} style={styles.tableRow} onPress={() => openSupplier(supplier.id)}>
@@ -507,61 +511,61 @@ export default function SupplierReportDashboardScreen() {
                 <Text style={[styles.td, styles.tdNum]}>{count(supplier.units)}</Text>
               </Pressable>
             ))}
-            {report.topBySpend.length === 0 ? <Text style={styles.empty}>No supplier purchases recorded.</Text> : null}
+            {report.topBySpend.length === 0 ? <Text style={styles.empty}>{t('reports.suppliers.empty.noPurchases')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Spend concentration" subtitle="Top suppliers by share of purchasing spend">
+        <Section title={t('reports.suppliers.section.spendConcentration')} subtitle={t('reports.suppliers.subtitleSection.shareSpend')}>
           <RankedBars
             items={report.topBySpend.slice(0, 5).map((supplier) => ({
               label: supplier.name,
               value: supplier.spend,
-              caption: `${count(supplier.orders)} orders · ${percent(supplier.spend, report.totalSpend)}% of spend`,
+              caption: t('reports.suppliers.labels.spendShare', { count: count(supplier.orders), percent: percent(supplier.spend, report.totalSpend) }),
             }))}
             color={COLORS.green}
             formatValue={money}
-            emptyText="No supplier purchases recorded."
+            emptyText={t('reports.suppliers.empty.noPurchases')}
           />
         </Section>
 
-        <Section title="Most purchased products" subtitle="By purchase line value">
+        <Section title={t('reports.suppliers.section.mostPurchased')} subtitle={t('reports.suppliers.subtitleSection.byLineValue')}>
           <RankedBars
             items={report.topProducts.map((product) => ({
               label: product.name,
               value: product.spend,
-              caption: `${count(product.units)} units · ${count(product.orders)} purchase lines`,
+              caption: `${t('reports.suppliers.labels.units', { count: count(product.units) })} · ${t('reports.suppliers.labels.purchaseLines', { count: count(product.orders) })}`,
             }))}
             color={COLORS.blue}
             formatValue={money}
-            emptyText="No purchase line items to display."
+            emptyText={t('reports.suppliers.empty.noLineItems')}
           />
         </Section>
 
-        <Section title="Supplier locations" subtitle="By purchasing spend and account count">
+        <Section title={t('reports.suppliers.section.locations')} subtitle={t('reports.suppliers.subtitleSection.locations')}>
           <RankedBars
             items={report.topLocations.map((location) => ({
-              label: location.label,
+              label: location.label === 'No location' ? t('reports.suppliers.labels.noLocation') : location.label,
               value: location.spend,
-              caption: `${count(location.suppliers)} suppliers`,
+              caption: t('reports.suppliers.labels.supplierCount', { count: count(location.suppliers) }),
             }))}
             color={COLORS.purple}
             formatValue={money}
-            emptyText="No supplier locations to display."
+            emptyText={t('reports.suppliers.empty.noLocations')}
           />
         </Section>
 
-        <Section title="Recent purchase orders" subtitle="Latest purchases" onViewAll={() => router.push("/purchases/list" as Href)}>
+        <Section title={t('reports.suppliers.section.recentOrders')} subtitle={t('reports.suppliers.subtitleSection.latestPurchases')} onViewAll={() => router.push("/purchases/list" as Href)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Supplier</Text>
-              <Text style={[styles.th, styles.tdNum]}>Date</Text>
-              <Text style={[styles.th, styles.tdNum]}>Total</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.suppliers.field.supplier')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.suppliers.field.date')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.suppliers.field.total')}</Text>
             </View>
             {report.recentPurchases.map((purchase) => (
               <Pressable key={purchase.id} style={styles.tableRow} onPress={() => openPurchase(purchase.id)}>
                 <View style={styles.tdWide}>
                   <Text style={styles.td} numberOfLines={1}>{purchase.supplierName}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{count(purchase.totalProducts)} units</Text>
+                  <Text style={styles.tdSub} numberOfLines={1}>{t('reports.suppliers.labels.units', { count: count(purchase.totalProducts) })}</Text>
                 </View>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>
                   {new Date(timestamp(purchase.purchaseDate)).toLocaleDateString()}
@@ -569,16 +573,16 @@ export default function SupplierReportDashboardScreen() {
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>{compactNumber(purchase.netTotal)}</Text>
               </Pressable>
             ))}
-            {report.recentPurchases.length === 0 ? <Text style={styles.empty}>No purchases recorded.</Text> : null}
+            {report.recentPurchases.length === 0 ? <Text style={styles.empty}>{t('reports.suppliers.empty.noPurchaseHistory')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Recently added suppliers" subtitle="Newest accounts" onViewAll={() => router.push(supplierListRoute)}>
+        <Section title={t('reports.suppliers.section.recentlyAdded')} subtitle={t('reports.suppliers.subtitleSection.newestAccounts')} onViewAll={() => router.push(supplierListRoute)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Supplier</Text>
-              <Text style={[styles.th, styles.tdNum]}>Added</Text>
-              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.suppliers.field.supplier')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.suppliers.field.added')}</Text>
+              <Text style={[styles.th, styles.tdStatus]}>{t('reports.suppliers.field.status')}</Text>
             </View>
             {report.recentSuppliers.map((supplier) => {
               const active = supplier.isActive !== false;
@@ -587,7 +591,7 @@ export default function SupplierReportDashboardScreen() {
                   <View style={styles.tdWide}>
                     <Text style={styles.td} numberOfLines={1}>{supplier.supplierName}</Text>
                     <Text style={styles.tdSub} numberOfLines={1}>
-                      {[supplier.city, supplier.country].filter(Boolean).join(", ") || "No location"}
+                      {[supplier.city, supplier.country].filter(Boolean).join(", ") || t('reports.suppliers.labels.noLocation')}
                     </Text>
                   </View>
                   <Text style={[styles.td, styles.tdNum]}>
@@ -596,14 +600,14 @@ export default function SupplierReportDashboardScreen() {
                   <View style={styles.tdStatus}>
                     <View style={[styles.statusPill, { backgroundColor: active ? "#D1FAE5" : "#FEE2E2" }]}>
                       <Text style={[styles.statusText, { color: active ? "#047857" : "#B91C1C" }]}>
-                        {active ? "ACTIVE" : "INACTIVE"}
+                        {active ? t('reports.common.active') : t('reports.common.inactive')}
                       </Text>
                     </View>
                   </View>
                 </Pressable>
               );
             })}
-            {report.recentSuppliers.length === 0 ? <Text style={styles.empty}>No suppliers yet.</Text> : null}
+            {report.recentSuppliers.length === 0 ? <Text style={styles.empty}>{t('reports.suppliers.empty.noSuppliers')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

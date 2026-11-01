@@ -26,6 +26,7 @@ import { IProductService } from '@/services/productService';
 import { ISaleService } from '@/services/saleService';
 import { ShopServiceClient } from '@/services/shopService';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
@@ -59,6 +60,7 @@ function InputRow({ label, children, theme }: { label: string; children: React.R
 
 export default function DealerSaleScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/sales');
@@ -113,12 +115,12 @@ export default function DealerSaleScreen() {
       setDealer(dealerData);
       setProducts(productData);
     }).catch((error) => {
-      if (active) SnackBar.Error(error instanceof Error ? error.message : 'Unable to load sale options');
+      if (active) SnackBar.Error(error instanceof Error ? error.message : t('dealers.messages.unableLoadSaleOptions'));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [dealerId, permissionState, router]);
+  }, [dealerId, permissionState, router, t]);
 
   const subtotal = selectedProducts.reduce((sum, line) =>
     sum + (Number(line.quantity) || 0) * (line.product.salePrice ?? 0), 0,
@@ -135,11 +137,11 @@ export default function DealerSaleScreen() {
 
   const addProduct = (product: ProductItem) => {
     if ((product.currentStock ?? 0) <= 0) {
-      SnackBar.Error('This product is out of stock');
+      SnackBar.Error(t('dealers.messages.saleOutOfStock'));
       return;
     }
     if (selectedProducts.some((line) => line.product.id === product.id)) {
-      SnackBar.Error('This product is already in the sale');
+      SnackBar.Error(t('dealers.messages.saleAlreadyHasProduct'));
       return;
     }
     setSelectedProducts((current) => [...current, { product, quantity: '1' }]);
@@ -156,18 +158,18 @@ export default function DealerSaleScreen() {
     if (permissionState !== 'authorized') return;
     if (!dealerId) return;
     if (selectedProducts.length === 0) {
-      SnackBar.Error('Add at least one product');
+      SnackBar.Error(t('dealers.messages.saleNoProducts'));
       return;
     }
     if (selectedProducts.some((line) => {
       const quantity = Number(line.quantity);
       return !Number.isInteger(quantity) || quantity <= 0 || quantity > (line.product.currentStock ?? 0);
     })) {
-      SnackBar.Error('Enter valid quantities within available stock');
+      SnackBar.Error(t('dealers.messages.saleQuantityInvalid'));
       return;
     }
     if (numericDiscount > subtotal) {
-      SnackBar.Error('Discount cannot be greater than the subtotal.');
+      SnackBar.Error(t('dealers.messages.saleDiscountExceedsSubtotal'));
       return;
     }
 
@@ -183,10 +185,10 @@ export default function DealerSaleScreen() {
           quantity: Number(line.quantity),
         })),
       });
-      SnackBar.Success('Sale recorded successfully');
+      SnackBar.Success(t('dealers.messages.saleRecorded'));
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to record sale');
+      SnackBar.Error(error instanceof Error ? error.message : t('dealers.messages.saleFailed'));
     } finally {
       setSaving(false);
     }
@@ -199,33 +201,33 @@ export default function DealerSaleScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Sale to Dealer</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('dealers.sale.saleToDealer')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.sale.loading')}</Text>
         </View>
       ) : (
         <>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <ShopBanner
-              label="Selling from"
+              label={t('dealers.labels.sellingFrom')}
               name={shopName}
-              emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+              emptyText={shopLoaded ? t('dealers.sale.noShopSelected') : undefined}
             />
 
             <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Text style={styles.sectionTitle}>Dealer</Text>
+              <Text style={styles.sectionTitle}>{t('dealers.sale.dealer')}</Text>
               <View style={[styles.dealerRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={[styles.dealerIcon, { backgroundColor: theme.secondary }]}>
                   <Icon className="text-muted-foreground" as={Store} size={14} />
@@ -239,24 +241,24 @@ export default function DealerSaleScreen() {
             <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderInfo}>
-                  <Text style={styles.sectionTitle}>Items ({selectedProducts.length})</Text>
-                  <Text style={styles.helperText}>Stock is deducted after saving.</Text>
+                  <Text style={styles.sectionTitle}>{t('dealers.sale.items', { count: selectedProducts.length })}</Text>
+                  <Text style={styles.helperText}>{t('dealers.labels.stockDeducted')}</Text>
                 </View>
                 <Pressable
                   onPress={() => setPickerVisible(true)}
                   disabled={saving}
                   accessibilityRole="button"
-                  accessibilityLabel="Add product"
+                  accessibilityLabel={t('dealers.accessibility.addProduct')}
                   style={[styles.addButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 >
                   <Icon as={Plus} size={14} color={theme.primary} />
-                  <Text style={[styles.addButtonText, { color: theme.primary }]}>Add</Text>
+                  <Text style={[styles.addButtonText, { color: theme.primary }]}>{t('dealers.sale.add')}</Text>
                 </Pressable>
               </View>
 
               {selectedProducts.length === 0 ? (
                 <View style={styles.emptyProducts}>
-                  <Text style={styles.helperText}>No products added yet.</Text>
+                  <Text style={styles.helperText}>{t('dealers.empty.noProducts')}</Text>
                 </View>
               ) : selectedProducts.map(({ product, quantity }) => (
                 <View key={product.id} style={[styles.lineCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -267,12 +269,12 @@ export default function DealerSaleScreen() {
                     <View style={styles.productInfo}>
                       <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                       <Text style={styles.helperText} numberOfLines={1}>
-                        {money(product.salePrice ?? 0)} each · {product.currentStock ?? 0} available
+                        {money(product.salePrice ?? 0)} {t('dealers.labels.each')} · {t('dealers.labels.available', { count: product.currentStock ?? 0 })}
                       </Text>
                     </View>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove ${product.name}`}
+                      accessibilityLabel={t('dealers.accessibility.removeProduct', { name: product.name })}
                       onPress={() => setSelectedProducts((current) => current.filter((line) => line.product.id !== product.id))}
                       style={styles.removeButton}
                     >
@@ -280,7 +282,7 @@ export default function DealerSaleScreen() {
                     </Pressable>
                   </View>
                   <View style={[styles.quantityRow, { borderTopColor: theme.border }]}>
-                    <Text style={styles.qtyLabel}>Qty</Text>
+                    <Text style={styles.qtyLabel}>{t('dealers.fields.quantity')}</Text>
                     <Input
                       value={quantity}
                       onChangeText={(value) => updateQuantity(product.id, value)}
@@ -297,9 +299,9 @@ export default function DealerSaleScreen() {
             </View>
 
             <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Text style={styles.sectionTitle}>Summary</Text>
-              <SummaryRow label="Subtotal" value={money(subtotal)} theme={theme} />
-              <InputRow label="Discount" theme={theme}>
+              <Text style={styles.sectionTitle}>{t('dealers.fields.summary')}</Text>
+              <SummaryRow label={t('dealers.fields.subtotal')} value={money(subtotal)} theme={theme} />
+              <InputRow label={t('dealers.fields.discount')} theme={theme}>
                 <Input
                   value={discount}
                   onChangeText={setDiscount}
@@ -308,7 +310,7 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <InputRow label="Tax %" theme={theme}>
+              <InputRow label={t('dealers.fields.taxPercent')} theme={theme}>
                 <Input
                   value={taxRate}
                   onChangeText={setTaxRate}
@@ -317,10 +319,11 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <SummaryRow label="Tax Amount" value={money(taxAmount)} theme={theme} />
+              <SummaryRow label={t('dealers.fields.taxAmount')} value={money(taxAmount)} theme={theme} />
               <View style={[styles.divider, { backgroundColor: theme.border }]} />
-              <SummaryRow label="Net Total" value={money(netTotal)} strong theme={theme} />
-              <InputRow label="Paid" theme={theme}>
+              <SummaryRow label={t('dealers.fields.netTotal')} value={money(netTotal)} strong theme={theme} />
+              <SummaryRow label={t('dealers.fields.netTotal')} value={money(netTotal)} strong theme={theme} />
+              <InputRow label={t('dealers.fields.paid')} theme={theme}>
                 <Input
                   value={paidAmount}
                   onChangeText={setPaidAmount}
@@ -329,17 +332,17 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
+              <SummaryRow label={t('dealers.fields.balance')} value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
             </View>
           </ScrollView>
 
           <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
             <View style={styles.actionTotal}>
-              <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Net Total</Text>
+              <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('dealers.fields.netTotal')}</Text>
               <Text style={[styles.actionTotalValue, { color: theme.foreground }]} numberOfLines={1}>{money(netTotal)}</Text>
             </View>
             <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={[styles.saveButton, { backgroundColor: theme.primary }]}>
-              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Complete Sale</Text>}
+              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('dealers.actions.completeSale')}</Text>}
             </Button>
           </View>
         </>
@@ -351,7 +354,7 @@ export default function DealerSaleScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View style={[styles.productSheet, { backgroundColor: theme.card }]}>
               <View style={styles.sheetHeader}>
-                <Text className="text-foreground" style={styles.sheetTitle}>Choose Product</Text>
+                <Text className="text-foreground" style={styles.sheetTitle}>{t('dealers.sale.chooseProduct')}</Text>
                 <Button variant="ghost" onPress={() => setPickerVisible(false)} style={styles.closeButton}>
                   <Icon className="text-foreground" as={X} size={20} />
                 </Button>
@@ -361,7 +364,7 @@ export default function DealerSaleScreen() {
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Search products"
+                  placeholder={t('dealers.placeholders.products')}
                   placeholderTextColor={theme.mutedForeground}
                   style={[styles.searchInput, { color: theme.foreground }]}
                   autoCapitalize="none"
@@ -372,7 +375,7 @@ export default function DealerSaleScreen() {
                 data={filteredProducts}
                 keyExtractor={(product) => product.id}
                 keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>No products found.</Text>}
+                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>{t('dealers.empty.noProductsFound')}</Text>}
                 renderItem={({ item: product }) => {
                   const stock = product.currentStock ?? 0;
                   const added = selectedProducts.some((line) => line.product.id === product.id);
@@ -388,10 +391,10 @@ export default function DealerSaleScreen() {
                       <View style={styles.productOptionInfo}>
                         <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                         <Text className="text-muted-foreground" style={styles.helperText}>
-                          {money(product.salePrice ?? 0)} · {stock} in stock
+                          {money(product.salePrice ?? 0)} · {t('dealers.labels.inStock', { count: stock })}
                         </Text>
                       </View>
-                      {added ? <Text className="text-muted-foreground" style={styles.helperText}>Added</Text> : null}
+                      {added ? <Text className="text-muted-foreground" style={styles.helperText}>{t('dealers.labels.added')}</Text> : null}
                     </Pressable>
                   );
                 }}

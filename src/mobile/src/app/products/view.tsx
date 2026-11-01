@@ -29,6 +29,7 @@ import { IProductService } from "@/services/productService";
 import SnackBar from "@/components/ui/snack-bar";
 import Gallery from "@/components/gallery";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -55,6 +56,7 @@ function SummaryTile({ label, value, accent, theme, valueStyle }: SummaryTilePro
 
 export default function ProductViewScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -75,12 +77,12 @@ export default function ProductViewScreen() {
       const result = await productService.getProductById(productId);
       setProduct(result);
     } catch (error) {
-      SnackBar.Error("Failed to load product details");
+      SnackBar.Error(t('products.messages.detailsFailed'));
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [productId, router]);
+  }, [productId, router, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -110,13 +112,13 @@ export default function ProductViewScreen() {
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Product</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('products.fields.product')}</Text>
           <View style={styles.headerButton} />
         </View>
-        {permissionState === 'denied' ? <UnauthorizedView /> : (
+        {permissionState === 'denied' ? <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} /> : (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.loadingText, { color: theme.mutedForeground }]}>{permissionState === 'checking' ? 'Checking permission...' : 'Loading product...'}</Text>
+            <Text style={[styles.loadingText, { color: theme.mutedForeground }]}>{permissionState === 'checking' ? t('products.dashboard.checkingPermission') : t('products.dashboard.loading')}</Text>
           </View>
         )}
       </SafeAreaView>
@@ -127,13 +129,13 @@ export default function ProductViewScreen() {
   const isLowStock = (product.currentStock ?? 0) < (product.minimumStock ?? 0);
   const subtitle =
     [product.category, product.brand].filter(Boolean).join(" · ") ||
-    "No category";
+    t('products.empty.noCategory');
   const formatMoney = (amount: number | undefined) =>
     `${(amount ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} MMK`;
   const detailRows = [
-    { label: "Brand", value: product.brand || "-" },
-    { label: "Category", value: product.category || "-" },
-    { label: "Unit", value: product.unit || "-" },
+    { label: t('products.fields.brand'), value: product.brand || "-" },
+    { label: t('products.fields.category'), value: product.category || "-" },
+    { label: t('products.fields.unit'), value: product.unit || "-" },
   ];
 
   return (
@@ -148,10 +150,10 @@ export default function ProductViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Product</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('products.fields.product')}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Edit product"
+          accessibilityLabel={t('products.accessibility.editProduct')}
           onPress={() =>
             router.push({
               pathname: "/products/edit",
@@ -200,14 +202,14 @@ export default function ProductViewScreen() {
                     { color: isActive ? theme.chart2 : theme.destructive },
                   ]}
                 >
-                  {isActive ? "ACTIVE" : "INACTIVE"}
+                  {isActive ? t('products.status.active') : t('products.status.inactive')}
                 </Text>
               </View>
             </View>
           </View>
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Details</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('products.sections.details')}</Text>
         <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
           {detailRows.map((row, index) => (
             <View
@@ -225,24 +227,24 @@ export default function ProductViewScreen() {
           ))}
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Description</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('products.fields.description')}</Text>
         <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.descriptionText, { color: theme.foreground }]}>
-            {product.description || "No description provided"}
+            {product.description || t('products.empty.noDescription')}
           </Text>
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Inventory</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('products.fields.inventory')}</Text>
         <View style={[styles.kpiPanel, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.kpiCell}>
-            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>Sale Price</Text>
+            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>{t('products.fields.salePrice')}</Text>
             <Text style={[styles.kpiValue, { color: theme.foreground }]} numberOfLines={1}>
               {product.salePrice != null ? `${product.salePrice} MMK` : "0 MMK"}
             </Text>
           </View>
           <View style={[styles.kpiDivider, { backgroundColor: theme.border }]} />
           <View style={styles.kpiCell}>
-            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>Current Stock</Text>
+            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>{t('products.fields.currentStock')}</Text>
             <Text
               style={[
                 styles.kpiValue,
@@ -254,33 +256,33 @@ export default function ProductViewScreen() {
           </View>
           <View style={[styles.kpiDivider, { backgroundColor: theme.border }]} />
           <View style={styles.kpiCell}>
-            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>Minimum Stock</Text>
+            <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>{t('products.fields.minimumStock')}</Text>
             <Text style={[styles.kpiValue, { color: theme.foreground }]}>{product.minimumStock ?? 0}</Text>
           </View>
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Summary</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('products.sections.summary')}</Text>
         <View style={styles.kpiGrid}>
           <SummaryTile
-            label="Total Revenue"
+            label={t('products.fields.totalRevenue')}
             value={formatMoney(product.totalRevenue)}
             accent={{ borderTopColor: theme.chart1, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <SummaryTile
-            label="Total Orders"
+            label={t('products.fields.totalOrders')}
             value={(product.totalOrders ?? 0).toLocaleString("en-US")}
             accent={{ borderTopColor: theme.mutedForeground, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <SummaryTile
-            label="Units Sold"
+            label={t('products.fields.unitsSold')}
             value={(product.totalQuantitySold ?? 0).toLocaleString("en-US")}
             accent={{ borderTopColor: theme.chart2, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <SummaryTile
-            label="Current Stock"
+            label={t('products.fields.currentStock')}
             value={(product.currentStock ?? 0).toLocaleString("en-US")}
             accent={{ borderTopColor: isLowStock ? theme.chart4 : theme.chart2, backgroundColor: theme.secondary }}
             valueStyle={isLowStock ? { color: theme.chart4 } : undefined}
@@ -289,7 +291,7 @@ export default function ProductViewScreen() {
         </View>
 
         {otherImages.length > 0 ? (
-          <Gallery images={otherImages} title="Other Images" />
+          <Gallery images={otherImages} title={t('products.sections.otherImages')} />
         ) : null}
       </ScrollView>
     </SafeAreaView>

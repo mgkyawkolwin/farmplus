@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 
@@ -24,6 +25,7 @@ const PAGE_SIZE = 20;
 
 export default function RoleListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/roles/list');
@@ -42,7 +44,7 @@ export default function RoleListScreen() {
       setPage(nextPage);
     } catch {
       if (!append) setRoles([]);
-      SnackBar.Error('Failed to load roles');
+      SnackBar.Error(t('roles.messages.failedLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -60,18 +62,18 @@ export default function RoleListScreen() {
   );
 
   const deleteRole = (role: RoleItem) => {
-    Alert.alert('Delete role', `Delete ${role.role}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('roles.deleteTitle'), t('roles.deleteConfirmation', { role: role.role }), [
+      { text: t('roles.actions.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('roles.actions.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await roleService.deleteRole(role.id);
             setRoles((current) => current.filter((item) => item.id !== role.id));
-            SnackBar.Success('Role deleted successfully');
+            SnackBar.Success(t('roles.messages.deleted'));
           } catch {
-            SnackBar.Error('Failed to delete role');
+            SnackBar.Error(t('roles.messages.deleteFailed'));
           }
         },
       },
@@ -91,7 +93,7 @@ export default function RoleListScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Roles</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('roles.listTitle')}</Text>
         <Button
           variant="ghost"
           onPress={() => router.push('/roles/new' as Parameters<typeof router.push>[0])}
@@ -104,19 +106,19 @@ export default function RoleListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('roles.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && roles.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading roles...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('roles.loadingRoles')}</Text>
         </View>
       ) : roles.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text className="text-foreground" style={styles.stateTitle}>No roles found</Text>
-          <Text className="text-muted-foreground" style={styles.stateText}>Add a role to get started.</Text>
+          <Text className="text-foreground" style={styles.stateTitle}>{t('roles.emptyTitle')}</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('roles.emptyDescription')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -143,7 +145,7 @@ export default function RoleListScreen() {
               <Text className="text-foreground" style={styles.roleName} numberOfLines={1}>{role.role}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Edit ${role.role}`}
+                accessibilityLabel={t('roles.accessibility.editRole', { role: role.role })}
                 onPress={() => router.push(`/roles/edit?id=${encodeURIComponent(role.id)}` as Parameters<typeof router.push>[0])}
                 style={styles.iconButton}
               >
@@ -151,7 +153,7 @@ export default function RoleListScreen() {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Delete ${role.role}`}
+                accessibilityLabel={t('roles.accessibility.deleteRole', { role: role.role })}
                 onPress={() => deleteRole(role)}
                 style={styles.iconButton}
               >

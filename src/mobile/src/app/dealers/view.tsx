@@ -36,9 +36,11 @@ import { DealerServiceClient } from '@/services/dealerService';
 import SnackBar from '@/components/ui/snack-bar';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function DealerViewScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -60,12 +62,12 @@ export default function DealerViewScreen() {
       const result = await service.getDealerById(dealerId);
       setDealer(result);
     } catch (error) {
-      SnackBar.Error('Failed to load dealer details.');
+      SnackBar.Error(t('dealers.messages.detailsFailed'));
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [dealerId, router, service]);
+  }, [dealerId, router, service, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -82,14 +84,14 @@ export default function DealerViewScreen() {
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Dealer</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('dealers.fields.dealer')}</Text>
           <View style={styles.headerButton} />
         </View>
-        {permissionState === 'denied' ? <UnauthorizedView /> : (
+        {permissionState === 'denied' ? <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} /> : (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.loadingText}>
-              {permissionState === 'checking' ? 'Checking permission...' : 'Loading dealer...'}
+              {permissionState === 'checking' ? t('dealers.dashboard.checkingPermission') : t('dealers.dashboard.loading')}
             </Text>
           </View>
         )}
@@ -107,15 +109,15 @@ export default function DealerViewScreen() {
     .join(', ');
 
   const detailRows = [
-    { icon: Phone, label: 'Phone', value: dealer.phoneNumber || '-' },
-    { icon: Mail, label: 'Email', value: dealer.email || '-' },
-    { icon: MapPin, label: 'Address', value: location || '-' },
-    { icon: Globe, label: 'Country', value: dealer.country || '-' },
+    { icon: Phone, label: t('dealers.fields.phone'), value: dealer.phoneNumber || '-' },
+    { icon: Mail, label: t('dealers.fields.email'), value: dealer.email || '-' },
+    { icon: MapPin, label: t('dealers.fields.address'), value: location || '-' },
+    { icon: Globe, label: t('dealers.fields.country'), value: dealer.country || '-' },
   ];
 
   const initial = dealer.dealerName?.charAt(0).toUpperCase() || 'D';
   const subtitle =
-    [dealer.city, dealer.country].filter(Boolean).join(', ') || 'Dealer';
+    [dealer.city, dealer.country].filter(Boolean).join(', ') || t('dealers.fields.dealer');
   const recentSales = dealer.recentSales ?? [];
   const recentPayments = dealer.recentPayments ?? [];
   const formatMoney = (amount: number | undefined) =>
@@ -134,7 +136,7 @@ export default function DealerViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Dealer</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('dealers.fields.dealer')}</Text>
         <Button
           variant="ghost"
           onPress={() =>
@@ -181,7 +183,7 @@ export default function DealerViewScreen() {
                   { color: dealer.isActive ? theme.chart2 : theme.destructive },
                 ]}
               >
-                {dealer.isActive ? 'ACTIVE' : 'INACTIVE'}
+                {dealer.isActive ? t('dealers.labels.active') : t('dealers.labels.inactive')}
               </Text>
             </View>
           </View>
@@ -198,10 +200,10 @@ export default function DealerViewScreen() {
           disabled={!dealer.isActive}
         >
           <Icon as={ShoppingCart} size={16} color={theme.primaryForeground} />
-          <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Sale</Text>
+          <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('dealers.sale.title')}</Text>
         </Button>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Contact & Location</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('dealers.sections.contactLocation')}</Text>
         <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           {detailRows.map((row, index) => (
             <View
@@ -228,28 +230,28 @@ export default function DealerViewScreen() {
           ))}
         </View>
 
-        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Summary</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('dealers.fields.summary')}</Text>
         <View style={styles.kpiGrid}>
           <KpiTile
-            label="Total Sales"
+            label={t('dealers.fields.totalSales')}
             value={formatMoney(dealer.totalSales)}
             accent={{ borderTopColor: theme.chart1, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <KpiTile
-            label="Total Orders"
+            label={t('dealers.fields.totalOrders')}
             value={(dealer.totalOrders ?? 0).toLocaleString('en-US')}
             accent={{ borderTopColor: theme.mutedForeground, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <KpiTile
-            label="Total Paid"
+            label={t('dealers.fields.totalPaid')}
             value={formatMoney(dealer.totalPaid)}
             accent={{ borderTopColor: theme.chart2, backgroundColor: theme.secondary }}
             theme={theme}
           />
           <KpiTile
-            label="Outstanding"
+            label={t('dealers.fields.outstanding')}
             value={formatMoney(dealer.totalOutstanding)}
             accent={{ borderTopColor: owesBalance ? theme.chart4 : theme.chart2, backgroundColor: theme.secondary }}
             valueStyle={owesBalance ? { color: theme.chart4 } : undefined}
@@ -258,7 +260,7 @@ export default function DealerViewScreen() {
         </View>
 
         <View style={styles.sectionHeadingRow}>
-          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Sales</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('dealers.sections.recentSales')}</Text>
           <Button
             variant="ghost"
             style={styles.viewAllButton}
@@ -269,15 +271,15 @@ export default function DealerViewScreen() {
               } as Parameters<typeof router.push>[0])
             }
           >
-            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>{t('dealers.actions.viewAll')}</Text>
             <Icon as={ChevronRight} size={14} color={theme.primary} />
           </Button>
         </View>
         <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
           <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
-            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
-            <Text style={[styles.headerCell, styles.amountCol]}>Total</Text>
-            <Text style={[styles.headerCell, styles.amountCol]}>Balance</Text>
+            <Text style={[styles.headerCell, styles.dateCol]}>{t('dealers.fields.date')}</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>{t('dealers.fields.total')}</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>{t('dealers.fields.balance')}</Text>
           </View>
           {recentSales.map((sale) => (
             <Pressable
@@ -306,12 +308,12 @@ export default function DealerViewScreen() {
             </Pressable>
           ))}
           {recentSales.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No sales recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>{t('dealers.empty.noSalesRecorded')}</Text>
           ) : null}
         </View>
 
         <View style={styles.sectionHeadingRow}>
-          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Payments</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>{t('dealers.sections.recentPayments')}</Text>
           <Button
             variant="ghost"
             style={styles.viewAllButton}
@@ -322,15 +324,15 @@ export default function DealerViewScreen() {
               } as Parameters<typeof router.push>[0])
             }
           >
-            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>{t('dealers.actions.viewAll')}</Text>
             <Icon as={ChevronRight} size={14} color={theme.primary} />
           </Button>
         </View>
         <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
           <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
-            <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
-            <Text style={[styles.headerCell, styles.amountCol]}>Amount</Text>
-            <Text style={[styles.headerCell, styles.amountCol]}>Balance After</Text>
+            <Text style={[styles.headerCell, styles.dateCol]}>{t('dealers.fields.date')}</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>{t('dealers.fields.amount')}</Text>
+            <Text style={[styles.headerCell, styles.amountCol]}>{t('dealers.fields.balanceAfter')}</Text>
           </View>
           {recentPayments.map((payment) => (
             <Pressable
@@ -356,7 +358,7 @@ export default function DealerViewScreen() {
             </Pressable>
           ))}
           {recentPayments.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No payments recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>{t('dealers.empty.noPaymentsRecorded')}</Text>
           ) : null}
         </View>
       </ScrollView>

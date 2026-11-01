@@ -26,6 +26,7 @@ import { ICustomerService } from '@/services/customerService';
 import { IProductService } from '@/services/productService';
 import { ISaleService } from '@/services/saleService';
 import { ShopServiceClient } from '@/services/shopService';
+import { useTranslation } from 'react-i18next';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
@@ -61,6 +62,7 @@ function InputRow({ label, children, theme }: { label: string; children: React.R
 
 export default function NewSaleScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/new');
@@ -111,12 +113,12 @@ export default function NewSaleScreen() {
       setCustomers(customerData);
       setProducts(productData);
     }).catch((error) => {
-      if (active) SnackBar.Error(error instanceof Error ? error.message : 'Unable to load sale options');
+      if (active) SnackBar.Error(error instanceof Error ? error.message : t('sales.messages.failedLoadOptions'));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [permissionState]);
+  }, [permissionState, t]);
 
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
   const subtotal = selectedProducts.reduce((sum, line) =>
@@ -143,11 +145,11 @@ export default function NewSaleScreen() {
 
   const addProduct = (product: ProductItem) => {
     if ((product.currentStock ?? 0) <= 0) {
-      SnackBar.Error('This product is out of stock');
+      SnackBar.Error(t('sales.messages.outOfStock'));
       return;
     }
     if (selectedProducts.some((line) => line.product.id === product.id)) {
-      SnackBar.Error('This product is already in the sale');
+      SnackBar.Error(t('sales.messages.productAlreadyAdded'));
       return;
     }
     setSelectedProducts((current) => [...current, { product, quantity: '1' }]);
@@ -163,18 +165,18 @@ export default function NewSaleScreen() {
   const submitSale = async () => {
     if (permissionState !== 'authorized') return;
     if (selectedProducts.length === 0) {
-      SnackBar.Error('Add at least one product');
+      SnackBar.Error(t('sales.messages.addProductsRequired'));
       return;
     }
     if (selectedProducts.some((line) => {
       const quantity = Number(line.quantity);
       return !Number.isInteger(quantity) || quantity <= 0 || quantity > (line.product.currentStock ?? 0);
     })) {
-      SnackBar.Error('Enter valid quantities within available stock');
+      SnackBar.Error(t('sales.messages.invalidQuantities'));
       return;
     }
     if (numericDiscount > subtotal) {
-      SnackBar.Error('Discount cannot be greater than the subtotal.');
+      SnackBar.Error(t('sales.messages.discountExceedsSubtotal'));
       return;
     }
 
@@ -190,10 +192,10 @@ export default function NewSaleScreen() {
           quantity: Number(line.quantity),
         })),
       });
-      SnackBar.Success('Sale recorded successfully');
+      SnackBar.Success(t('sales.messages.saleRecorded'));
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to record sale');
+      SnackBar.Error(error instanceof Error ? error.message : t('sales.messages.failedRecord'));
     } finally {
       setSaving(false);
     }
@@ -206,44 +208,44 @@ export default function NewSaleScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>New Sale</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('sales.actions.new')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('sales.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('sales.unauthorized.title')} message={t('sales.unauthorized.description')} />
       ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('sales.dashboard.loadingOptions')}</Text>
         </View>
       ) : (
         <>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <ShopBanner
-            label="Selling from"
+            label={t('sales.shop.sellingFrom')}
             name={shopName}
-            emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
+            emptyText={shopLoaded ? t('sales.shop.noShopSelectedFirst') : undefined}
           />
 
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Customer</Text>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>{t('sales.fields.customer')}</Text>
             <Pressable
               onPress={() => setCustomerPickerVisible(true)}
               style={[styles.customerSelector, { backgroundColor: theme.card, borderColor: theme.border }]}
               accessibilityRole="button"
-              accessibilityLabel="Choose customer"
+              accessibilityLabel={t('sales.accessibility.chooseCustomer')}
             >
               <View style={[styles.customerSelectorIcon, { backgroundColor: theme.secondary }]}>
                 <Icon className="text-muted-foreground" as={User} size={14} />
               </View>
               <Text className="text-foreground" style={styles.customerSelectorText} numberOfLines={1}>
-                {selectedCustomer ? selectedCustomer.name : 'Walk-in Customer'}
+                {selectedCustomer ? selectedCustomer.name : t('sales.picker.walkInCustomer')}
               </Text>
               <Icon className="text-muted-foreground" as={ChevronDown} size={16} />
             </Pressable>
@@ -252,24 +254,24 @@ export default function NewSaleScreen() {
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderInfo}>
-                <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items ({selectedProducts.length})</Text>
-                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>Stock is deducted after saving.</Text>
+                <Text style={[styles.sectionTitle, { color: theme.foreground }]}>{t('sales.sections.items')} ({selectedProducts.length})</Text>
+                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>{t('sales.labels.stockDeducted')}</Text>
               </View>
               <Pressable
                 onPress={() => setPickerVisible(true)}
                 disabled={saving}
                 accessibilityRole="button"
-                accessibilityLabel="Add product"
+                accessibilityLabel={t('sales.accessibility.addProduct')}
                 style={[styles.addButton, { borderColor: theme.chart2, backgroundColor: theme.secondary }]}
               >
                 <Icon as={Plus} size={14} color={theme.chart2} />
-                <Text style={[styles.addButtonText, { color: theme.chart2 }]}>Add</Text>
+                <Text style={[styles.addButtonText, { color: theme.chart2 }]}>{t('sales.actions.add')}</Text>
               </Pressable>
             </View>
 
             {selectedProducts.length === 0 ? (
               <View style={[styles.emptyProducts, { borderColor: theme.border }]}>
-                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>No products added yet.</Text>
+                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>{t('sales.empty.noProductsAdded')}</Text>
               </View>
             ) : selectedProducts.map(({ product, quantity }) => (
               <View key={product.id} style={[styles.lineCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -280,12 +282,12 @@ export default function NewSaleScreen() {
                   <View style={styles.productInfo}>
                     <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                     <Text style={[styles.helperText, { color: theme.mutedForeground }]} numberOfLines={1}>
-                      {money(product.salePrice ?? 0)} each · {product.currentStock ?? 0} available
+                      {money(product.salePrice ?? 0)} {t('sales.labels.each')} · {t('sales.labels.available', { count: product.currentStock ?? 0 })}
                     </Text>
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Remove ${product.name}`}
+                    accessibilityLabel={t('sales.accessibility.removeProduct', { name: product.name })}
                     onPress={() => setSelectedProducts((current) => current.filter((line) => line.product.id !== product.id))}
                     style={styles.removeButton}
                   >
@@ -293,7 +295,7 @@ export default function NewSaleScreen() {
                   </Pressable>
                 </View>
                 <View style={[styles.quantityRow, { borderTopColor: theme.border }]}>
-                  <Text style={[styles.qtyLabel, { color: theme.mutedForeground }]}>Qty</Text>
+                  <Text style={[styles.qtyLabel, { color: theme.mutedForeground }]}>{t('sales.fields.quantity')}</Text>
                   <Input
                     value={quantity}
                     onChangeText={(value) => updateQuantity(product.id, value)}
@@ -310,9 +312,9 @@ export default function NewSaleScreen() {
           </View>
 
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Summary</Text>
-            <SummaryRow label="Subtotal" value={money(subtotal)} theme={theme} />
-            <InputRow label="Discount" theme={theme}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>{t('sales.fields.summary')}</Text>
+            <SummaryRow label={t('sales.fields.subtotal')} value={money(subtotal)} theme={theme} />
+            <InputRow label={t('sales.fields.discount')} theme={theme}>
               <Input
                 value={discount}
                 onChangeText={setDiscount}
@@ -321,7 +323,7 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <InputRow label="Tax %" theme={theme}>
+            <InputRow label={t('sales.fields.taxPercent')} theme={theme}>
               <Input
                 value={taxRate}
                 onChangeText={setTaxRate}
@@ -330,10 +332,10 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <SummaryRow label="Tax Amount" value={money(taxAmount)} theme={theme} />
+            <SummaryRow label={t('sales.fields.taxAmount')} value={money(taxAmount)} theme={theme} />
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <SummaryRow label="Net Total" value={money(netTotal)} strong theme={theme} />
-            <InputRow label="Paid" theme={theme}>
+            <SummaryRow label={t('sales.fields.netTotal')} value={money(netTotal)} strong theme={theme} />
+            <InputRow label={t('sales.fields.paid')} theme={theme}>
               <Input
                 value={paidAmount}
                 onChangeText={setPaidAmount}
@@ -342,17 +344,17 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
+            <SummaryRow label={t('sales.fields.balance')} value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
           </View>
         </ScrollView>
 
         <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
           <View style={styles.actionTotal}>
-            <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Net Total</Text>
+            <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('sales.fields.netTotal')}</Text>
             <Text style={[styles.actionTotalValue, { color: theme.foreground }]} numberOfLines={1}>{money(netTotal)}</Text>
           </View>
           <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={styles.saveButton}>
-            {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">Complete Sale</Text>}
+            {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">{t('sales.actions.completeSale')}</Text>}
           </Button>
         </View>
         </>
@@ -366,7 +368,7 @@ export default function NewSaleScreen() {
               {customerPickerStage === 'choice' ? (
                 <>
                   <View style={styles.sheetHeader}>
-                    <Text className="text-foreground" style={styles.sheetTitle}>Customer</Text>
+                    <Text className="text-foreground" style={styles.sheetTitle}>{t('sales.picker.customer')}</Text>
                     <Button variant="ghost" onPress={closeCustomerPicker} style={styles.closeButton}>
                       <Icon className="text-foreground" as={X} size={20} />
                     </Button>
@@ -379,14 +381,14 @@ export default function NewSaleScreen() {
                     }}
                     style={[styles.customerChoiceRow, { backgroundColor: theme.card, borderColor: theme.border }]}
                   >
-                    <Text className="text-foreground" style={styles.customerChoiceText}>Walk-in Customer</Text>
+                    <Text className="text-foreground" style={styles.customerChoiceText}>{t('sales.picker.walkInCustomer')}</Text>
                   </Pressable>
 
                   <Pressable
                     onPress={() => setCustomerPickerStage('list')}
                     style={[styles.customerChoiceRow, { backgroundColor: theme.card, borderColor: theme.border }]}
                   >
-                    <Text className="text-foreground" style={styles.customerChoiceText}>Choose Customer</Text>
+                    <Text className="text-foreground" style={styles.customerChoiceText}>{t('sales.picker.chooseCustomer')}</Text>
                   </Pressable>
                 </>
               ) : (
@@ -395,7 +397,7 @@ export default function NewSaleScreen() {
                     <Button variant="ghost" onPress={() => setCustomerPickerStage('choice')} style={styles.closeButton}>
                       <Icon className="text-foreground" as={ChevronLeft} size={20} />
                     </Button>
-                    <Text className="text-foreground" style={styles.sheetTitle}>Choose Customer</Text>
+                    <Text className="text-foreground" style={styles.sheetTitle}>{t('sales.picker.chooseCustomer')}</Text>
                     <Button variant="ghost" onPress={closeCustomerPicker} style={styles.closeButton}>
                       <Icon className="text-foreground" as={X} size={20} />
                     </Button>
@@ -406,7 +408,7 @@ export default function NewSaleScreen() {
                     <TextInput
                       value={customerSearch}
                       onChangeText={setCustomerSearch}
-                      placeholder="Search customers"
+                      placeholder={t('sales.picker.searchCustomers')}
                       placeholderTextColor={theme.mutedForeground}
                       style={[styles.searchInput, { color: theme.foreground }]}
                       autoCapitalize="none"
@@ -418,7 +420,7 @@ export default function NewSaleScreen() {
                     data={filteredCustomers}
                     keyExtractor={(item) => item.id}
                     keyboardShouldPersistTaps="handled"
-                    ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>No customers found.</Text>}
+                    ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>{t('sales.empty.noCustomersFound')}</Text>}
                     renderItem={({ item: customer }) => (
                       <Pressable
                         onPress={() => {
@@ -440,7 +442,7 @@ export default function NewSaleScreen() {
                         <View style={styles.customerOptionInfo}>
                           <Text className="text-foreground" style={styles.customerNameText} numberOfLines={1}>{customer.name}</Text>
                           <Text className="text-muted-foreground" style={styles.helperText}>
-                            {customer.phone || 'No phone'}
+                            {customer.phone || t('sales.empty.noCustomerPhone')}
                           </Text>
                         </View>
                       </Pressable>
@@ -459,7 +461,7 @@ export default function NewSaleScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View className="bg-background" style={styles.productSheet}>
               <View style={styles.sheetHeader}>
-                <Text className="text-foreground" style={styles.sheetTitle}>Choose Product</Text>
+                <Text className="text-foreground" style={styles.sheetTitle}>{t('sales.picker.chooseProduct')}</Text>
                 <Button variant="ghost" onPress={() => setPickerVisible(false)} style={styles.closeButton}>
                   <Icon className="text-foreground" as={X} size={20} />
                 </Button>
@@ -469,7 +471,7 @@ export default function NewSaleScreen() {
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Search products"
+                  placeholder={t('sales.picker.searchProducts')}
                   placeholderTextColor={theme.mutedForeground}
                   style={[styles.searchInput, { color: theme.foreground }]}
                   autoCapitalize="none"
@@ -480,7 +482,7 @@ export default function NewSaleScreen() {
                 data={filteredProducts}
                 keyExtractor={(product) => product.id}
                 keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>No products found.</Text>}
+                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>{t('sales.empty.noProductsFound')}</Text>}
                 renderItem={({ item: product }) => {
                   const stock = product.currentStock ?? 0;
                   const added = selectedProducts.some((line) => line.product.id === product.id);
@@ -496,10 +498,10 @@ export default function NewSaleScreen() {
                       <View style={styles.productOptionInfo}>
                         <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                         <Text className="text-muted-foreground" style={styles.helperText}>
-                          {money(product.salePrice ?? 0)} · {stock} in stock
+                          {money(product.salePrice ?? 0)} · {t('sales.labels.inStock', { count: stock })}
                         </Text>
                       </View>
-                      {added ? <Text className="text-muted-foreground" style={styles.helperText}>Added</Text> : null}
+                      {added ? <Text className="text-muted-foreground" style={styles.helperText}>{t('sales.labels.added')}</Text> : null}
                     </Pressable>
                   );
                 }}

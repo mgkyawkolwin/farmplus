@@ -46,6 +46,7 @@ import { IProductService } from "@/services/productService";
 import { useSelectedShopChanged } from "@/lib/selectedShop";
 import { THEME } from "@/lib/theme";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -110,6 +111,7 @@ function Section({
   theme: ThemeColors;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const colors = getColors(theme);
   return (
     <View>
@@ -120,7 +122,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={[styles.seeAllText, { color: colors.green }]}>View all</Text>
+            <Text style={[styles.seeAllText, { color: colors.green }]}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={colors.green} />
           </Pressable>
         ) : null}
@@ -177,6 +179,7 @@ type MovementTypeStats = { name: string; quantity: number; events: number };
 
 export default function InventoryReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
   const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
   const colors = getColors(theme);
@@ -203,13 +206,13 @@ export default function InventoryReportDashboardScreen() {
     ]);
 
     if (productResult.status === "rejected" && movementResult.status === "rejected") {
-      SnackBar.Error("Unable to load inventory report");
+      SnackBar.Error(t('reports.common.loadFailed'));
     }
     setProducts(productResult.status === "fulfilled" ? productResult.value : []);
     setMovements(movementResult.status === "fulfilled" ? movementResult.value : []);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -245,7 +248,7 @@ export default function InventoryReportDashboardScreen() {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
       return {
         key: monthKey(date),
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+        label: date.toLocaleDateString(i18n.language, { month: "short" }),
         stockIn: 0,
         stockOut: 0,
         transferIn: 0,
@@ -343,17 +346,25 @@ export default function InventoryReportDashboardScreen() {
       movementsLast30,
       newProductsLast30,
     };
-  }, [movements, products]);
+  }, [movements, products, i18n.language]);
 
   const otherCategoryValue = Math.max(report.stockValue - report.categories.slice(0, 5).reduce((sum, item) => sum + item.value, 0), 0);
   const categorySlices = [
     ...report.categories.slice(0, 5).map((category, index) => ({
-      label: category.name,
+      label: category.name === 'Uncategorized' ? t('reports.inventory.labels.uncategorized') : category.name,
       value: category.value,
       color: [colors.green, colors.blue, colors.amber, colors.purple, colors.red][index],
     })),
-    ...(otherCategoryValue > 0 ? [{ label: "Other", value: otherCategoryValue, color: colors.slate }] : []),
+    ...(otherCategoryValue > 0 ? [{ label: t('reports.inventory.chart.other'), value: otherCategoryValue, color: colors.slate }] : []),
   ];
+  const movementLabel = (type: string) => {
+    const normalized = type.toLowerCase();
+    if (normalized.includes('transfer')) return t('reports.inventory.movement.transfer');
+    if (normalized.includes('damage')) return t('reports.inventory.movement.damage');
+    if (normalized.includes('stock-in') || normalized.includes('stock in')) return t('reports.inventory.movement.stockIn');
+    if (normalized.includes('stock-out') || normalized.includes('stock out')) return t('reports.inventory.movement.stockOut');
+    return type;
+  };
   const stockListRoute = "/inventory/list" as Href;
   const openProduct = (id: string) => router.push({ pathname: "/inventory/view", params: { id } } as Href);
 
@@ -364,14 +375,14 @@ export default function InventoryReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Inventory Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.inventory.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color={colors.green} /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color={colors.green} /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {
@@ -380,80 +391,80 @@ export default function InventoryReportDashboardScreen() {
         }} />}
       >
         <View>
-          <Text style={[styles.eyebrow, { color: colors.green }]}>Inventory analytics</Text>
-          <Text style={[styles.title, { color: colors.ink }]}>Inventory overview</Text>
+          <Text style={[styles.eyebrow, { color: colors.green }]}>{t('reports.inventory.eyebrow')}</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>{t('reports.inventory.overview')}</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
-            {count(products.length)} SKUs · current stock and movements for the selected shop when active
+            {t('reports.inventory.subtitle', { count: count(products.length) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Stock on hand" value={count(report.stockUnits)} caption="Units across all products" icon={Boxes} tone="green" theme={theme} />
-          <Kpi label="Stock value" value={money(report.stockValue)} caption="At current sale price" icon={Wallet} tone="blue" theme={theme} />
-          <Kpi label="Active products" value={count(report.activeProducts)} caption={`${count(products.length - report.activeProducts)} inactive`} icon={Package} tone="green" theme={theme} />
-          <Kpi label="Low stock SKUs" value={count(report.lowStockProducts.length)} caption="At or below minimum" icon={AlertTriangle} tone={report.lowStockProducts.length > 0 ? "amber" : "green"} theme={theme} />
-          <Kpi label="Out of stock" value={count(report.outOfStockProducts.length)} caption="SKUs at zero" icon={AlertTriangle} tone={report.outOfStockProducts.length > 0 ? "red" : "green"} theme={theme} />
-          <Kpi label="Stock in" value={count(report.stockIn)} caption="Units in movement history" icon={TrendingUp} tone="green" theme={theme} />
-          <Kpi label="Stock out" value={count(report.stockOut)} caption="Units out, excluding transfers" icon={TrendingDown} tone="amber" theme={theme} />
-          <Kpi label="Transfer movement" value={count(report.transferUnits)} caption="Units moved between shops" icon={Repeat} tone="blue" theme={theme} />
-          <Kpi label="Damage recorded" value={count(report.damageUnits)} caption="Units written off" icon={AlertTriangle} tone={report.damageUnits > 0 ? "red" : "green"} theme={theme} />
-          <Kpi label="Events · 30 days" value={count(report.movementsLast30)} caption={`${count(report.newProductsLast30)} new SKUs`} icon={CalendarDays} tone="blue" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.stockOnHand')} value={count(report.stockUnits)} caption={t('reports.inventory.caption.unitsAllProducts')} icon={Boxes} tone="green" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.stockValue')} value={money(report.stockValue)} caption={t('reports.inventory.caption.atSalePrice')} icon={Wallet} tone="blue" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.activeProducts')} value={count(report.activeProducts)} caption={t('reports.inventory.caption.inactive', { count: count(products.length - report.activeProducts) })} icon={Package} tone="green" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.lowStock')} value={count(report.lowStockProducts.length)} caption={t('reports.inventory.caption.atOrBelowMinimum')} icon={AlertTriangle} tone={report.lowStockProducts.length > 0 ? "amber" : "green"} theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.outOfStock')} value={count(report.outOfStockProducts.length)} caption={t('reports.inventory.caption.skusAtZero')} icon={AlertTriangle} tone={report.outOfStockProducts.length > 0 ? "red" : "green"} theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.stockIn')} value={count(report.stockIn)} caption={t('reports.inventory.caption.unitsMovementHistory')} icon={TrendingUp} tone="green" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.stockOut')} value={count(report.stockOut)} caption={t('reports.inventory.caption.unitsExcludingTransfers')} icon={TrendingDown} tone="amber" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.transfer')} value={count(report.transferUnits)} caption={t('reports.inventory.caption.unitsMovedBetweenShops')} icon={Repeat} tone="blue" theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.damage')} value={count(report.damageUnits)} caption={t('reports.inventory.caption.unitsWrittenOff')} icon={AlertTriangle} tone={report.damageUnits > 0 ? "red" : "green"} theme={theme} />
+          <Kpi label={t('reports.inventory.kpi.events30')} value={count(report.movementsLast30)} caption={t('reports.inventory.caption.newSkus', { count: count(report.newProductsLast30) })} icon={CalendarDays} tone="blue" theme={theme} />
         </View>
 
-        <Section title="Stock movement trend" subtitle="Last 12 months · units in vs out, excluding transfers" theme={theme}>
+        <Section title={t('reports.inventory.section.movementTrend')} subtitle={t('reports.inventory.subtitleSection.movementTrend')} theme={theme}>
           <LineChart
             labels={report.monthly.map((month) => month.label)}
             series={[
-              { name: "Stock in", color: colors.green, values: report.monthly.map((month) => month.stockIn) },
-              { name: "Stock out", color: colors.amber, values: report.monthly.map((month) => month.stockOut) },
+              { name: t('reports.inventory.series.stockIn'), color: colors.green, values: report.monthly.map((month) => month.stockIn) },
+              { name: t('reports.inventory.series.stockOut'), color: colors.amber, values: report.monthly.map((month) => month.stockOut) },
             ]}
           />
         </Section>
 
-        <Section title="Movement events" subtitle="Recorded movement count by month" theme={theme}>
+        <Section title={t('reports.inventory.section.movementEvents')} subtitle={t('reports.inventory.subtitleSection.eventCount')} theme={theme}>
           <BarChart
             data={report.monthly.map((month) => ({ label: month.label, values: [month.events] }))}
-            series={[{ name: "Movement events", color: colors.blue }]}
+            series={[{ name: t('reports.inventory.series.movementEvents'), color: colors.blue }]}
             height={160}
           />
         </Section>
 
-        <Section title="Stock health" subtitle="Current SKU availability" theme={theme}>
+        <Section title={t('reports.inventory.section.stockHealth')} subtitle={t('reports.inventory.subtitleSection.currentSku')} theme={theme}>
           <DonutChart
-            centerLabel="Products"
+            centerLabel={t('reports.inventory.chart.products')}
             centerValue={count(products.length)}
             slices={[
-              { label: "Healthy", value: report.healthyStock, color: colors.green },
-              { label: "Low stock", value: report.lowStockProducts.length, color: colors.amber },
-              { label: "Out of stock", value: report.outOfStockProducts.length, color: colors.red },
+              { label: t('reports.inventory.chart.healthy'), value: report.healthyStock, color: colors.green },
+              { label: t('reports.inventory.chart.lowStock'), value: report.lowStockProducts.length, color: colors.amber },
+              { label: t('reports.inventory.chart.outOfStock'), value: report.outOfStockProducts.length, color: colors.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Inventory value by category" subtitle="Current stock × current sale price" theme={theme}>
+        <Section title={t('reports.inventory.section.categoryValue')} subtitle={t('reports.inventory.subtitleSection.currentValue')} theme={theme}>
           <DonutChart
-            centerLabel="Stock value"
+            centerLabel={t('reports.inventory.chart.stockValue')}
             centerValue={compactNumber(report.stockValue)}
             slices={categorySlices}
             formatValue={money}
           />
         </Section>
 
-        <Section title="Movement type" subtitle="Units represented by recorded event type" theme={theme}>
+        <Section title={t('reports.inventory.section.movementType')} subtitle={t('reports.inventory.subtitleSection.unitsByType')} theme={theme}>
           <RankedBars
             items={report.typeStats.slice(0, 8).map((type) => ({
-              label: type.name,
+              label: movementLabel(type.name),
               value: type.quantity,
               caption: `${count(type.events)} events`,
             }))}
             color={colors.purple}
             formatValue={count}
-            emptyText="No stock movements recorded."
+            emptyText={t('reports.inventory.empty.noMovements')}
           />
         </Section>
 
-        <Section title="Products with most movement" subtitle="Absolute units moved" theme={theme}>
+        <Section title={t('reports.inventory.section.mostMovement')} subtitle={t('reports.inventory.subtitleSection.absoluteUnits')} theme={theme}>
           <RankedBars
             items={report.topProducts.map((product) => ({
               label: product.name,
@@ -462,40 +473,40 @@ export default function InventoryReportDashboardScreen() {
             }))}
             color={colors.blue}
             formatValue={count}
-            emptyText="No stock movements recorded."
+            emptyText={t('reports.inventory.empty.noMovements')}
           />
         </Section>
 
-        <Section title="Reorder attention" subtitle="Out-of-stock or at/below minimum" onViewAll={() => router.push(stockListRoute)} theme={theme}>
+        <Section title={t('reports.inventory.section.reorderAttention')} subtitle={t('reports.inventory.subtitleSection.reorder')} onViewAll={() => router.push(stockListRoute)} theme={theme}>
           <View style={[styles.table, { borderColor: theme.border }]}>
             <View style={[styles.tableHeader, { backgroundColor: theme.secondary }]}>
-              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>Stock</Text>
-              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Minimum</Text>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>{t('reports.inventory.field.product')}</Text>
+              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>{t('reports.inventory.field.stock')}</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>{t('reports.inventory.field.minimum')}</Text>
             </View>
             {report.outOfStockProducts.concat(report.lowStockProducts).slice(0, 8).map((product) => (
               <Pressable key={product.id} style={[styles.tableRow, { borderTopColor: theme.border }]} onPress={() => openProduct(product.id)}>
                 <View style={styles.tdWide}>
                   <Text style={[styles.td, { color: colors.ink }]} numberOfLines={1}>{product.name}</Text>
-                  <Text style={[styles.tdSub, { color: colors.muted }]} numberOfLines={1}>{product.category || "Uncategorized"}</Text>
+                  <Text style={[styles.tdSub, { color: colors.muted }]} numberOfLines={1}>{product.category || t('reports.inventory.labels.uncategorized')}</Text>
                 </View>
                 <Text style={[styles.td, styles.tdSmall, { color: colors.amber, fontWeight: "700" }]}>{count(product.currentStock ?? 0)}</Text>
                 <Text style={[styles.td, styles.tdNum, { color: colors.ink }]}>{count(product.minimumStock ?? 0)}</Text>
               </Pressable>
             ))}
             {report.outOfStockProducts.length + report.lowStockProducts.length === 0 ? (
-              <Text style={[styles.empty, { color: colors.muted }]}>All products are above minimum stock.</Text>
+              <Text style={[styles.empty, { color: colors.muted }]}>{t('reports.inventory.empty.aboveMinimum')}</Text>
             ) : null}
           </View>
         </Section>
 
-        <Section title="Recent stock movements" subtitle="Latest selected-shop events" theme={theme}>
+        <Section title={t('reports.inventory.section.recentMovements')} subtitle={t('reports.inventory.subtitleSection.latestEvents')} theme={theme}>
           <View style={[styles.table, { borderColor: theme.border }]}>
             <View style={[styles.tableHeader, { backgroundColor: theme.secondary }]}>
-              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>Type</Text>
-              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Qty</Text>
-              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Date</Text>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>{t('reports.inventory.field.product')}</Text>
+              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>{t('reports.inventory.field.type')}</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>{t('reports.inventory.field.quantity')}</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>{t('reports.inventory.field.date')}</Text>
             </View>
             {report.recentMovements.map((movement) => (
               <Pressable key={movement.id} style={[styles.tableRow, { borderTopColor: theme.border }]} onPress={() => openProduct(movement.productId)}>
@@ -503,7 +514,7 @@ export default function InventoryReportDashboardScreen() {
                   <Text style={[styles.td, { color: colors.ink }]} numberOfLines={1}>{movement.productName}</Text>
                   <Text style={[styles.tdSub, { color: colors.muted }]} numberOfLines={1}>{movement.shopName}</Text>
                 </View>
-                <Text style={[styles.td, styles.tdSmall, { color: colors.ink }]} numberOfLines={1}>{movement.type}</Text>
+                <Text style={[styles.td, styles.tdSmall, { color: colors.ink }]} numberOfLines={1}>{movementLabel(movement.type)}</Text>
                 <Text style={[styles.td, styles.tdNum, { color: movement.quantity < 0 ? colors.red : colors.green, fontWeight: "700" }]}>
                   {movement.quantity > 0 ? "+" : ""}{count(movement.quantity)}
                 </Text>
@@ -512,7 +523,7 @@ export default function InventoryReportDashboardScreen() {
                 </Text>
               </Pressable>
             ))}
-            {report.recentMovements.length === 0 ? <Text style={[styles.empty, { color: colors.muted }]}>No stock movements recorded.</Text> : null}
+            {report.recentMovements.length === 0 ? <Text style={[styles.empty, { color: colors.muted }]}>{t('reports.inventory.empty.noMovements')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

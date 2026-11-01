@@ -19,12 +19,14 @@ import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import { getInventoryProducts } from '@/services/inventoryService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 type AdjustmentMode = 'set' | 'add' | 'remove';
 
 export default function InventoryAdjustmentScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const permissionState = usePagePermission('/inventory/adjustment');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [selectedProduct, setSelectedProduct] = React.useState<ProductItem | null>(null);
@@ -41,12 +43,12 @@ export default function InventoryAdjustmentScreen() {
     getInventoryProducts().then((result) => {
       if (active) setProducts(result);
     }).catch((error) => {
-      if (active) SnackBar.Error(error instanceof Error ? error.message : 'Unable to load products');
+      if (active) SnackBar.Error(error instanceof Error ? error.message : t('inventory.messages.loadProductsFailed'));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [permissionState]);
+  }, [permissionState, t]);
 
   const currentStock = selectedProduct?.currentStock ?? 0;
   const amount = Number(quantity);
@@ -62,19 +64,19 @@ export default function InventoryAdjustmentScreen() {
   const saveAdjustment = async () => {
     if (permissionState !== 'authorized') return;
     if (!selectedProduct) {
-      SnackBar.Error('Choose a product first');
+      SnackBar.Error(t('inventory.adjustment.chooseProductFirst'));
       return;
     }
     if (!Number.isInteger(amount) || amount < 0 || (mode !== 'set' && amount === 0)) {
-      SnackBar.Error(mode === 'set' ? 'Enter a valid stock quantity' : 'Enter a positive whole adjustment quantity');
+      SnackBar.Error(mode === 'set' ? t('inventory.messages.invalidQuantity') : t('inventory.messages.invalidRemoval'));
       return;
     }
     if (projectedStock < 0) {
-      SnackBar.Error('Stock cannot be less than zero');
+      SnackBar.Error(t('inventory.messages.negativeStock'));
       return;
     }
     if (!selectedProduct.rowVersion) {
-      SnackBar.Error('Product version is missing. Reload and try again.');
+      SnackBar.Error(t('inventory.messages.missingProductVersion'));
       return;
     }
 
@@ -85,10 +87,10 @@ export default function InventoryAdjustmentScreen() {
         currentStock: projectedStock,
         rowVersion: selectedProduct.rowVersion,
       });
-      SnackBar.Success(`Stock updated: ${selectedProduct.name}`);
+      SnackBar.Success(t('inventory.messages.stockUpdatedForProduct', { name: selectedProduct.name }));
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to adjust stock');
+      SnackBar.Error(error instanceof Error ? error.message : t('inventory.messages.adjustmentFailed'));
     } finally {
       setSaving(false);
     }
@@ -101,46 +103,46 @@ export default function InventoryAdjustmentScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Stock Adjustment</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('inventory.adjustment.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('inventory.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('inventory.unauthorized.title')} message={t('inventory.unauthorized.description')} />
       ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading products...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('inventory.adjustment.loadingProducts')}</Text>
         </View>
       ) : (
         <View style={styles.formContent}>
           <View style={styles.field}>
-            <Label className="text-foreground">Product <Text className="text-red-500">*</Text></Label>
-            <Button variant="outline" style={styles.productSelect} onPress={() => setPickerVisible(true)}>
+            <Label className="text-foreground">{t('inventory.fields.product')} <Text className="text-red-500">*</Text></Label>
+            <Button variant="outline" style={styles.productSelect} onPress={() => setPickerVisible(true)} accessibilityLabel={t('inventory.adjustment.chooseProduct')}>
               <Icon className="text-muted-foreground" as={Package} size={18} />
               <Text className={selectedProduct ? 'text-foreground' : 'text-muted-foreground'} style={styles.productSelectText} numberOfLines={1}>
-                {selectedProduct?.name ?? 'Choose a product'}
+                {selectedProduct?.name ?? t('inventory.adjustment.chooseProduct')}
               </Text>
             </Button>
             {selectedProduct ? (
               <Text className="text-muted-foreground" style={styles.stockHint}>
-                Current stock: {currentStock.toLocaleString('en-US')} {selectedProduct.unit ?? ''}
+                {t('inventory.adjustment.currentStock', { count: currentStock.toLocaleString('en-US'), unit: selectedProduct.unit ?? '' })}
               </Text>
             ) : null}
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Adjustment Type</Label>
+            <Label className="text-foreground">{t('inventory.adjustment.type')}</Label>
             <View style={styles.segmentRow}>
               {[
-                { key: 'add', label: 'Add' },
-                { key: 'remove', label: 'Remove' },
-                { key: 'set', label: 'Set Stock' },
+                { key: 'add', label: t('inventory.adjustment.add') },
+                { key: 'remove', label: t('inventory.adjustment.remove') },
+                { key: 'set', label: t('inventory.adjustment.setStock') },
               ].map((option) => {
                 const selected = mode === option.key;
                 return (
@@ -158,12 +160,12 @@ export default function InventoryAdjustmentScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">{mode === 'set' ? 'New Stock Quantity' : 'Quantity'}</Label>
+            <Label className="text-foreground">{mode === 'set' ? t('inventory.adjustment.newStockQuantity') : t('inventory.fields.quantity')}</Label>
             <Input
               value={quantity}
               onChangeText={(value) => setQuantity(value.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
-              placeholder="Enter whole quantity"
+              placeholder={t('inventory.placeholders.enterQuantity')}
               editable={!saving}
               className="mt-2"
             />
@@ -171,7 +173,7 @@ export default function InventoryAdjustmentScreen() {
 
           {selectedProduct && quantity ? (
             <View style={styles.preview}>
-              <Text className="text-muted-foreground">New on-hand quantity</Text>
+              <Text className="text-muted-foreground">{t('inventory.adjustment.onHandQuantity')}</Text>
               <Text className="text-foreground" style={styles.previewValue}>
                 {Number.isFinite(projectedStock) ? Math.max(0, projectedStock).toLocaleString('en-US') : '0'} {selectedProduct.unit ?? ''}
               </Text>
@@ -179,7 +181,7 @@ export default function InventoryAdjustmentScreen() {
           ) : null}
 
           <Button onPress={saveAdjustment} disabled={saving || !selectedProduct} style={styles.saveButton}>
-            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Save Adjustment</Text>}
+            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">{t('inventory.actions.saveAdjustment')}</Text>}
           </Button>
         </View>
       )}
@@ -190,7 +192,7 @@ export default function InventoryAdjustmentScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View className="bg-background" style={styles.productSheet}>
               <View style={styles.sheetHeader}>
-                <Text className="text-foreground" style={styles.sheetTitle}>Choose Product</Text>
+                <Text className="text-foreground" style={styles.sheetTitle}>{t('inventory.adjustment.chooseProduct')}</Text>
                 <Button variant="ghost" onPress={() => setPickerVisible(false)} style={styles.closeButton}>
                   <Icon className="text-foreground" as={X} size={20} />
                 </Button>
@@ -200,7 +202,7 @@ export default function InventoryAdjustmentScreen() {
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Search products"
+                  placeholder={t('inventory.adjustment.searchProducts')}
                   placeholderTextColor="#9CA3AF"
                   style={styles.searchInput}
                   autoCapitalize="none"
@@ -211,9 +213,11 @@ export default function InventoryAdjustmentScreen() {
                 data={filteredProducts}
                 keyExtractor={(product) => product.id}
                 keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>No products found.</Text>}
+                ListEmptyComponent={<Text className="text-muted-foreground" style={styles.emptyPicker}>{t('inventory.empty.noStockItems')}</Text>}
                 renderItem={({ item: product }) => (
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('inventory.accessibility.product', { name: product.name })}
                     onPress={() => {
                       setSelectedProduct(product);
                       setQuantity('');
@@ -224,7 +228,7 @@ export default function InventoryAdjustmentScreen() {
                     <View style={styles.productOptionInfo}>
                       <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                       <Text className="text-muted-foreground" style={styles.stockHint}>
-                        {product.category || 'Uncategorized'} · {(product.currentStock ?? 0).toLocaleString('en-US')} {product.unit ?? ''}
+                        {product.category || t('inventory.empty.noUncategorized')} · {(product.currentStock ?? 0).toLocaleString('en-US')} {product.unit ?? ''}
                       </Text>
                     </View>
                   </Pressable>

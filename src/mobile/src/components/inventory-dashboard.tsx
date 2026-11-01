@@ -25,6 +25,7 @@ import { getInventoryProducts } from '@/services/inventoryService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 function stockOf(product: ProductItem) {
   return Math.max(0, product.currentStock ?? 0);
@@ -73,7 +74,7 @@ function Metric({
 
 export function InventoryDashboardContent({
   showHeader = true,
-  title = 'Inventory Dashboard',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -81,6 +82,7 @@ export function InventoryDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/inventory/dashboard');
@@ -93,12 +95,12 @@ export function InventoryDashboardContent({
       const result = await getInventoryProducts();
       setProducts(result);
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to load inventory');
+      SnackBar.Error(error instanceof Error ? error.message : t('inventory.messages.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -138,7 +140,7 @@ export function InventoryDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+          <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('inventory.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -146,14 +148,14 @@ export function InventoryDashboardContent({
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('inventory.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('inventory.unauthorized.title')} message={t('inventory.unauthorized.description')} />
       ) : loading && products.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading inventory...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('inventory.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -166,9 +168,9 @@ export function InventoryDashboardContent({
           }
         >
           <View style={styles.metricsGrid}>
-            <Metric label="Total Stock Qty" value={totalStock.toLocaleString('en-US')} icon={Boxes} tone="green" theme={theme} />
-            <Metric label="Low Stock Items" value={lowStockCount.toLocaleString('en-US')} icon={AlertTriangle} tone="amber" theme={theme} />
-            <Metric label="Out of Stock" value={outOfStockCount.toLocaleString('en-US')} icon={Package} tone="red" theme={theme} />
+            <Metric label={t('inventory.dashboard.totalStockQuantity')} value={totalStock.toLocaleString('en-US')} icon={Boxes} tone="green" theme={theme} />
+            <Metric label={t('inventory.dashboard.lowStockItems')} value={lowStockCount.toLocaleString('en-US')} icon={AlertTriangle} tone="amber" theme={theme} />
+            <Metric label={t('inventory.dashboard.outOfStock')} value={outOfStockCount.toLocaleString('en-US')} icon={Package} tone="red" theme={theme} />
           </View>
 
           <View style={styles.actionRow}>
@@ -177,7 +179,7 @@ export function InventoryDashboardContent({
               onPress={() => router.push('/inventory/adjustment' as Parameters<typeof router.push>[0])}
             >
               <ClipboardPenLine size={18} color="#FFFFFF" />
-              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>Adjustment</Text>
+              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>{t('inventory.actions.adjustment')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -185,40 +187,40 @@ export function InventoryDashboardContent({
               onPress={() => router.push('/inventory/list' as Parameters<typeof router.push>[0])}
             >
               <List size={18} color="#16794B" />
-              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>Stock List</Text>
+              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>{t('inventory.actions.stockList')}</Text>
             </Button>
           </View>
 
           <View style={styles.categorySection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Stock by Category</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('inventory.dashboard.stockByCategory')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={styles.seeAllButton}
                 onPress={() => router.push('/inventory/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={styles.seeAllText}>View all</Text>
+                <Text style={styles.seeAllText}>{t('inventory.actions.viewAll')}</Text>
                 <ChevronRight size={14} color="#16794B" />
               </Button>
             </View>
 
             <View style={styles.tableHeader}>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.categoryColumn]}>Category</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.barColumn]}>Share</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.qtyColumn]}>Qty</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.percentColumn]}>%</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.categoryColumn]}>{t('inventory.fields.category')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.barColumn]}>{t('inventory.fields.share')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.qtyColumn]}>{t('inventory.fields.quantity')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.percentColumn]}>{t('inventory.fields.percent')}</Text>
             </View>
 
             {categoryTotals.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No stock categories to display.</Text>
+                <Text className="text-muted-foreground">{t('inventory.dashboard.noCategories')}</Text>
               </View>
             ) : categoryTotals.map((item) => (
               <View key={item.category} style={styles.tableRow}>
                 <Text className="text-foreground" style={[styles.categoryText, styles.categoryColumn]} numberOfLines={1}>
-                  {item.category}
+                  {item.category === 'Uncategorized' ? t('inventory.empty.noUncategorized') : item.category}
                 </Text>
                 <View style={[styles.barColumn, styles.progressTrack]}>
                   <View style={[styles.progressFill, { width: `${item.percentage}%` }]} />

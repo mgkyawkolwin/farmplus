@@ -33,6 +33,9 @@ import {
 } from "@/lib/authStorage";
 import { notifySelectedShopChanged } from "@/lib/selectedShop";
 import { MessageServiceClient } from "@/services/messageService";
+import { useTranslation } from "react-i18next";
+import { useColorScheme } from "nativewind";
+import { THEME } from "@/lib/theme";
 
 const shopService = new ShopServiceClient();
 const messageService = new MessageServiceClient();
@@ -40,6 +43,9 @@ const UNREAD_POLL_INTERVAL_MS = 10_000;
 
 export default function HomeTopBar() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
 
   const [shops, setShops] = React.useState<Shop[]>([]);
   const [selectedShopId, setSelectedShopId] = React.useState<string | null>(
@@ -79,23 +85,29 @@ export default function HomeTopBar() {
     setLoadingShops(true);
     try {
       const storedId = await getSelectedShopId();
-      setSelectedShopId(storedId);
-
       const result = await shopService.getShops(1, 200);
       setShops(result);
 
-      if (storedId && result.some((shop) => shop.id === storedId)) {
-        setSelectedShopId(storedId);
-      } else if (result.length === 1) {
-        setSelectedShopId(result[0].id);
-        await storeSelectedShopId(result[0].id);
-        notifySelectedShopChanged();
-      } else {
+      if (result.length === 0) {
         setSelectedShopId(null);
         if (storedId) {
           await clearSelectedShopId();
           notifySelectedShopChanged();
         }
+        SnackBar.Error(t("shops.setupRequired"));
+        router.push("/shops/shops" as Parameters<typeof router.push>[0]);
+        return;
+      }
+
+      // Keep the stored shop when it still exists; otherwise default to the first shop.
+      const validStoredId =
+        storedId && result.some((shop) => shop.id === storedId) ? storedId : null;
+      const nextShopId = validStoredId ?? result[0].id;
+      setSelectedShopId(nextShopId);
+
+      if (nextShopId !== storedId) {
+        await storeSelectedShopId(nextShopId);
+        notifySelectedShopChanged();
       }
     } catch (error) {
       if (showError) {
@@ -106,11 +118,13 @@ export default function HomeTopBar() {
     } finally {
       setLoadingShops(false);
     }
-  }, []);
+  }, [router, t]);
 
-  React.useEffect(() => {
-    void loadShops(false);
-  }, [loadShops]);
+  useFocusEffect(
+    React.useCallback(() => {
+      void loadShops(false);
+    }, [loadShops]),
+  );
 
   const openPicker = () => {
     setPickerVisible(true);
@@ -153,11 +167,13 @@ export default function HomeTopBar() {
           <Pressable
             onPress={openPicker}
             style={styles.selectTrigger}
+            className="border-input bg-card"
             accessibilityRole="button"
             accessibilityLabel="Choose shop"
           >
-            <Store size={15} color="#475569" />
+            <Icon className="text-muted-foreground" as={Store} size={15} />
             <Text
+              className={selectedShop ? "text-foreground" : "text-muted-foreground"}
               style={[
                 styles.selectText,
                 !selectedShop && styles.selectPlaceholder,
@@ -166,7 +182,7 @@ export default function HomeTopBar() {
             >
               {selectedShop ? selectedShop.name : "Select shop"}
             </Text>
-            <ChevronDown size={16} color="#475569" />
+            <Icon className="text-muted-foreground" as={ChevronDown} size={16} />
           </Pressable>
         </View>
         <View style={styles.rightSection}>
@@ -204,7 +220,7 @@ export default function HomeTopBar() {
             onPress={() => setPickerVisible(false)}
           />
           <View className="bg-background" style={styles.sheet}>
-            <View style={styles.sheetHeader}>
+              <View className="border-border" style={styles.sheetHeader}>
               <Text className="text-foreground" style={styles.sheetTitle}>
                 Select Shop
               </Text>
@@ -213,13 +229,13 @@ export default function HomeTopBar() {
                 hitSlop={8}
                 accessibilityLabel="Close"
               >
-                <X size={20} color="#475569" />
+                <Icon className="text-muted-foreground" as={X} size={20} />
               </Pressable>
             </View>
 
             {loadingShops && shops.length === 0 ? (
               <View style={styles.stateBox}>
-                <ActivityIndicator size="small" color="#16794B" />
+                <ActivityIndicator size="small" color={theme.primary} />
                 <Text
                   className="text-muted-foreground"
                   style={styles.stateText}
@@ -247,7 +263,7 @@ export default function HomeTopBar() {
                   }}
                   style={styles.manageButton}
                 >
-                  <Text style={styles.manageButtonText}>Manage Shops</Text>
+                  <Text className="text-primary-foreground" style={styles.manageButtonText}>Manage Shops</Text>
                 </Button>
               </View>
             ) : (
@@ -265,17 +281,17 @@ export default function HomeTopBar() {
                       accessibilityState={{ selected }}
                     >
                       <View
-                        style={[
-                          styles.option,
-                          selected && styles.optionSelected,
-                        ]}
+                        className={selected ? "border-border bg-muted" : "border-border"}
+                        style={styles.option}
                       >
                         <View
-                          style={[styles.tile, selected && styles.tileSelected]}
+                          className={selected ? "bg-primary" : "bg-muted"}
+                          style={styles.tile}
                         >
-                          <Store
+                          <Icon
+                            className={selected ? "text-primary-foreground" : "text-primary"}
+                            as={Store}
                             size={16}
-                            color={selected ? "#FFFFFF" : "#16794B"}
                           />
                         </View>
                         <View style={styles.optionInfo}>
@@ -296,7 +312,7 @@ export default function HomeTopBar() {
                             </Text>
                           ) : null}
                         </View>
-                        {selected ? <Check size={18} color="#16794B" /> : null}
+                        {selected ? <Icon className="text-primary" as={Check} size={18} /> : null}
                       </View>
                     </Pressable>
                   );
@@ -365,18 +381,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
   },
   selectText: {
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: "#0F172A",
   },
   selectPlaceholder: {
-    color: "#94A3B8",
     fontWeight: "500",
   },
   modalBackdrop: {
@@ -398,7 +410,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#CBD5E1",
   },
   sheetTitle: {
     fontSize: 15,
@@ -418,10 +429,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E2E8F0",
-  },
-  optionSelected: {
-    backgroundColor: "#F0F9F4",
   },
   tile: {
     width: 34,
@@ -429,10 +436,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E6F4EC",
-  },
-  tileSelected: {
-    backgroundColor: "#16794B",
   },
   optionInfo: {
     flex: 1,
@@ -462,10 +465,8 @@ const styles = StyleSheet.create({
   manageButton: {
     marginTop: 8,
     borderRadius: 6,
-    backgroundColor: "#16794B",
   },
   manageButtonText: {
-    color: "#FFFFFF",
     fontWeight: "700",
   },
   placeholderContainer: {

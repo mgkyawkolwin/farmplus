@@ -6,6 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, ChevronDown, ChevronLeft, Save } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -26,6 +27,7 @@ const permissionService = new RolePermissionServiceClient();
 
 export default function RolePermissionsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/rolepermissions');
@@ -43,7 +45,7 @@ export default function RolePermissionsScreen() {
       const keys = await permissionService.getRolePermissionKeys(nextRoleId);
       setSelectedKeys(new Set(keys));
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to load permissions');
+      SnackBar.Error(error instanceof Error ? error.message : t('rolePermissions.messages.failedLoadPermissions'));
     }
   }, []);
 
@@ -69,7 +71,7 @@ export default function RolePermissionsScreen() {
           }
         })
         .catch((error) => {
-          if (active) SnackBar.Error(error instanceof Error ? error.message : 'Failed to load role permissions');
+          if (active) SnackBar.Error(error instanceof Error ? error.message : t('rolePermissions.messages.failedLoad'));
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -111,9 +113,9 @@ export default function RolePermissionsScreen() {
     setSaving(true);
     try {
       await permissionService.updateRolePermissionKeys(roleId, [...selectedKeys]);
-      SnackBar.Success('Role permissions updated');
+      SnackBar.Success(t('rolePermissions.messages.updated'));
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to save permissions');
+      SnackBar.Error(error instanceof Error ? error.message : t('rolePermissions.messages.failedSave'));
     } finally {
       setSaving(false);
     }
@@ -128,7 +130,7 @@ export default function RolePermissionsScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Role Permissions</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('rolePermissions.title')}</Text>
         <Button
           variant="ghost"
           onPress={save}
@@ -142,29 +144,29 @@ export default function RolePermissionsScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('rolePermissions.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading permissions...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('rolePermissions.loadingPermissions')}</Text>
         </View>
       ) : roles.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text className="text-foreground" style={styles.emptyTitle}>No roles found</Text>
-          <Text className="text-muted-foreground" style={styles.stateText}>Create a role to manage page access.</Text>
+          <Text className="text-foreground" style={styles.emptyTitle}>{t('rolePermissions.emptyTitle')}</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('rolePermissions.emptyDescription')}</Text>
           <Button style={styles.createRoleButton} onPress={() => router.push('/roles/new' as Parameters<typeof router.push>[0])}>
-            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Create Role</Text>
+            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('rolePermissions.createRole')}</Text>
           </Button>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <Pressable style={[styles.roleSelect, { borderColor: theme.border }]} onPress={() => setRolePickerVisible(true)}>
             <View style={styles.roleSelectText}>
-              <Text className="text-muted-foreground" style={styles.eyebrow}>ROLE</Text>
-              <Text className="text-foreground" style={styles.roleName}>{selectedRole?.role ?? 'Choose a role'}</Text>
+              <Text className="text-muted-foreground" style={styles.eyebrow}>{t('rolePermissions.roleLabel')}</Text>
+              <Text className="text-foreground" style={styles.roleName}>{selectedRole?.role ?? t('rolePermissions.chooseRole')}</Text>
             </View>
             <Icon className="text-muted-foreground" as={ChevronDown} size={18} />
           </Pressable>
@@ -176,7 +178,7 @@ export default function RolePermissionsScreen() {
                 <View style={[styles.groupHeader, { borderBottomColor: theme.border }]}>
                   <Text className="text-foreground" style={styles.groupTitle}>{group}</Text>
                   <Pressable accessibilityRole="button" onPress={() => toggleGroup(groupPages.map((page) => page.key))}>
-                    <Text style={[styles.groupAction, { color: theme.primary }]}>{allSelected ? 'Clear group' : 'Select group'}</Text>
+                    <Text style={[styles.groupAction, { color: theme.primary }]}>{t(allSelected ? 'rolePermissions.clearGroup' : 'rolePermissions.selectGroup')}</Text>
                   </Pressable>
                 </View>
                 {groupPages.map((page) => {
@@ -216,7 +218,7 @@ export default function RolePermissionsScreen() {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
           <View style={[styles.rolePicker, { backgroundColor: theme.card }]}>
             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
-            <Text className="text-foreground" style={styles.pickerTitle}>Select Role</Text>
+            <Text className="text-foreground" style={styles.pickerTitle}>{t('rolePermissions.selectRole')}</Text>
             <ScrollView>
               {roles.map((role) => (
                 <Pressable

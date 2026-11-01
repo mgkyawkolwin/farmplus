@@ -46,6 +46,8 @@ type CustomerFormState = {
   rowVersion: string;
 };
 
+import { useTranslation } from 'react-i18next';
+
 const emptyFormState: CustomerFormState = {
   name: '',
   phone: '',
@@ -57,6 +59,8 @@ const emptyFormState: CustomerFormState = {
   postalCode: '',
   rowVersion: '',
 };
+
+  const { t } = useTranslation();
 
 export default function EditCustomerScreen() {
   const router = useRouter();
@@ -105,7 +109,7 @@ export default function EditCustomerScreen() {
         setIsActive(customer.isActive ?? true);
       } catch (error) {
         if (isActiveRequest) {
-          SnackBar.Error('Failed to load customer details');
+          SnackBar.Error(t('customers.messages.detailsFailed'));
           router.back();
         }
       } finally {
@@ -162,7 +166,7 @@ export default function EditCustomerScreen() {
     if (!customerId) return;
 
     if (!formData.name.trim()) {
-      SnackBar.Error('Name is required');
+      SnackBar.Error(t('customers.messages.nameRequired'));
       return;
     }
 
@@ -197,13 +201,13 @@ export default function EditCustomerScreen() {
         await customerService.uploadCustomerProfilePicture(customerId, imageFile);
       }
 
-      SnackBar.Success('Customer updated successfully');
+      SnackBar.Success(t('customers.messages.updated'));
       router.back();
     } catch (error) {
       if (error instanceof Error) {
-        SnackBar.Error(`Failed to update customer: ${error.message}`);
+        SnackBar.Error(t('customers.messages.updateFailed', { message: error.message }));
       } else {
-        SnackBar.Error('Failed to update customer. Please try again.');
+        SnackBar.Error(t('customers.messages.updateFailedFallback'));
       }
     } finally {
       setLoading(false);
@@ -220,7 +224,7 @@ export default function EditCustomerScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerBarTitle}>
-          Edit Customer
+            {t('customers.actions.edit')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -228,7 +232,7 @@ export default function EditCustomerScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+                  <Text className="text-muted-foreground" style={styles.stateText}>{t('customers.form.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -236,7 +240,7 @@ export default function EditCustomerScreen() {
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading customer details...
+                      {t('customers.form.loadingDetails')}
           </Text>
         </View>
       ) : (
@@ -248,7 +252,7 @@ export default function EditCustomerScreen() {
             <Pressable onPress={() => setShowPhotoModal(true)} disabled={loading}>
               <View style={[styles.avatarWrapper, { borderColor: theme.border, backgroundColor: theme.muted }]}>
                 {profileImageUri ? (
-                  <Avatar alt={formData.name || 'Customer'} style={styles.avatar}>
+                  <Avatar alt={formData.name || t('customers.profile.title')} style={styles.avatar}>
                     <AvatarImage source={{ uri: profileImageUri }} style={styles.avatarImage} />
                   </Avatar>
                 ) : (
@@ -269,15 +273,15 @@ export default function EditCustomerScreen() {
             <Pressable style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]} onPress={() => setShowPhotoModal(false)}>
               <Pressable style={[styles.modalSheet, { backgroundColor: theme.card }]} onPress={() => undefined}>
                 <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
-                <Text className="text-foreground" style={styles.sheetTitle}>Choose photo</Text>
+                <Text className="text-foreground" style={styles.sheetTitle}>{t('customers.photo.choosePhoto')}</Text>
                 <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('library')} disabled={loading}>
-                  <Text>Choose from gallery</Text>
+                  <Text>{t('customers.photo.chooseFromGallery')}</Text>
                 </Button>
                 <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('camera')} disabled={loading}>
-                  <Text>Take photo</Text>
+                  <Text>{t('customers.photo.takePhoto')}</Text>
                 </Button>
                 <Button variant="ghost" style={styles.sheetButton} onPress={() => setShowPhotoModal(false)}>
-                  <Text>Cancel</Text>
+                  <Text>{t('customers.actions.cancel')}</Text>
                 </Button>
               </Pressable>
             </Pressable>
@@ -285,10 +289,10 @@ export default function EditCustomerScreen() {
 
           <View style={styles.field}>
             <Label className="text-foreground">
-              Name <Text style={{ color: theme.destructive }}>*</Text>
+              {t('customers.fields.name')} <Text style={{ color: theme.destructive }}>*</Text>
             </Label>
             <Input
-              placeholder="Enter customer name"
+              placeholder={t('customers.placeholders.name')}
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
               className="mt-2"
@@ -297,9 +301,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Phone</Label>
+            <Label className="text-foreground">{t('customers.fields.phone')}</Label>
             <Input
-              placeholder="Enter phone number"
+              placeholder={t('customers.placeholders.phone')}
               value={formData.phone}
               onChangeText={(value) => handleInputChange('phone', value)}
               className="mt-2"
@@ -309,9 +313,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Email</Label>
+            <Label className="text-foreground">{t('customers.fields.email')}</Label>
             <Input
-              placeholder="Enter email address"
+              placeholder={t('customers.placeholders.email')}
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
               className="mt-2"
@@ -321,9 +325,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">National ID Number</Label>
+            <Label className="text-foreground">{t('customers.fields.nationalIdNumber')}</Label>
             <Input
-              placeholder="Enter national ID number"
+              placeholder={t('customers.placeholders.nationalIdNumber')}
               value={formData.nationalIdNumber}
               onChangeText={(value) => handleInputChange('nationalIdNumber', value)}
               className="mt-2"
@@ -332,9 +336,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Address</Label>
+            <Label className="text-foreground">{t('customers.fields.address')}</Label>
             <Input
-              placeholder="Enter street address"
+              placeholder={t('customers.placeholders.address')}
               value={formData.address}
               onChangeText={(value) => handleInputChange('address', value)}
               className="mt-2"
@@ -343,9 +347,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">City</Label>
+            <Label className="text-foreground">{t('customers.fields.city')}</Label>
             <Input
-              placeholder="Enter city"
+              placeholder={t('customers.placeholders.city')}
               value={formData.city}
               onChangeText={(value) => handleInputChange('city', value)}
               className="mt-2"
@@ -354,9 +358,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Country</Label>
+            <Label className="text-foreground">{t('customers.fields.country')}</Label>
             <Input
-              placeholder="Enter country"
+              placeholder={t('customers.placeholders.country')}
               value={formData.country}
               onChangeText={(value) => handleInputChange('country', value)}
               className="mt-2"
@@ -365,9 +369,9 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Postal Code</Label>
+            <Label className="text-foreground">{t('customers.fields.postalCode')}</Label>
             <Input
-              placeholder="Enter postal code"
+              placeholder={t('customers.placeholders.postalCode')}
               value={formData.postalCode}
               onChangeText={(value) => handleInputChange('postalCode', value)}
               className="mt-2"
@@ -377,18 +381,18 @@ export default function EditCustomerScreen() {
 
           <View style={styles.checkboxField}>
             <Checkbox checked={isActive} onCheckedChange={setIsActive} disabled={loading} />
-            <Text className="text-foreground ml-2">Active Customer</Text>
+            <Text className="text-foreground ml-2">{t('customers.fields.activeCustomer')}</Text>
           </View>
 
           <View style={styles.actionRow}>
             <Button className="border border-foreground" variant="outline" style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
-              <Text className="text-foreground">Cancel</Text>
+              <Text className="text-foreground">{t('customers.actions.cancel')}</Text>
             </Button>
             <Button style={[styles.submitButton, { backgroundColor: theme.primary }]} onPress={handleSubmit} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color={theme.primaryForeground} size="small" />
               ) : (
-                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Update Customer</Text>
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('customers.actions.update')}</Text>
               )}
             </Button>
           </View>

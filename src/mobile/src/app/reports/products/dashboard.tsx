@@ -41,6 +41,7 @@ import { container, DI_TOKENS } from "@/di";
 import { ProductItem } from "@/models/product";
 import { IProductService } from "@/services/productService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -95,6 +96,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -104,7 +106,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -157,6 +159,7 @@ type ProductGroup = { label: string; count: number; units: number; value: number
 
 export default function ProductReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/products/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -175,12 +178,12 @@ export default function ProductReportDashboardScreen() {
       setProducts(allProducts);
     } catch (error) {
       setProducts([]);
-      SnackBar.Error(error instanceof Error ? error.message : "Unable to load product report");
+      SnackBar.Error(error instanceof Error ? error.message : t('reports.common.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -242,7 +245,7 @@ export default function ProductReportDashboardScreen() {
 
     const months = Array.from({ length: 12 }, (_, index) => {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
-      return { key: monthKey(date), label: date.toLocaleDateString("en-US", { month: "short" }), added: 0 };
+      return { key: monthKey(date), label: date.toLocaleDateString(i18n.language, { month: "short" }), added: 0 };
     });
     const monthBuckets = new Map(months.map((month) => [month.key, month]));
     products.forEach((product) => {
@@ -299,19 +302,27 @@ export default function ProductReportDashboardScreen() {
       categoryCount,
       brandCount,
     };
-  }, [products]);
+  }, [products, i18n.language]);
 
   const stockHealthy = Math.max(products.length - report.outOfStock - report.lowStock, 0);
   const stockRisk = report.outOfStock + report.lowStock;
   const topCategoryValue = report.categories.slice(0, 5).reduce((sum, item) => sum + item.value, 0);
   const otherCategoryValue = Math.max(report.stockValue - topCategoryValue, 0);
+  const categoryLabel = (label: string) => label === 'Uncategorized' ? t('reports.products.labels.uncategorized') : label;
+  const brandLabel = (label: string) => label === 'Unbranded' ? t('reports.products.labels.unbranded') : label;
+  const priceBandLabel = (label: string) => ({
+    '<10k': t('reports.products.priceBand.under10k'),
+    '10-50k': t('reports.products.priceBand.10to50k'),
+    '50-100k': t('reports.products.priceBand.50to100k'),
+    '100k+': t('reports.products.priceBand.100kPlus'),
+  }[label] ?? label);
   const categorySlices = [
     ...report.categories.slice(0, 5).map((item, index) => ({
-      label: item.label,
+      label: categoryLabel(item.label),
       value: item.value,
       color: [COLORS.green, COLORS.blue, COLORS.amber, COLORS.purple, COLORS.red][index],
     })),
-    ...(otherCategoryValue > 0 ? [{ label: "Other", value: otherCategoryValue, color: COLORS.slate }] : []),
+    ...(otherCategoryValue > 0 ? [{ label: t('reports.products.chart.other'), value: otherCategoryValue, color: COLORS.slate }] : []),
   ];
   const topStockValue = report.highestValue[0]
     ? (report.highestValue[0].currentStock ?? 0) * (report.highestValue[0].salePrice ?? 0)
@@ -325,14 +336,14 @@ export default function ProductReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Product Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.products.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -343,99 +354,99 @@ export default function ProductReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Product analytics</Text>
-          <Text style={styles.title}>Product overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.products.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.products.overview')}</Text>
           <Text style={styles.subtitle}>
-            {count(products.length)} products · stock value uses current sale prices and the selected shop
+            {t('reports.products.subtitle', { count: count(products.length) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Total products" value={count(products.length)} caption={`${count(report.categoryCount)} categories`} icon={Boxes} tone="blue" />
-          <Kpi label="Active products" value={count(report.activeProducts.length)} caption={`${count(report.inactiveProducts)} inactive`} icon={Package} tone="green" />
-          <Kpi label="Stock on hand" value={count(report.stockUnits)} caption={`${count(report.outOfStock)} SKUs out of stock`} icon={Layers} tone={report.outOfStock > 0 ? "amber" : "green"} />
-          <Kpi label="Stock value" value={money(report.stockValue)} caption="At current sale price" icon={Wallet} tone="green" />
-          <Kpi label="Low stock" value={count(report.lowStock)} caption="At or below minimum" icon={AlertTriangle} tone={report.lowStock > 0 ? "amber" : "green"} />
-          <Kpi label="Out of stock" value={count(report.outOfStock)} caption="No stock in selected shop" icon={AlertTriangle} tone={report.outOfStock > 0 ? "red" : "green"} />
-          <Kpi label="Average sale price" value={money(report.averagePrice)} caption="Across all products" icon={Percent} tone="blue" />
-          <Kpi label="Added · 30 days" value={count(report.newLast30)} caption="New catalog products" icon={CalendarDays} tone="blue" />
-          <Kpi label="Category groups" value={count(report.categoryCount)} caption={`${count(report.brandCount)} brands`} icon={Tags} tone="green" />
-          <Kpi label="Largest stock value" value={money(topStockValue)} caption={report.highestValue[0]?.name ?? "No products"} icon={TrendingUp} tone="amber" />
+          <Kpi label={t('reports.products.kpi.totalProducts')} value={count(products.length)} caption={t('reports.products.caption.categoryCount', { count: count(report.categoryCount) })} icon={Boxes} tone="blue" />
+          <Kpi label={t('reports.products.kpi.activeProducts')} value={count(report.activeProducts.length)} caption={t('reports.products.caption.inactive', { count: count(report.inactiveProducts) })} icon={Package} tone="green" />
+          <Kpi label={t('reports.products.kpi.stockOnHand')} value={count(report.stockUnits)} caption={t('reports.products.caption.skusOut', { count: count(report.outOfStock) })} icon={Layers} tone={report.outOfStock > 0 ? "amber" : "green"} />
+          <Kpi label={t('reports.products.kpi.stockValue')} value={money(report.stockValue)} caption={t('reports.products.caption.atSalePrice')} icon={Wallet} tone="green" />
+          <Kpi label={t('reports.products.kpi.lowStock')} value={count(report.lowStock)} caption={t('reports.products.caption.atOrBelowMinimum')} icon={AlertTriangle} tone={report.lowStock > 0 ? "amber" : "green"} />
+          <Kpi label={t('reports.products.kpi.outOfStock')} value={count(report.outOfStock)} caption={t('reports.products.caption.noStockSelectedShop')} icon={AlertTriangle} tone={report.outOfStock > 0 ? "red" : "green"} />
+          <Kpi label={t('reports.products.kpi.averagePrice')} value={money(report.averagePrice)} caption={t('reports.products.caption.allProducts')} icon={Percent} tone="blue" />
+          <Kpi label={t('reports.products.kpi.new30')} value={count(report.newLast30)} caption={t('reports.products.caption.newCatalog')} icon={CalendarDays} tone="blue" />
+          <Kpi label={t('reports.products.kpi.categoryGroups')} value={count(report.categoryCount)} caption={t('reports.products.caption.brandCount', { count: count(report.brandCount) })} icon={Tags} tone="green" />
+          <Kpi label={t('reports.products.kpi.largestStockValue')} value={money(topStockValue)} caption={report.highestValue[0]?.name ?? t('reports.products.caption.noProducts')} icon={TrendingUp} tone="amber" />
         </View>
 
-        <Section title="Product additions" subtitle="New catalog products · last 12 months">
+        <Section title={t('reports.products.section.additions')} subtitle={t('reports.products.subtitleSection.additions')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.added] }))}
-            series={[{ name: "Products added", color: COLORS.blue }]}
+            series={[{ name: t('reports.products.series.productsAdded'), color: COLORS.blue }]}
           />
         </Section>
 
-        <Section title="Stock health" subtitle="SKU count by selected-shop availability">
+        <Section title={t('reports.products.section.stockHealth')} subtitle={t('reports.products.subtitleSection.skuAvailability')}>
           <DonutChart
-            centerLabel="Products"
+            centerLabel={t('reports.products.chart.products')}
             centerValue={count(products.length)}
             slices={[
-              { label: "Healthy stock", value: stockHealthy, color: COLORS.green },
-              { label: "Low stock", value: report.lowStock, color: COLORS.amber },
-              { label: "Out of stock", value: report.outOfStock, color: COLORS.red },
+              { label: t('reports.products.chart.healthy'), value: stockHealthy, color: COLORS.green },
+              { label: t('reports.products.chart.lowStock'), value: report.lowStock, color: COLORS.amber },
+              { label: t('reports.products.chart.outOfStock'), value: report.outOfStock, color: COLORS.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Inventory value by category" subtitle="Current stock × current sale price">
+        <Section title={t('reports.products.section.categoryValue')} subtitle={t('reports.products.subtitleSection.stockValue')}>
           <DonutChart
-            centerLabel="Stock value"
+            centerLabel={t('reports.products.chart.stockValue')}
             centerValue={compactNumber(report.stockValue)}
             slices={categorySlices}
             formatValue={money}
           />
         </Section>
 
-        <Section title="Sale price distribution" subtitle="Products grouped by current sale price">
+        <Section title={t('reports.products.section.priceDistribution')} subtitle={t('reports.products.subtitleSection.priceDistribution')}>
           <BarChart
-            data={report.priceBands.map((band) => ({ label: band.label, values: [band.value] }))}
-            series={[{ name: "Products", color: COLORS.purple }]}
+            data={report.priceBands.map((band) => ({ label: priceBandLabel(band.label), values: [band.value] }))}
+            series={[{ name: t('reports.products.chart.products'), color: COLORS.purple }]}
             height={160}
           />
         </Section>
 
-        <Section title="Top categories" subtitle="By current inventory value">
+        <Section title={t('reports.products.section.topCategories')} subtitle={t('reports.products.subtitleSection.byValue')}>
           <RankedBars
             items={report.categories.slice(0, 8).map((category) => ({
-              label: category.label,
+              label: categoryLabel(category.label),
               value: category.value,
-              caption: `${count(category.count)} products · ${count(category.units)} units`,
+              caption: `${count(category.count)} ${t('reports.products.chart.products')} · ${count(category.units)} ${t('reports.products.chart.units')}`,
             }))}
             color={COLORS.green}
             formatValue={money}
-            emptyText="No product categories to display."
+            emptyText={t('reports.products.empty.noCategories')}
           />
         </Section>
 
-        <Section title="Top brands" subtitle="By product count">
+        <Section title={t('reports.products.section.topBrands')} subtitle={t('reports.products.subtitleSection.byCount')}>
           <RankedBars
             items={report.brands.slice(0, 8).map((brand) => ({
-              label: brand.label,
+              label: brandLabel(brand.label),
               value: brand.count,
-              caption: `${count(brand.units)} units · ${money(brand.value)} stock value`,
+              caption: `${count(brand.units)} ${t('reports.products.chart.units')} · ${money(brand.value)} ${t('reports.products.chart.stockValue')}`,
             }))}
             color={COLORS.blue}
             formatValue={count}
-            emptyText="No product brands to display."
+            emptyText={t('reports.products.empty.noBrands')}
           />
         </Section>
 
         <Section
-          title="Highest inventory value"
-          subtitle="Products with the greatest on-hand value"
+          title={t('reports.products.section.highestValue')}
+          subtitle={t('reports.products.subtitleSection.greatestValue')}
           onViewAll={() => router.push(productListRoute)}
         >
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Stock</Text>
-              <Text style={[styles.th, styles.tdNum]}>Value</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.products.field.product')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.products.field.stock')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.products.field.value')}</Text>
             </View>
             {report.highestValue.map((product) => (
               <Pressable
@@ -445,7 +456,7 @@ export default function ProductReportDashboardScreen() {
               >
                 <View style={styles.tdWide}>
                   <Text style={styles.td} numberOfLines={1}>{product.name}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{product.category || "Uncategorized"}</Text>
+                  <Text style={styles.tdSub} numberOfLines={1}>{product.category || t('reports.products.labels.uncategorized')}</Text>
                 </View>
                 <Text style={[styles.td, styles.tdSmall]}>{count(product.currentStock ?? 0)}</Text>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>
@@ -453,16 +464,16 @@ export default function ProductReportDashboardScreen() {
                 </Text>
               </Pressable>
             ))}
-            {report.highestValue.length === 0 ? <Text style={styles.empty}>No products to display.</Text> : null}
+            {report.highestValue.length === 0 ? <Text style={styles.empty}>{t('reports.products.empty.noProducts')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Reorder attention" subtitle="Out-of-stock or at/below minimum">
+        <Section title={t('reports.products.section.reorderAttention')} subtitle={t('reports.products.subtitleSection.reorder')}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Stock</Text>
-              <Text style={[styles.th, styles.tdNum]}>Minimum</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.products.field.product')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.products.field.stock')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.products.field.minimum')}</Text>
             </View>
             {report.lowStockProducts.map((product) => (
               <Pressable
@@ -472,26 +483,26 @@ export default function ProductReportDashboardScreen() {
               >
                 <View style={styles.tdWide}>
                   <Text style={styles.td} numberOfLines={1}>{product.name}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{product.category || "Uncategorized"}</Text>
+                  <Text style={styles.tdSub} numberOfLines={1}>{product.category || t('reports.products.labels.uncategorized')}</Text>
                 </View>
                 <Text style={[styles.td, styles.tdSmall, styles.red]}>{count(product.currentStock ?? 0)}</Text>
                 <Text style={[styles.td, styles.tdNum]}>{count(product.minimumStock ?? 0)}</Text>
               </Pressable>
             ))}
-            {report.lowStockProducts.length === 0 ? <Text style={styles.empty}>All products are above their minimum stock.</Text> : null}
+            {report.lowStockProducts.length === 0 ? <Text style={styles.empty}>{t('reports.products.empty.aboveMinimum')}</Text> : null}
           </View>
         </Section>
 
         <Section
-          title="Recently added products"
-          subtitle="Newest catalog entries"
+          title={t('reports.products.section.recentlyAdded')}
+          subtitle={t('reports.products.subtitleSection.newest')}
           onViewAll={() => router.push(productListRoute)}
         >
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Product</Text>
-              <Text style={[styles.th, styles.tdNum]}>Added</Text>
-              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.products.field.product')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.products.field.added')}</Text>
+              <Text style={[styles.th, styles.tdStatus]}>{t('reports.products.field.status')}</Text>
             </View>
             {report.recentlyAdded.map((product) => {
               const active = product.isActive !== false;
@@ -503,7 +514,7 @@ export default function ProductReportDashboardScreen() {
                 >
                   <View style={styles.tdWide}>
                     <Text style={styles.td} numberOfLines={1}>{product.name}</Text>
-                    <Text style={styles.tdSub} numberOfLines={1}>{product.brand || "Unbranded"}</Text>
+                    <Text style={styles.tdSub} numberOfLines={1}>{product.brand || t('reports.products.labels.unbranded')}</Text>
                   </View>
                   <Text style={[styles.td, styles.tdNum]}>
                     {product.createdAtUtc ? new Date(product.createdAtUtc).toLocaleDateString() : "-"}
@@ -511,14 +522,14 @@ export default function ProductReportDashboardScreen() {
                   <View style={styles.tdStatus}>
                     <View style={[styles.statusPill, { backgroundColor: active ? "#D1FAE5" : "#FEE2E2" }]}>
                       <Text style={[styles.statusText, { color: active ? "#047857" : "#B91C1C" }]}>
-                        {active ? "ACTIVE" : "INACTIVE"}
+                        {active ? t('reports.common.active') : t('reports.common.inactive')}
                       </Text>
                     </View>
                   </View>
                 </Pressable>
               );
             })}
-            {report.recentlyAdded.length === 0 ? <Text style={styles.empty}>No products yet.</Text> : null}
+            {report.recentlyAdded.length === 0 ? <Text style={styles.empty}>{t('reports.products.empty.noProductsYet')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

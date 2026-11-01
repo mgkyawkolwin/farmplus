@@ -118,7 +118,7 @@ export default function PurchaseListScreen() {
         setPage(nextPage);
       } catch {
         if (!append) setPurchases([]);
-        SnackBar.Error("Failed to load purchases");
+        SnackBar.Error(t('purchases.messages.failedLoad'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -186,7 +186,7 @@ export default function PurchaseListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('purchases.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -305,7 +305,7 @@ export default function PurchaseListScreen() {
               color={theme.chart2}
             />
           ) : null}
-          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>{t('purchases.list.endOfList')}</Text> : null}
         </ScrollView>
       )}
       </>}

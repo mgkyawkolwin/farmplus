@@ -43,6 +43,7 @@ import { container, DI_TOKENS } from "@/di";
 import { Sale } from "@/models/sale";
 import { ISaleService } from "@/services/saleService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 
@@ -103,6 +104,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -112,7 +114,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -175,6 +177,7 @@ type AccountStats = {
 
 export default function SalesReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/sales/dashboard');
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -193,12 +196,12 @@ export default function SalesReportDashboardScreen() {
       setSales(all);
     } catch (error) {
       setSales([]);
-      SnackBar.Error(error instanceof Error ? error.message : "Unable to load sales report");
+      SnackBar.Error(error instanceof Error ? error.message : t('reports.common.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -228,7 +231,7 @@ export default function SalesReportDashboardScreen() {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
       return {
         key: monthKey(date),
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+        label: date.toLocaleDateString(i18n.language, { month: "short" }),
         revenue: 0,
         collected: 0,
         orders: 0,
@@ -349,9 +352,12 @@ export default function SalesReportDashboardScreen() {
       avgDailyRevenue,
       top5Share: percent(top5Revenue, totalRevenue),
     };
-  }, [sales]);
+  }, [sales, i18n.language]);
 
   const collectionRate = percent(report.totalPaid, report.totalRevenue);
+  const accountTypeLabel = (type: AccountStats['type']) => type === 'Dealer'
+    ? t('reports.sales.labels.dealer')
+    : t('reports.sales.labels.customer');
   const customerListRoute = "/customers/list" as Href;
   const dealerListRoute = "/dealers/dealers" as Href;
 
@@ -370,14 +376,14 @@ export default function SalesReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Sales Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.sales.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -388,152 +394,152 @@ export default function SalesReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Sales analytics</Text>
-          <Text style={styles.title}>Sales overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.sales.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.sales.overview')}</Text>
           <Text style={styles.subtitle}>
-            {count(report.completedSales.length)} completed sales · filtered to the selected shop when active
+            {t('reports.sales.subtitle', { count: count(report.completedSales.length) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Net sales" value={money(report.totalRevenue)} caption={`${count(report.completedSales.length)} completed orders`} icon={ShoppingCart} tone="green" />
-          <Kpi label="Collected" value={money(report.totalPaid)} caption={`${collectionRate}% of billed sales`} icon={Banknote} tone="blue" />
-          <Kpi label="Outstanding" value={money(report.receivables)} caption={`${count(report.partialInvoices + report.unpaidInvoices)} open invoices`} icon={HandCoins} tone="amber" />
-          <Kpi label="Avg order value" value={money(report.avgOrder)} caption="Per completed sale" icon={Receipt} tone="blue" />
-          <Kpi label="Sales · 30 days" value={count(report.salesLast30)} caption="Completed orders" icon={CalendarDays} tone="blue" />
-          <Kpi label="Revenue · month" value={money(report.thisMonth)} caption={report.growth === null ? "No prior month" : `${report.growth >= 0 ? "+" : ""}${report.growth}% vs last month`} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
-          <Kpi label="Daily average" value={money(report.avgDailyRevenue)} caption="On days with sales" icon={CalendarDays} tone="blue" />
-          <Kpi label="Voided sales" value={count(report.voidedSales.length)} caption="Excluded from totals" icon={AlertTriangle} tone={report.voidedSales.length > 0 ? "red" : "green"} />
-          <Kpi label="Discounts" value={money(report.totalDiscount)} caption="Across completed sales" icon={Percent} tone="amber" />
-          <Kpi label="Customer buyers" value={count(report.uniqueCustomers)} caption="Registered customers" icon={Store} tone="green" />
-          <Kpi label="Dealer buyers" value={count(report.uniqueDealers)} caption={`${count(report.averageUnits)} avg units per order`} icon={Wallet} tone="blue" />
+          <Kpi label={t('reports.sales.kpi.netSales')} value={money(report.totalRevenue)} caption={t('reports.sales.caption.completedOrders', { count: count(report.completedSales.length) })} icon={ShoppingCart} tone="green" />
+          <Kpi label={t('reports.sales.kpi.collected')} value={money(report.totalPaid)} caption={t('reports.sales.caption.billedCollection', { percent: collectionRate })} icon={Banknote} tone="blue" />
+          <Kpi label={t('reports.sales.kpi.outstanding')} value={money(report.receivables)} caption={t('reports.sales.caption.openInvoices', { count: count(report.partialInvoices + report.unpaidInvoices) })} icon={HandCoins} tone="amber" />
+          <Kpi label={t('reports.sales.kpi.avgOrderValue')} value={money(report.avgOrder)} caption={t('reports.sales.caption.perSale')} icon={Receipt} tone="blue" />
+          <Kpi label={t('reports.sales.kpi.sales30')} value={count(report.salesLast30)} caption={t('reports.sales.caption.orders30')} icon={CalendarDays} tone="blue" />
+          <Kpi label={t('reports.sales.kpi.revenueMonth')} value={money(report.thisMonth)} caption={report.growth === null ? t('reports.sales.caption.noPriorMonth') : t('reports.sales.caption.growth', { growth: `${report.growth >= 0 ? "+" : ""}${report.growth}` })} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
+          <Kpi label={t('reports.sales.kpi.dailyAverage')} value={money(report.avgDailyRevenue)} caption={t('reports.sales.caption.daysWithSales')} icon={CalendarDays} tone="blue" />
+          <Kpi label={t('reports.sales.kpi.voidedSales')} value={count(report.voidedSales.length)} caption={t('reports.sales.caption.excludedFromTotals')} icon={AlertTriangle} tone={report.voidedSales.length > 0 ? "red" : "green"} />
+          <Kpi label={t('reports.sales.kpi.discounts')} value={money(report.totalDiscount)} caption={t('reports.sales.caption.acrossCompleted')} icon={Percent} tone="amber" />
+          <Kpi label={t('reports.sales.kpi.customerBuyers')} value={count(report.uniqueCustomers)} caption={t('reports.sales.caption.registeredCustomers')} icon={Store} tone="green" />
+          <Kpi label={t('reports.sales.kpi.dealerBuyers')} value={count(report.uniqueDealers)} caption={t('reports.sales.caption.avgUnits', { count: count(report.averageUnits) })} icon={Wallet} tone="blue" />
         </View>
 
-        <Section title="Sales and collection trend" subtitle="Last 12 months · billed vs collected">
+        <Section title={t('reports.sales.section.trend')} subtitle={t('reports.sales.subtitleSection.trend')}>
           <LineChart
             labels={report.months.map((month) => month.label)}
             series={[
-              { name: "Billed", color: COLORS.green, values: report.months.map((month) => month.revenue) },
-              { name: "Collected", color: COLORS.blue, values: report.months.map((month) => month.collected) },
+              { name: t('reports.sales.series.billed'), color: COLORS.green, values: report.months.map((month) => month.revenue) },
+              { name: t('reports.sales.series.collected'), color: COLORS.blue, values: report.months.map((month) => month.collected) },
             ]}
           />
         </Section>
 
-        <Section title="Order volume" subtitle="Completed sales by month">
+        <Section title={t('reports.sales.section.orderVolume')} subtitle={t('reports.sales.subtitleSection.completedByMonth')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.orders] }))}
-            series={[{ name: "Sales", color: COLORS.blue }]}
+            series={[{ name: t('reports.sales.series.sales'), color: COLORS.blue }]}
             height={160}
           />
         </Section>
 
-        <Section title="Sales channel mix" subtitle="Revenue from customers, dealers, and walk-ins">
+        <Section title={t('reports.sales.section.channelMix')} subtitle={t('reports.sales.subtitleSection.channels')}>
           <DonutChart
-            centerLabel="Billed"
+            centerLabel={t('reports.sales.chart.billed')}
             centerValue={compactNumber(report.totalRevenue)}
             slices={[
-              { label: "Customers", value: report.registeredRevenue, color: COLORS.blue },
-              { label: "Dealers", value: report.dealerRevenue, color: COLORS.green },
-              { label: "Walk-in", value: report.walkInRevenue, color: COLORS.purple },
+              { label: t('reports.sales.chart.customers'), value: report.registeredRevenue, color: COLORS.blue },
+              { label: t('reports.sales.chart.dealers'), value: report.dealerRevenue, color: COLORS.green },
+              { label: t('reports.sales.chart.walkIn'), value: report.walkInRevenue, color: COLORS.purple },
             ]}
             formatValue={money}
           />
         </Section>
 
-        <Section title="Invoice payment status" subtitle="All completed sales">
+        <Section title={t('reports.sales.section.invoiceStatus')} subtitle={t('reports.sales.subtitleSection.completedSales')}>
           <DonutChart
-            centerLabel="Invoices"
+            centerLabel={t('reports.sales.chart.invoices')}
             centerValue={count(report.completedSales.length)}
             slices={[
-              { label: "Paid", value: report.paidInvoices, color: COLORS.green },
-              { label: "Partial", value: report.partialInvoices, color: COLORS.amber },
-              { label: "Unpaid", value: report.unpaidInvoices, color: COLORS.red },
+              { label: t('reports.sales.chart.paid'), value: report.paidInvoices, color: COLORS.green },
+              { label: t('reports.sales.chart.partial'), value: report.partialInvoices, color: COLORS.amber },
+              { label: t('reports.sales.chart.unpaid'), value: report.unpaidInvoices, color: COLORS.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Receivables aging" subtitle="Outstanding balance by sale age">
+        <Section title={t('reports.sales.section.receivablesAging')} subtitle={t('reports.sales.subtitleSection.aging')}>
           <BarChart
-            data={report.aging.map((item) => ({ label: item.label, values: [item.value] }))}
-            series={[{ name: "Outstanding", color: COLORS.amber }]}
+            data={report.aging.map((item, index) => ({ label: t(['reports.common.age0to30', 'reports.common.age31to60', 'reports.common.age61to90', 'reports.common.age90Plus'][index]), values: [item.value] }))}
+            series={[{ name: t('reports.sales.kpi.outstanding'), color: COLORS.amber }]}
             height={160}
           />
         </Section>
 
-        <Section title="Revenue concentration" subtitle="Top accounts by sales value">
+        <Section title={t('reports.sales.section.revenueConcentration')} subtitle={t('reports.sales.subtitleSection.topAccounts')}>
           <RankedBars
             items={report.topAccounts.slice(0, 6).map((account) => ({
               label: account.name,
               value: account.revenue,
-              caption: `${account.type} · ${count(account.orders)} orders · ${percent(account.revenue, report.totalRevenue)}% of revenue`,
+              caption: t('reports.sales.labels.revenueShare', { type: accountTypeLabel(account.type), orders: count(account.orders), percent: percent(account.revenue, report.totalRevenue) }),
             }))}
             color={COLORS.green}
             formatValue={money}
-            emptyText="No registered-account sales to display."
+            emptyText={t('reports.sales.empty.noRegisteredSalesDisplay')}
           />
         </Section>
 
-        <Section title="Top accounts" subtitle="By lifetime billed sales">
+        <Section title={t('reports.sales.section.topAccounts')} subtitle={t('reports.sales.subtitleSection.lifetimeBilled')}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Account</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Type</Text>
-              <Text style={[styles.th, styles.tdNum]}>Orders</Text>
-              <Text style={[styles.th, styles.tdNum]}>Revenue</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.sales.field.account')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.sales.field.type')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.orders')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.revenue')}</Text>
             </View>
             {report.topAccounts.map((account) => (
               <Pressable key={`${account.type}-${account.id}`} style={styles.tableRow} onPress={() => openAccount(account)}>
                 <Text style={[styles.td, styles.tdWide]} numberOfLines={1}>{account.name}</Text>
-                <Text style={[styles.td, styles.tdSmall]}>{account.type}</Text>
+                <Text style={[styles.td, styles.tdSmall]}>{accountTypeLabel(account.type)}</Text>
                 <Text style={[styles.td, styles.tdNum]}>{count(account.orders)}</Text>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>{compactNumber(account.revenue)}</Text>
               </Pressable>
             ))}
-            {report.topAccounts.length === 0 ? <Text style={styles.empty}>No registered-account sales recorded.</Text> : null}
+            {report.topAccounts.length === 0 ? <Text style={styles.empty}>{t('reports.sales.empty.noRegisteredSales')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Highest receivables" subtitle="Largest customer and dealer balances">
+        <Section title={t('reports.sales.section.highestReceivables')} subtitle={t('reports.sales.subtitleSection.largestBalances')}>
           <RankedBars
             items={report.topBalances.map((account) => ({
               label: account.name,
               value: account.balance,
-              caption: `${account.type} · ${count(account.orders)} orders`,
+              caption: t('reports.sales.labels.accountOrders', { type: accountTypeLabel(account.type), count: count(account.orders) }),
             }))}
             color={COLORS.amber}
             formatValue={money}
-            emptyText="No outstanding balances."
+            emptyText={t('reports.sales.empty.noBalances')}
           />
         </Section>
 
-        <Section title="Overdue accounts" subtitle="Unpaid for more than 60 days">
+        <Section title={t('reports.sales.section.overdueAccounts')} subtitle={t('reports.sales.subtitleSection.overdue60Days')}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Account</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Type</Text>
-              <Text style={[styles.th, styles.tdNum]}>Balance</Text>
-              <Text style={[styles.th, styles.tdNum]}>Last sale</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.sales.field.account')}</Text>
+              <Text style={[styles.th, styles.tdSmall]}>{t('reports.sales.field.type')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.balance')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.lastSale')}</Text>
             </View>
             {report.overdueAccounts.map((account) => (
               <Pressable key={`${account.type}-${account.id}`} style={styles.tableRow} onPress={() => openAccount(account)}>
                 <Text style={[styles.td, styles.tdWide]} numberOfLines={1}>{account.name}</Text>
-                <Text style={[styles.td, styles.tdSmall]}>{account.type}</Text>
+                <Text style={[styles.td, styles.tdSmall]}>{accountTypeLabel(account.type)}</Text>
                 <Text style={[styles.td, styles.tdNum, styles.red]} numberOfLines={1}>{money(account.overdue)}</Text>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>{new Date(account.last).toLocaleDateString()}</Text>
               </Pressable>
             ))}
-            {report.overdueAccounts.length === 0 ? <Text style={styles.empty}>No overdue accounts.</Text> : null}
+            {report.overdueAccounts.length === 0 ? <Text style={styles.empty}>{t('reports.sales.empty.noOverdue')}</Text> : null}
           </View>
         </Section>
 
-        <Section title="Recent sales" subtitle="Latest invoices" onViewAll={() => router.push("/sales/list" as Href)}>
+        <Section title={t('reports.sales.section.recentSales')} subtitle={t('reports.sales.subtitleSection.latestInvoices')} onViewAll={() => router.push("/sales/list" as Href)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Sale</Text>
-              <Text style={[styles.th, styles.tdNum]}>Date</Text>
-              <Text style={[styles.th, styles.tdNum]}>Total</Text>
-              <Text style={[styles.th, styles.tdNum]}>Status</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.sales.field.sale')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.date')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.total')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.sales.field.status')}</Text>
             </View>
             {report.recentSales.map((sale) => (
               <Pressable key={sale.id} style={styles.tableRow} onPress={() => openSale(sale.id)}>
@@ -546,13 +552,13 @@ export default function SalesReportDashboardScreen() {
                 <View style={styles.tdStatus}>
                   <View style={[styles.statusPill, { backgroundColor: sale.status === "Voided" ? "#FEE2E2" : "#D1FAE5" }]}>
                     <Text style={[styles.statusText, { color: sale.status === "Voided" ? "#B91C1C" : "#047857" }]}>
-                      {sale.status === "Voided" ? "VOIDED" : "COMPLETED"}
+                      {sale.status === "Voided" ? t('reports.sales.labels.voided') : t('reports.sales.labels.completed')}
                     </Text>
                   </View>
                 </View>
               </Pressable>
             ))}
-            {report.recentSales.length === 0 ? <Text style={styles.empty}>No sales recorded.</Text> : null}
+            {report.recentSales.length === 0 ? <Text style={styles.empty}>{t('reports.sales.empty.noSales')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

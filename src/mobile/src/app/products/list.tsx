@@ -33,6 +33,7 @@ import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -40,6 +41,7 @@ const productService = container.resolve<IProductService>(
 
 export default function ProductListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/products/list');
@@ -133,7 +135,10 @@ export default function ProductListScreen() {
     loadProducts(page + 1, false, searchText.trim());
   }, [loadingMore, hasMore, loading, loadProducts, page, searchText]);
 
-  const listLabel = `Products · ${products.length}${hasMore ? '+' : ''}`;
+  const listLabel = t('products.list.totalHeader', {
+    count: products.length,
+    more: hasMore ? '+' : '',
+  });
 
   return (
     <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
@@ -148,10 +153,10 @@ export default function ProductListScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Products</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('products.list.title')}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New product"
+          accessibilityLabel={t('products.accessibility.newProduct')}
           onPress={() => router.push('/products/new')}
           disabled={permissionState !== 'authorized'}
           style={[styles.addButton, { backgroundColor: theme.primary }]}
@@ -163,10 +168,10 @@ export default function ProductListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Checking permission...</Text>
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>{t('products.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} />
       ) : <>
       <View style={[styles.searchContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.muted }]}>
@@ -174,7 +179,7 @@ export default function ProductListScreen() {
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Search by product name"
+            placeholder={t('products.list.searchPlaceholder')}
             placeholderTextColor={theme.mutedForeground}
             style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize="none"
@@ -189,8 +194,8 @@ export default function ProductListScreen() {
         </View>
       ) : products.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text style={[styles.stateTitle, { color: theme.foreground }]}>No products found</Text>
-          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Add a product to get started.</Text>
+          <Text style={[styles.stateTitle, { color: theme.foreground }]}>{t('products.empty.noProducts')}</Text>
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>{t('products.empty.addProduct')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -216,9 +221,9 @@ export default function ProductListScreen() {
             <Text style={[styles.headerCell, styles.headerInfo]}>
               {listLabel}
             </Text>
-            <Text style={[styles.headerCell, styles.stockColumn]}>Stock</Text>
+            <Text style={[styles.headerCell, styles.stockColumn]}>{t('products.fields.stock')}</Text>
             <Text style={[styles.headerCell, styles.priceColumn]}>
-              Sale Price
+              {t('products.fields.salePrice')}
             </Text>
             <View style={styles.headerChevronSpace} />
           </View>
@@ -236,7 +241,7 @@ export default function ProductListScreen() {
               <Pressable
                 key={product.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Product ${product.name}`}
+                accessibilityLabel={t('products.accessibility.product', { name: product.name })}
                 style={[styles.row, { backgroundColor: theme.card, borderBottomColor: theme.border }]}
                 onPress={() =>
                   router.push({

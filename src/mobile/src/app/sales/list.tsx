@@ -27,6 +27,7 @@ import { Sale } from "@/models/sale";
 import { ISaleService } from "@/services/saleService";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from "@/lib/theme";
+import { useTranslation } from 'react-i18next';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const PAGE_SIZE = 20;
@@ -51,12 +52,12 @@ function formatDate(value: string) {
 
 type ThemeColors = typeof THEME.light;
 
-function getStatus(sale: Sale, theme: ThemeColors) {
+function getStatus(sale: Sale, theme: ThemeColors, t: (key: string) => string) {
   if (sale.status === "Voided")
-    return { label: "VOID", color: theme.destructive, bg: theme.secondary };
+    return { label: t('sales.status.void'), color: theme.destructive, bg: theme.secondary };
   if (sale.paidAmount > 0 && sale.balance <= 0)
-    return { label: "PAID", color: theme.chart2, bg: theme.secondary };
-  return { label: "UNPAID", color: theme.chart4, bg: theme.secondary };
+    return { label: t('sales.status.paid'), color: theme.chart2, bg: theme.secondary };
+  return { label: t('sales.status.unpaid'), color: theme.chart4, bg: theme.secondary };
 }
 
 function Field({
@@ -87,6 +88,7 @@ function Field({
 
 export default function SalesListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
   const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/list');
@@ -113,7 +115,7 @@ export default function SalesListScreen() {
       } catch (error) {
         if (!append) setSales([]);
         SnackBar.Error(
-          error instanceof Error ? error.message : "Unable to load sales",
+          error instanceof Error ? error.message : t('sales.messages.unableLoad'),
         );
       } finally {
         setLoading(false);
@@ -121,7 +123,7 @@ export default function SalesListScreen() {
         setLoadingMore(false);
       }
     },
-    [customerId],
+    [customerId, t],
   );
 
   useFocusEffect(
@@ -155,7 +157,7 @@ export default function SalesListScreen() {
         </Button>
         <View style={styles.headerTitleWrap}>
           <Text className="text-foreground" style={styles.headerTitle}>
-            Sales
+            {t('sales.list.title')}
           </Text>
         </View>
         <View style={styles.headerButton} />
@@ -164,18 +166,18 @@ export default function SalesListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('sales.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('sales.unauthorized.title')} message={t('sales.unauthorized.description')} />
       ) : <>
       <View style={styles.shopBannerWrap}>
         <ShopBanner
-          label="Showing sales for"
+          label={t('sales.list.showingSalesFor')}
           name={shopName}
           emptyText={
             shopLoaded
-              ? "No shop selected. Choose one from the top bar."
+              ? t('sales.shop.noShopSelected')
               : undefined
           }
         />
@@ -185,16 +187,16 @@ export default function SalesListScreen() {
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading sales...
+            {t('sales.list.loading')}
           </Text>
         </View>
       ) : sales.length === 0 ? (
         <View style={styles.centeredState}>
           <Text className="text-foreground" style={styles.stateTitle}>
-            No sales found
+            {t('sales.list.noSales')}
           </Text>
           <Text className="text-muted-foreground" style={styles.stateText}>
-            New sales will appear here.
+            {t('sales.list.noSalesDescription')}
           </Text>
         </View>
       ) : (
@@ -220,13 +222,13 @@ export default function SalesListScreen() {
           }}
         >
           {sales.map((sale) => {
-            const status = getStatus(sale, theme);
+            const status = getStatus(sale, theme, t);
             const isVoided = sale.status === "Voided";
             return (
               <Pressable
                 key={sale.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Sale ${sale.id.slice(0, 8)}`}
+                accessibilityLabel={t('sales.accessibility.sale', { id: sale.id.slice(0, 8) })}
                 style={[styles.saleRow, { backgroundColor: isVoided ? theme.secondary : theme.card, borderColor: theme.border }, isVoided && styles.saleRowVoided]}
                 onPress={() =>
                   router.push({
@@ -258,16 +260,16 @@ export default function SalesListScreen() {
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldWide}>
-                    <Field label="Customer" value={sale.customerName} theme={theme} />
+                    <Field label={t('sales.fields.customer')} value={sale.customerName} theme={theme} />
                   </View>
                   <Field
-                    label="Products"
+                    label={t('sales.fields.products')}
                     value={sale.totalProducts}
                     align="right"
                     theme={theme}
                   />
                   <Field
-                    label="Total Qty"
+                    label={t('sales.fields.saleQuantity')}
                     value={sale.totalProducts}
                     align="right"
                     theme={theme}
@@ -276,20 +278,20 @@ export default function SalesListScreen() {
 
                 <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                   <Field
-                    label="Net"
+                    label={t('sales.fields.net')}
                     value={money(sale.netTotal)}
                     align="right"
                     theme={theme}
                   />
                   <Field
-                    label="Paid"
+                    label={t('sales.fields.paid')}
                     value={money(sale.paidAmount)}
                     align="right"
                     theme={theme}
                   />
                   <View style={[styles.field, styles.fieldRight]}>
                     <Text style={[styles.fieldLabel, { color: theme.mutedForeground }, styles.textRight]}>
-                      Balance
+                      {t('sales.fields.balance')}
                     </Text>
                     <Text
                       style={[
@@ -319,7 +321,7 @@ export default function SalesListScreen() {
               color={theme.chart2}
             />
           ) : null}
-          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>{t('sales.list.endOfList')}</Text> : null}
         </ScrollView>
       )}
       </>}

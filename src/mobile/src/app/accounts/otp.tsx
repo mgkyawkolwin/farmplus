@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function PhoneScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -25,28 +27,28 @@ export default function PhoneScreen() {
                 <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                     <Text className="text-foreground" style={styles.backButtonText}>
-                        Back
+                        {t('accounts.back')}
                     </Text>
                 </Button>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Verify OTP
+                    {t('accounts.otp.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Enter the 6-digit code sent to 09-xxxxxxxxx.
+                    {t('accounts.otp.subtitle')}
                 </Text>
 
                 <View style={styles.field}>
-                    <Label>OTP Code</Label>
+                    <Label>{t('accounts.otp.codeLabel')}</Label>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Input placeholder="XXXXXX" />
                     </View>
                 </View>
 
                 <Button style={styles.continueButton} onPress={() => router.push('./plan')}>
-                    <Text>Verify OTP</Text>
+                    <Text>{t('accounts.otp.title')}</Text>
                 </Button>
             </ScrollView>
         </View>

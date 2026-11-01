@@ -21,6 +21,7 @@ import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ function formatMoney(value: number) {
 
 export default function SupplierPurchasesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/purchases');
@@ -63,7 +65,7 @@ export default function SupplierPurchasesScreen() {
         SnackBar.Error(
           error instanceof Error
             ? error.message
-            : "Unable to load supplier purchases.",
+            : t('suppliers.messages.unableLoadPurchases'),
         );
       } finally {
         setLoading(false);
@@ -71,7 +73,7 @@ export default function SupplierPurchasesScreen() {
         setLoadingMore(false);
       }
     },
-    [router, service, supplierId],
+    [router, service, supplierId, t],
   );
 
   useFocusEffect(
@@ -103,7 +105,7 @@ export default function SupplierPurchasesScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.title}>
-          Supplier Purchases
+          {t('suppliers.purchases.title')}
         </Text>
         <View style={styles.headerButton} />
       </View>
@@ -111,10 +113,10 @@ export default function SupplierPurchasesScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground">Checking permission...</Text>
+          <Text className="text-muted-foreground">{t('suppliers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('suppliers.unauthorized.title')} message={t('suppliers.unauthorized.description')} />
       ) : loading && purchases.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -122,10 +124,10 @@ export default function SupplierPurchasesScreen() {
       ) : purchases.length === 0 ? (
         <View style={styles.centered}>
           <Text className="text-foreground" style={styles.emptyTitle}>
-            No purchases found
+            {t('suppliers.empty.noPurchases')}
           </Text>
           <Text className="text-muted-foreground">
-            This supplier has no purchases.
+            {t('suppliers.empty.noPurchasesDescription')}
           </Text>
         </View>
       ) : (
@@ -174,7 +176,7 @@ export default function SupplierPurchasesScreen() {
               <View style={[styles.summary, { borderTopColor: theme.border }]}>
                 <View>
                   <Text className="text-muted-foreground" style={styles.label}>
-                    Items
+                    {t('suppliers.fields.items')}
                   </Text>
                   <Text className="text-foreground" style={styles.value}>
                     {purchase.totalProducts}
@@ -182,7 +184,7 @@ export default function SupplierPurchasesScreen() {
                 </View>
                 <View style={styles.total}>
                   <Text className="text-muted-foreground" style={styles.label}>
-                    Total
+                    {t('suppliers.fields.total')}
                   </Text>
                   <Text className="text-foreground" style={styles.value}>
                     {formatMoney(purchase.netTotal)}
@@ -194,7 +196,7 @@ export default function SupplierPurchasesScreen() {
           {loadingMore ? (
             <ActivityIndicator size="small" color={theme.primary} />
           ) : null}
-          {!hasMore ? <Text style={[styles.end, { color: theme.mutedForeground }]}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.end, { color: theme.mutedForeground }]}>{t('suppliers.purchases.endOfList')}</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>

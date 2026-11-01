@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -61,6 +62,7 @@ const emptyForm: UserFormState = {
 
 export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -81,7 +83,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
     roleService.getRoles(1, 100).then((items) => {
       if (active) setRoles(items);
     }).catch(() => {
-      if (active) SnackBar.Error('Failed to load roles');
+      if (active) SnackBar.Error(t('users.messages.failedLoadRoles'));
     });
     return () => { active = false; };
   }, [permissionState]);
@@ -112,7 +114,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
       });
     }).catch(() => {
       if (active) {
-        SnackBar.Error('Failed to load user details');
+        SnackBar.Error(t('users.messages.failedLoadUser'));
         router.back();
       }
     }).finally(() => {
@@ -134,22 +136,22 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
   const handleResetPassword = async () => {
     if (!userId) {
-      SnackBar.Error('Unable to identify the user');
+      SnackBar.Error(t('users.messages.unableIdentifyUser'));
       return;
     }
     if (!resetPasswordValue.trim()) {
-      SnackBar.Error('New password is required');
+      SnackBar.Error(t('users.messages.newPasswordRequired'));
       return;
     }
 
     setIsResettingPassword(true);
     try {
       await userService.resetPassword(userId, resetPasswordValue);
-      SnackBar.Success('Password reset successfully');
+      SnackBar.Success(t('users.messages.resetPasswordSuccess'));
       setResetPasswordVisible(false);
       setResetPasswordValue('');
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to reset password');
+      SnackBar.Error(error instanceof Error ? error.message : t('users.messages.failedResetPassword'));
     } finally {
       setIsResettingPassword(false);
     }
@@ -157,23 +159,23 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
   const handleSubmit = async () => {
     if (mode === 'create' && !form.userName.trim()) {
-      SnackBar.Error('Username is required');
+      SnackBar.Error(t('users.messages.usernameRequired'));
       return;
     }
     if (!form.displayName.trim()) {
-      SnackBar.Error('Display name is required');
+      SnackBar.Error(t('users.messages.displayNameRequired'));
       return;
     }
     if (!form.email.trim()) {
-      SnackBar.Error('Email is required');
+      SnackBar.Error(t('users.messages.emailRequired'));
       return;
     }
     if (mode === 'create' && !form.password) {
-      SnackBar.Error('Password is required');
+      SnackBar.Error(t('users.messages.passwordRequired'));
       return;
     }
     if (!form.roleId) {
-      SnackBar.Error('Select a role for this user');
+      SnackBar.Error(t('users.messages.roleRequired'));
       return;
     }
 
@@ -192,7 +194,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           passportNumber: form.passportNumber.trim() || undefined,
           roleId: form.roleId,
         });
-        SnackBar.Success('User created successfully');
+        SnackBar.Success(t('users.messages.created'));
       } else {
         if (!userId) return;
         const request: UpdateUserRequest = {
@@ -208,17 +210,17 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           roleId: form.roleId,
         };
         await userService.updateUser(userId, request);
-        SnackBar.Success('User updated successfully');
+        SnackBar.Success(t('users.messages.updated'));
       }
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : `Failed to ${mode} user`);
+      SnackBar.Error(error instanceof Error ? error.message : t(mode === 'create' ? 'users.messages.createFailed' : 'users.messages.updateFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const title = mode === 'create' ? 'New User' : 'Edit User';
+  const title = mode === 'create' ? t('users.newTitle') : t('users.editTitle');
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
@@ -235,14 +237,14 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('users.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Loading user details...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('users.loadingUserDetails')}</Text>
         </View>
       ) : (
         <KeyboardAwareScrollView
@@ -253,9 +255,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         >
           {mode === 'create' ? (
             <View style={styles.field}>
-              <Label className="text-foreground">Username <Text style={{ color: theme.destructive }}>*</Text></Label>
+              <Label className="text-foreground">{t('users.fields.username')} <Text style={{ color: theme.destructive }}>*</Text></Label>
               <Input
-                placeholder="Enter username"
+                placeholder={t('users.placeholders.username')}
                 value={form.userName}
                 onChangeText={(value) => updateField('userName', value)}
                 autoCapitalize="none"
@@ -267,9 +269,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           ) : null}
 
           <View style={styles.field}>
-            <Label className="text-foreground">Display Name <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label className="text-foreground">{t('users.fields.displayName')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Enter display name"
+              placeholder={t('users.placeholders.displayName')}
               value={form.displayName}
               onChangeText={(value) => updateField('displayName', value)}
               maxLength={100}
@@ -279,9 +281,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Email <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label className="text-foreground">{t('users.fields.email')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Enter email address"
+              placeholder={t('users.placeholders.email')}
               value={form.email}
               onChangeText={(value) => updateField('email', value)}
               keyboardType="email-address"
@@ -294,9 +296,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
           {mode === 'create' ? (
             <View style={styles.field}>
-              <Label className="text-foreground">Password <Text style={{ color: theme.destructive }}>*</Text></Label>
+              <Label className="text-foreground">{t('users.fields.password')} <Text style={{ color: theme.destructive }}>*</Text></Label>
               <Input
-                placeholder="Create a password"
+                placeholder={t('users.placeholders.password')}
                 value={form.password}
                 onChangeText={(value) => updateField('password', value)}
                 secureTextEntry
@@ -308,9 +310,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           ) : null}
 
           <View style={styles.field}>
-            <Label className="text-foreground">Address</Label>
+            <Label className="text-foreground">{t('users.fields.address')}</Label>
             <Input
-              placeholder="Enter street address"
+              placeholder={t('users.placeholders.address')}
               value={form.address}
               onChangeText={(value) => updateField('address', value)}
               maxLength={500}
@@ -320,9 +322,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">City</Label>
+            <Label className="text-foreground">{t('users.fields.city')}</Label>
             <Input
-              placeholder="Enter city"
+              placeholder={t('users.placeholders.city')}
               value={form.city}
               onChangeText={(value) => updateField('city', value)}
               maxLength={100}
@@ -334,22 +336,22 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           {mode === 'edit' ? (
             <View style={styles.statusField}>
               <View style={styles.statusCopy}>
-                <Label className="text-foreground">Active</Label>
-                <Text className="text-muted-foreground">Inactive users cannot sign in.</Text>
+                <Label className="text-foreground">{t('users.active')}</Label>
+                <Text className="text-muted-foreground">{t('users.inactiveDescription')}</Text>
               </View>
               <Switch
                 checked={form.isActive}
                 onCheckedChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))}
                 disabled={loading}
-                accessibilityLabel="User active status"
+                accessibilityLabel={t('users.active')}
               />
             </View>
           ) : null}
 
           <View style={styles.field}>
-            <Label className="text-foreground">Phone</Label>
+            <Label className="text-foreground">{t('users.fields.phone')}</Label>
             <Input
-              placeholder="Enter phone number"
+              placeholder={t('users.placeholders.phone')}
               value={form.phone}
               onChangeText={(value) => updateField('phone', value)}
               keyboardType="phone-pad"
@@ -360,9 +362,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">National ID</Label>
+            <Label className="text-foreground">{t('users.fields.nationalId')}</Label>
             <Input
-              placeholder="Enter national ID"
+              placeholder={t('users.placeholders.nationalId')}
               value={form.nationalId}
               onChangeText={(value) => updateField('nationalId', value)}
               maxLength={30}
@@ -372,9 +374,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Passport number</Label>
+            <Label className="text-foreground">{t('users.fields.passportNumber')}</Label>
             <Input
-              placeholder="Enter passport number"
+              placeholder={t('users.placeholders.passportNumber')}
               value={form.passportNumber}
               onChangeText={(value) => updateField('passportNumber', value)}
               maxLength={30}
@@ -384,30 +386,30 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Role <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label className="text-foreground">{t('users.fields.role')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Pressable
               style={[styles.roleSelect, { borderColor: theme.border }]}
               onPress={() => setRolePickerVisible(true)}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel={`Role: ${roles.find((item) => item.id === form.roleId)?.role ?? 'Choose a role'}`}
+              accessibilityLabel={t('users.accessibility.role', { role: roles.find((item) => item.id === form.roleId)?.role ?? t('users.placeholders.role') })}
               accessibilityState={{ expanded: rolePickerVisible }}
             >
               <Text className="text-foreground" numberOfLines={1}>
-                {roles.find((item) => item.id === form.roleId)?.role ?? 'Choose a role'}
+                {roles.find((item) => item.id === form.roleId)?.role ?? t('users.placeholders.role')}
               </Text>
               <Icon className="text-muted-foreground" as={ChevronDown} size={18} />
             </Pressable>
-            {roles.length === 0 ? <Text className="text-muted-foreground">Create a role before adding users.</Text> : null}
+            {roles.length === 0 ? <Text className="text-muted-foreground">{t('users.selectRoleBeforeAdding')}</Text> : null}
           </View>
 
           <View style={styles.actions}>
             <Button variant="outline" style={styles.actionButton} onPress={() => router.back()} disabled={loading}>
-              <Text className="text-foreground">Cancel</Text>
+              <Text className="text-foreground">{t('users.cancel')}</Text>
             </Button>
             <Button style={styles.actionButton} onPress={handleSubmit} disabled={loading}>
               {loading ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
-                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{mode === 'create' ? 'Create User' : 'Save Changes'}</Text>
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t(mode === 'create' ? 'users.createUser' : 'users.saveChanges')}</Text>
               )}
             </Button>
           </View>
@@ -418,7 +420,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
               onPress={() => setResetPasswordVisible(true)}
               disabled={loading}
             >
-              <Text className="text-foreground">Reset Password</Text>
+              <Text className="text-foreground">{t('users.resetPassword')}</Text>
             </Button>
           ) : null}
         </KeyboardAwareScrollView>
@@ -428,7 +430,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
           <View className="bg-background" style={styles.rolePicker}>
             <View style={[styles.roleSheetHandle, { backgroundColor: theme.border }]} />
-            <Text className="text-foreground" style={styles.rolePickerTitle}>Select Role</Text>
+            <Text className="text-foreground" style={styles.rolePickerTitle}>{t('users.selectRole')}</Text>
             <ScrollView>
               {roles.map((item) => (
                 <Pressable
@@ -455,10 +457,10 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         <KeyboardAvoidingView style={[styles.resetPasswordOverlay, { backgroundColor: theme.overlay }]} behavior="padding">
           <Pressable style={styles.resetPasswordBackdrop} onPress={closeResetPasswordModal} />
           <View className="bg-background" style={styles.resetPasswordSheet}>
-            <Text className="text-foreground" style={styles.rolePickerTitle}>Reset Password</Text>
-            <Label className="text-foreground">New Password</Label>
+            <Text className="text-foreground" style={styles.rolePickerTitle}>{t('users.resetPassword')}</Text>
+            <Label className="text-foreground">{t('users.fields.password')}</Label>
             <Input
-              placeholder="Enter new password"
+              placeholder={t('users.placeholders.newPassword')}
               value={resetPasswordValue}
               onChangeText={setResetPasswordValue}
               secureTextEntry
@@ -473,7 +475,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
                 onPress={closeResetPasswordModal}
                 disabled={isResettingPassword}
               >
-                <Text className="text-foreground">Cancel</Text>
+                <Text className="text-foreground">{t('users.cancel')}</Text>
               </Button>
               <Button
                 style={styles.actionButton}
@@ -481,7 +483,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
                 disabled={isResettingPassword}
               >
                 {isResettingPassword ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
-                  <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Reset</Text>
+                  <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('users.reset')}</Text>
                 )}
               </Button>
             </View>

@@ -25,11 +25,13 @@ import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 20;
 
 export default function SupplierListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/list');
@@ -51,7 +53,7 @@ export default function SupplierListScreen() {
       } catch (error) {
         if (!append) setSuppliers([]);
         SnackBar.Error(
-          error instanceof Error ? error.message : "Unable to load suppliers.",
+            error instanceof Error ? error.message : t('suppliers.messages.unableLoad'),
         );
       } finally {
         setLoading(false);
@@ -59,7 +61,7 @@ export default function SupplierListScreen() {
         setLoadingMore(false);
       }
     },
-    [service],
+    [service, t],
   );
 
   useFocusEffect(
@@ -77,7 +79,10 @@ export default function SupplierListScreen() {
     void loadSuppliers(page + 1, true);
   };
 
-  const listLabel = `Supplier · ${suppliers.length}${hasMore ? "+" : ""}`;
+  const listLabel = t('suppliers.list.totalHeader', {
+    count: suppliers.length,
+    more: hasMore ? '+' : '',
+  });
 
   return (
     <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
@@ -91,10 +96,10 @@ export default function SupplierListScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Suppliers</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>{t('suppliers.list.title')}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="New supplier"
+          accessibilityLabel={t('suppliers.accessibility.newSupplier')}
           onPress={() => router.push("/suppliers/new")}
           disabled={permissionState !== 'authorized'}
           style={[styles.addButton, { backgroundColor: theme.primary }]}
@@ -106,10 +111,10 @@ export default function SupplierListScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Checking permission...</Text>
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>{t('suppliers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('suppliers.unauthorized.title')} message={t('suppliers.unauthorized.description')} />
       ) : <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -138,8 +143,8 @@ export default function SupplierListScreen() {
           </View>
         ) : suppliers.length === 0 ? (
           <View style={styles.centeredState}>
-            <Text style={[styles.stateTitle, { color: theme.foreground }]}>No suppliers found</Text>
-            <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Add a supplier to get started.</Text>
+            <Text style={[styles.stateTitle, { color: theme.foreground }]}>{t('suppliers.empty.noSuppliers')}</Text>
+            <Text style={[styles.stateText, { color: theme.mutedForeground }]}>{t('suppliers.empty.addSupplier')}</Text>
           </View>
         ) : (
           <>
@@ -148,7 +153,7 @@ export default function SupplierListScreen() {
                 {listLabel}
               </Text>
               <Text style={[styles.headerCell, styles.statusColumn]}>
-                Status
+                {t('suppliers.fields.status')}
               </Text>
               <View style={styles.headerChevronSpace} />
             </View>
@@ -158,7 +163,7 @@ export default function SupplierListScreen() {
                 <Pressable
                   key={supplier.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Supplier ${supplier.supplierName}`}
+                  accessibilityLabel={t('suppliers.accessibility.supplier', { name: supplier.supplierName })}
                   style={[styles.row, { borderBottomColor: theme.border, backgroundColor: theme.card }]}
                   onPress={() =>
                     router.push({
@@ -217,7 +222,7 @@ export default function SupplierListScreen() {
                           { color: supplier.isActive ? theme.chart2 : theme.destructive },
                         ]}
                       >
-                        {supplier.isActive ? "ACTIVE" : "INACTIVE"}
+                        {supplier.isActive ? t('suppliers.status.active') : t('suppliers.status.inactive')}
                       </Text>
                     </View>
                   </View>

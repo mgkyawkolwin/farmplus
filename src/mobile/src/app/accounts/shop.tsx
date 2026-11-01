@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function ShopScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -25,34 +27,34 @@ export default function ShopScreen() {
                 <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                     <Text className="text-foreground" style={styles.backButtonText}>
-                        Back
+                        {t('accounts.back')}
                     </Text>
                 </Button>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Shop Information
+                    {t('accounts.shop.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Enter your shop details.
+                    {t('accounts.shop.subtitle')}
                 </Text>
 
                 <View style={styles.field}>
-                    <Label>Shop Name</Label>
-                    <Input className="bg-foreground" placeholder="Enter your shop name" />
+                    <Label>{t('accounts.shopName')}</Label>
+                    <Input className="bg-foreground" placeholder={t('accounts.shop.namePlaceholder')} />
                 </View>
 
                 <View style={styles.field}>
-                    <Label>Shop Address</Label>
-                    <Input placeholder="Enter your shop address" />
+                    <Label>{t('accounts.shop.address')}</Label>
+                    <Input placeholder={t('accounts.shop.addressPlaceholder')} />
                 </View>
 
                 <View style={styles.field}>
-                    <Label>Region</Label>
+                    <Label>{t('accounts.shop.region')}</Label>
                     <Select>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a region" />
+                            <SelectValue placeholder={t('accounts.shop.regionPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem key="township1" label="Township 1" value="township1" />
@@ -61,10 +63,10 @@ export default function ShopScreen() {
                 </View>
 
                 <View style={styles.field}>
-                    <Label>Township</Label>
+                    <Label>{t('accounts.shop.township')}</Label>
                     <Select>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a township" />
+                            <SelectValue placeholder={t('accounts.shop.townshipPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem key="township1" label="Township 1" value="township1" />
@@ -73,10 +75,10 @@ export default function ShopScreen() {
                 </View>
 
                 <View style={styles.field}>
-                    <Label>Business Type (Optional)</Label>
+                    <Label>{t('accounts.shop.businessType')}</Label>
                     <Select>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a business type" />
+                            <SelectValue placeholder={t('accounts.shop.businessTypePlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem key="township1" label="Township 1" value="township1" />
@@ -85,7 +87,7 @@ export default function ShopScreen() {
                 </View>
 
                 <Button style={styles.continueButton} onPress={() => router.push('./shopSetup')}>
-                    <Text>Create Shop</Text>
+                    <Text>{t('accounts.shop.createShop')}</Text>
                 </Button>
             </ScrollView>
         </View>

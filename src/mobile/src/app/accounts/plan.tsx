@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function PlanScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -27,30 +29,30 @@ export default function PlanScreen() {
                 <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                     <Text className="text-foreground" style={styles.backButtonText}>
-                        Back
+                        {t('accounts.back')}
                     </Text>
                 </Button>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Choose Your Plan
+                    {t('accounts.plan.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Start with a plan that suits your business.
+                    {t('accounts.planSubtitle')}
                 </Text>
                 <RadioGroup value="freemium" onValueChange={() => { }} className="flex flex-col gap-2">
                     <Card>
                         <CardContent>
                             <View className="flex flex-row items-center gap-3">
                                 <RadioGroupItem id="freemium" value="freemium" />
-                                <Label htmlFor="freemium" className="text-text text-lg">Freemium</Label>
+                                <Label htmlFor="freemium" className="text-text text-lg">{t('accounts.plans.freemium')}</Label>
                             </View>
                             <View>
-                                <Text className="text-text-muted text-sm">✔ One Shop</Text>
-                                <Text className="text-text-muted text-sm">✔ One User</Text>
-                                <Text className="text-text-muted text-sm">✔ Limited Features</Text>
-                                <Text className="text-text-muted text-sm">✔ Transaction Limit</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.oneShop')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.oneUser')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.limitedFeatures')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.transactionLimit')}</Text>
                             </View>
                         </CardContent>
                     </Card>
@@ -58,20 +60,20 @@ export default function PlanScreen() {
                         <CardContent>
                             <View className="flex flex-row items-center gap-3">
                                 <RadioGroupItem id="premium" value="premium" />
-                                <Label htmlFor="premium" className="text-text text-lg">Premium</Label>
+                                <Label htmlFor="premium" className="text-text text-lg">{t('accounts.plans.premium')}</Label>
                             </View>
                             <View>
-                                <Text className="text-text-muted text-sm">✔ Unlimited Shops</Text>
-                                <Text className="text-text-muted text-sm">✔ Unlimited Users</Text>
-                                <Text className="text-text-muted text-sm">✔ Full Features</Text>
-                                <Text className="text-text-muted text-sm">✔ Unlimited Transactions</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedShops')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedUsers')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.fullFeatures')}</Text>
+                                <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedTransactions')}</Text>
                             </View>
                         </CardContent>
                     </Card>
                 </RadioGroup>
 
                 <Button style={styles.continueButton} onPress={() => router.push('./confirm')}>
-                    <Text>Continue</Text>
+                    <Text>{t('accounts.continue')}</Text>
                 </Button>
             </ScrollView>
         </View>

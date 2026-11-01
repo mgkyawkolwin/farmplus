@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import User from '@/models/user';
 
 const TOKEN_KEY = 'auth_bearer_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
@@ -13,6 +14,24 @@ export async function storeToken(token: string): Promise<void> {
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+export async function getAuthUser(): Promise<User | null> {
+  const raw = await SecureStore.getItemAsync(AUTH_USER_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+export async function hasStoredSession(): Promise<boolean> {
+  const [token, user] = await Promise.all([getToken(), getAuthUser()]);
+  return Boolean(token && user);
 }
 
 export async function storeRefreshToken(token: string): Promise<void> {

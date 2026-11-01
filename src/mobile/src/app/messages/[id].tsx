@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -30,6 +31,7 @@ function formatDate(value: string) {
 
 export default function MessageDetailsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const messageId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [message, setMessage] = React.useState<CustomerMessage | null>(null);
@@ -67,9 +69,9 @@ export default function MessageDetailsScreen() {
     try {
       await messageService.markUnread(message.id);
       setMessage({ ...message, isRead: false, readAtUtc: undefined });
-      SnackBar.Success('Message marked as unread');
+      SnackBar.Success(t('messages.markedUnread'));
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to mark message as unread');
+      SnackBar.Error(error instanceof Error ? error.message : t('messages.errorMarkUnread'));
     } finally {
       setIsMarkingUnread(false);
     }
@@ -81,17 +83,17 @@ export default function MessageDetailsScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Message</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('messages.headerDetail')}</Text>
         {message ? (
           <Button
             variant="ghost"
             style={styles.markUnreadHeaderButton}
             onPress={() => void markUnread()}
             disabled={!message.isRead || isMarkingUnread}
-            accessibilityLabel={message.isRead ? 'Mark message as unread' : 'Message is unread'}
+            accessibilityLabel={message.isRead ? t('messages.accessibilityMarkUnread') : t('messages.accessibilityUnread')}
           >
             <Text className="text-foreground" style={styles.markUnreadButtonText}>
-              {isMarkingUnread ? 'Marking...' : message.isRead ? 'Mark unread' : 'Unread'}
+              {isMarkingUnread ? t('messages.markingUnread') : message.isRead ? t('messages.markUnread') : t('messages.unread')}
             </Text>
           </Button>
         ) : <View style={styles.headerSpacer} />}
@@ -100,12 +102,12 @@ export default function MessageDetailsScreen() {
       {loading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading message...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('messages.loadingDetail')}</Text>
         </View>
       ) : !message || loadFailed ? (
         <View style={styles.centeredState}>
-          <Text className="text-foreground" style={styles.stateTitle}>Message unavailable</Text>
-          <Text className="text-muted-foreground" style={styles.stateText}>This message could not be loaded.</Text>
+          <Text className="text-foreground" style={styles.stateTitle}>{t('messages.messageUnavailable')}</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('messages.messageUnavailableDescription')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
@@ -115,7 +117,7 @@ export default function MessageDetailsScreen() {
             <View style={styles.readStatus}>
               <View style={[styles.statusDot, message.isRead ? styles.readDot : styles.unreadDot]} />
               <Text style={[styles.statusText, message.isRead ? styles.readText : styles.unreadText]}>
-                {message.isRead ? 'Read' : 'Unread'}
+                {t(message.isRead ? 'messages.read' : 'messages.unread')}
               </Text>
             </View>
           </View>

@@ -24,6 +24,7 @@ import { DealerItem } from '@/models/dealer';
 import { DealerServiceClient } from '@/services/dealerService';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const dealerService = new DealerServiceClient();
 
@@ -68,6 +69,7 @@ function Metric({
 }
 
 function RecentDealerRow({ dealer, theme }: { dealer: DealerItem; theme: ThemeColors }) {
+  const { t } = useTranslation();
   const lastUpdated = dealer.updatedAtUtc ?? dealer.createdAtUtc ?? null;
   const isActive = dealer.isActive !== false;
 
@@ -78,7 +80,7 @@ function RecentDealerRow({ dealer, theme }: { dealer: DealerItem; theme: ThemeCo
         <View style={styles.metaRow}>
           <Icon className="text-muted-foreground" as={MapPin} size={12} />
           <Text className="text-muted-foreground" style={styles.dealerMeta} numberOfLines={1}>
-            {dealer.city || dealer.stateDivision || dealer.country || 'No location'}
+            {dealer.city || dealer.stateDivision || dealer.country || t('dealers.dashboard.noLocation')}
           </Text>
         </View>
       </View>
@@ -88,7 +90,7 @@ function RecentDealerRow({ dealer, theme }: { dealer: DealerItem; theme: ThemeCo
       <View style={styles.statusColumn}>
         <View style={[styles.statusPill, { backgroundColor: theme.secondary }]}>
           <Text style={[styles.statusText, { color: isActive ? theme.chart2 : theme.destructive }]}>
-            {isActive ? 'ACTIVE' : 'INACTIVE'}
+            {isActive ? t('dealers.labels.active') : t('dealers.labels.inactive')}
           </Text>
         </View>
       </View>
@@ -98,7 +100,7 @@ function RecentDealerRow({ dealer, theme }: { dealer: DealerItem; theme: ThemeCo
 
 export function DealerDashboardContent({
   showHeader = true,
-  title = 'Dealers',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -106,6 +108,7 @@ export function DealerDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/dashboard');
@@ -152,12 +155,12 @@ export function DealerDashboardContent({
     const inactiveDealers = dealers.filter((dealer) => dealer.isActive === false).length;
 
     return [
-      { label: 'Total Dealers', value: totalDealers.toLocaleString('en-US'), icon: BriefcaseBusiness, tone: 'blue' as const },
-      { label: 'Active', value: activeDealers.toLocaleString('en-US'), icon: UserRoundCheck, tone: 'green' as const },
-      { label: 'Inactive', value: inactiveDealers.toLocaleString('en-US'), icon: UserRoundX, tone: 'amber' as const },
-      { label: 'Recent', value: recentDealers.length.toLocaleString('en-US'), icon: CalendarDays, tone: 'red' as const },
+      { label: t('dealers.dashboard.totalDealers'), value: totalDealers.toLocaleString('en-US'), icon: BriefcaseBusiness, tone: 'blue' as const },
+      { label: t('dealers.dashboard.active'), value: activeDealers.toLocaleString('en-US'), icon: UserRoundCheck, tone: 'green' as const },
+      { label: t('dealers.dashboard.inactive'), value: inactiveDealers.toLocaleString('en-US'), icon: UserRoundX, tone: 'amber' as const },
+      { label: t('dealers.dashboard.recent'), value: recentDealers.length.toLocaleString('en-US'), icon: CalendarDays, tone: 'red' as const },
     ];
-  }, [dealers, recentDealers]);
+  }, [dealers, recentDealers, t]);
 
   return (
     <View style={[styles.page, { backgroundColor: theme.background }]}>
@@ -166,7 +169,7 @@ export function DealerDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title}</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title ?? t('dealers.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -174,14 +177,14 @@ export function DealerDashboardContent({
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : loading && dealers.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading dealers...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('dealers.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -203,7 +206,7 @@ export function DealerDashboardContent({
               onPress={() => router.push('/dealers/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color={theme.primaryForeground} />
-              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>New Dealer</Text>
+              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>{t('dealers.dashboard.newDealer')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -211,33 +214,33 @@ export function DealerDashboardContent({
               onPress={() => router.push('/dealers/dealers' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color={theme.primary} />
-              <Text style={[styles.actionLabel, { color: theme.primary }]}>View Dealers</Text>
+              <Text style={[styles.actionLabel, { color: theme.primary }]}>{t('dealers.dashboard.viewDealers')}</Text>
             </Button>
           </View>
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Recent Dealers</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('dealers.dashboard.recentDealers')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={[styles.seeAllButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 onPress={() => router.push('/dealers/dealers' as Parameters<typeof router.push>[0])}
               >
-                <Text style={[styles.seeAllText, { color: theme.primary }]}>View all</Text>
+                <Text style={[styles.seeAllText, { color: theme.primary }]}>{t('dealers.dashboard.viewAll')}</Text>
                 <ChevronRight size={14} color={theme.primary} />
               </Button>
             </View>
 
             <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.dealerColumn]}>Dealer</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.updatedColumn]}>Updated</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.statusHeaderColumn]}>Status</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.dealerColumn]}>{t('dealers.dashboard.dealer')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.updatedColumn]}>{t('dealers.dashboard.updated')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.statusHeaderColumn]}>{t('dealers.dashboard.status')}</Text>
             </View>
             {recentDealers.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No dealers found.</Text>
+                <Text className="text-muted-foreground">{t('dealers.dashboard.noDealersFound')}</Text>
               </View>
             ) : (
               recentDealers.map((dealer) => <RecentDealerRow key={dealer.id} dealer={dealer} theme={theme} />)

@@ -35,6 +35,7 @@ import { normalizeMediaFile } from "@/lib/mediaFile";
 import { useColorScheme } from "nativewind";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from "@/lib/theme";
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -66,6 +67,7 @@ const emptyFormState: ProductFormState = {
 
 export default function EditProductScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -120,11 +122,11 @@ export default function EditProductScreen() {
         unitData.map((item) => ({ label: item.unit, value: item.unit })),
       );
     } catch (error) {
-      SnackBar.Error("Unable to load selection options.");
+      SnackBar.Error(t('products.messages.selectionOptionsFailed'));
     } finally {
       setLoadingOptions(false);
     }
-  }, [brandService, categoryService, unitService]);
+  }, [brandService, categoryService, unitService, t]);
 
   React.useEffect(() => {
     if (permissionState === 'authorized') void loadDropdownOptions();
@@ -163,7 +165,7 @@ export default function EditProductScreen() {
         setNewMediaFiles([]);
       } catch (error) {
         if (isActive) {
-          SnackBar.Error("Failed to load product details");
+          SnackBar.Error(t('products.messages.detailsFailed'));
           router.back();
         }
       } finally {
@@ -178,7 +180,7 @@ export default function EditProductScreen() {
     return () => {
       isActive = false;
     };
-  }, [permissionState, productId, router]);
+  }, [permissionState, productId, router, t]);
 
   const handleInputChange = (field: keyof ProductFormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -188,7 +190,7 @@ export default function EditProductScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('products.messages.photosPermission'));
       return;
     }
 
@@ -229,7 +231,7 @@ export default function EditProductScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('products.messages.photosPermission'));
       return;
     }
 
@@ -267,12 +269,12 @@ export default function EditProductScreen() {
         mediaId,
       );
       setExistingMedia(updatedProduct.medias ?? []);
-      SnackBar.Success("Media removed successfully");
+      SnackBar.Success(t('products.messages.mediaRemoved'));
     } catch (error) {
       if (error instanceof Error) {
-        SnackBar.Error(`Failed to delete media: ${error.message}`);
+        SnackBar.Error(t('products.messages.mediaDeleteFailed', { message: error.message }));
       } else {
-        SnackBar.Error("Failed to delete media. Please try again.");
+        SnackBar.Error(t('products.messages.mediaDeleteFailedFallback'));
       }
     } finally {
       setLoading(false);
@@ -287,7 +289,7 @@ export default function EditProductScreen() {
     if (permissionState !== 'authorized') return;
     if (!productId) return;
     if (!formData.name.trim()) {
-      SnackBar.Error("Name is required");
+      SnackBar.Error(t('products.messages.nameRequired'));
       return;
     }
 
@@ -321,13 +323,13 @@ export default function EditProductScreen() {
       setCoverImageFile(null);
       setNewMediaFiles([]);
 
-      SnackBar.Success("Product updated successfully");
+      SnackBar.Success(t('products.messages.updated'));
       router.replace("/products/list");
     } catch (error) {
       if (error instanceof Error) {
-        SnackBar.Error(`Failed to update product: ${error.message}`);
+        SnackBar.Error(t('products.messages.updateFailed', { message: error.message }));
       } else {
-        SnackBar.Error("Failed to update product. Please try again.");
+        SnackBar.Error(t('products.messages.updateFailedFallback'));
       }
     } finally {
       setLoading(false);
@@ -351,7 +353,7 @@ export default function EditProductScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerBarTitle}>
-          Edit Product
+          {t('products.actions.edit')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -359,15 +361,15 @@ export default function EditProductScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('products.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
-            Loading product details...
+            {t('products.messages.loadingDetails')}
           </Text>
         </View>
       ) : (
@@ -376,9 +378,9 @@ export default function EditProductScreen() {
           className="bg-background"
         >
           <View style={styles.field}>
-            <Label className="text-foreground">Name</Label>
+            <Label className="text-foreground">{t('products.fields.name')}</Label>
             <Input
-              placeholder="Enter product name"
+              placeholder={t('products.placeholders.name')}
               value={formData.name}
               onChangeText={(value) => handleInputChange("name", value)}
               className="mt-2"
@@ -387,9 +389,9 @@ export default function EditProductScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Description</Label>
+            <Label className="text-foreground">{t('products.fields.description')}</Label>
             <Textarea
-              placeholder="Enter description"
+              placeholder={t('products.placeholders.description')}
               value={formData.description}
               onChangeText={(value) => handleInputChange("description", value)}
               editable={!loading}
@@ -397,43 +399,43 @@ export default function EditProductScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Brand</Label>
+            <Label className="text-foreground">{t('products.fields.brand')}</Label>
             <DropdownModel
               items={brands}
               value={formData.brand}
-              placeholder="Select brand"
-              title="Select Brand"
+              placeholder={t('products.placeholders.brand')}
+              title={t('products.placeholders.brand')}
               disabled={loading || loadingOptions || brands.length === 0}
               onSelect={(item) => handleInputChange("brand", item.value)}
             />
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Category</Label>
+            <Label className="text-foreground">{t('products.fields.category')}</Label>
             <DropdownModel
               items={categories}
               value={formData.category}
-              placeholder="Select category"
-              title="Select Category"
+              placeholder={t('products.placeholders.category')}
+              title={t('products.placeholders.category')}
               disabled={loading || loadingOptions || categories.length === 0}
               onSelect={(item) => handleInputChange("category", item.value)}
             />
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Unit</Label>
+            <Label className="text-foreground">{t('products.fields.unit')}</Label>
             <DropdownModel
               items={units}
               value={formData.unit}
-              placeholder="Select unit"
-              title="Select Unit"
+              placeholder={t('products.placeholders.unit')}
+              title={t('products.placeholders.unit')}
               disabled={loading || loadingOptions || units.length === 0}
               onSelect={(item) => handleInputChange("unit", item.value)}
             />
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Cover Image</Label>
+            <Label className="text-foreground">{t('products.fields.coverImage')}</Label>
             {coverImageUri ? (
               <View style={styles.coverImagePreviewContainer}>
                 <Image
@@ -445,7 +447,7 @@ export default function EditProductScreen() {
                   onPress={removeCoverImage}
                   disabled={loading}
                 >
-                  <Text className="text-foreground">Remove image</Text>
+                  <Text className="text-foreground">{t('products.actions.removeImage')}</Text>
                 </Button>
               </View>
             ) : (
@@ -454,13 +456,13 @@ export default function EditProductScreen() {
                 onPress={pickCoverImage}
                 disabled={loading}
               >
-                <Text className="text-foreground">Select cover image</Text>
+                <Text className="text-foreground">{t('products.actions.selectCoverImage')}</Text>
               </Button>
             )}
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Additional Images</Label>
+            <Label className="text-foreground">{t('products.fields.additionalImages')}</Label>
             {existingMedia.length > 0 && (
               <View style={styles.imageList}>
                 {existingMedia.map((media) => (
@@ -478,7 +480,7 @@ export default function EditProductScreen() {
                         onPress={() => removeExistingMedia(media.id!)}
                         disabled={loading}
                       >
-                        <Text className="text-foreground">Remove</Text>
+                        <Text className="text-foreground">{t('products.actions.remove')}</Text>
                       </Button>
                     )}
                   </View>
@@ -501,7 +503,7 @@ export default function EditProductScreen() {
                       onPress={() => removeNewMediaFile(index)}
                       disabled={loading}
                     >
-                      <Text className="text-foreground">Remove</Text>
+                      <Text className="text-foreground">{t('products.actions.remove')}</Text>
                     </Button>
                   </View>
                 ))}
@@ -512,12 +514,12 @@ export default function EditProductScreen() {
               onPress={pickProductMedia}
               disabled={loading}
             >
-              <Text className="text-foreground">Select additional images</Text>
+              <Text className="text-foreground">{t('products.actions.selectAdditionalImages')}</Text>
             </Button>
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Sale Price</Label>
+            <Label className="text-foreground">{t('products.fields.salePrice')}</Label>
             <Input
               placeholder="0"
               value={formData.salePrice}
@@ -529,14 +531,14 @@ export default function EditProductScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Current Stock</Label>
+            <Label className="text-foreground">{t('products.fields.currentStock')}</Label>
             <Text className="text-muted-foreground">
               {formData.currentStock || "0"}
             </Text>
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Minimum Stock</Label>
+            <Label className="text-foreground">{t('products.fields.minimumStock')}</Label>
             <Input
               placeholder="0"
               value={formData.minimumStock}
@@ -553,7 +555,7 @@ export default function EditProductScreen() {
               onCheckedChange={setIsActive}
               disabled={loading}
             />
-            <Text className="text-foreground ml-2">Active Product</Text>
+            <Text className="text-foreground ml-2">{t('products.fields.activeProduct')}</Text>
           </View>
 
           <View style={styles.actionsRow}>
@@ -563,7 +565,7 @@ export default function EditProductScreen() {
               onPress={() => router.back()}
               disabled={loading}
             >
-              <Text className="text-foreground">Cancel</Text>
+              <Text className="text-foreground">{t('products.actions.cancel')}</Text>
             </Button>
             <Button
               style={[styles.submitButton, { backgroundColor: theme.primary }]}
@@ -574,7 +576,7 @@ export default function EditProductScreen() {
                 <ActivityIndicator color={theme.primaryForeground} size="small" />
               ) : (
                 <Text className="font-semibold" style={{ color: theme.primaryForeground }}>
-                  Save Changes
+                  {t('products.actions.saveChanges')}
                 </Text>
               )}
             </Button>

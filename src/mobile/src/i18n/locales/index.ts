@@ -1,2 +1,11 @@
 export { default as en } from "./en";
-export { default as mm } from "./mm";
+export { default as my } from "./my";
+export { default as th } from "./th";
+export { default as zh } from "./zh";
+export { default as lo } from "./lo";
+export { default as km } from "./km";
+export { default as vi } from "./vi";
+export { default as ms } from "./ms";
+export { default as id } from "./id";
+export { default as hi } from "./hi";
+export { default as fil } from "./fil";

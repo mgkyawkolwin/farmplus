@@ -34,6 +34,7 @@ import { UnitServiceClient } from "@/services/unitService";
 import { normalizeMediaFile } from "@/lib/mediaFile";
 import { usePagePermission } from "@/lib/usePagePermission";
 import { THEME } from "@/lib/theme";
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -41,6 +42,7 @@ const productService = container.resolve<IProductService>(
 
 export default function NewProductScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const permissionState = usePagePermission('/products/new');
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -100,11 +102,11 @@ export default function NewProductScreen() {
         unitData.map((item) => ({ label: item.unit, value: item.unit })),
       );
     } catch (error) {
-      SnackBar.Error("Unable to load selection options.");
+      SnackBar.Error(t('products.messages.selectionOptionsFailed'));
     } finally {
       setLoadingOptions(false);
     }
-  }, [brandService, categoryService, unitService]);
+  }, [brandService, categoryService, unitService, t]);
 
   React.useEffect(() => {
     if (permissionState === 'authorized') void loadDropdownOptions();
@@ -114,7 +116,7 @@ export default function NewProductScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('products.messages.photosPermission'));
       return;
     }
 
@@ -155,7 +157,7 @@ export default function NewProductScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error("Permission to access photos is required.");
+      SnackBar.Error(t('products.messages.photosPermission'));
       return;
     }
 
@@ -190,7 +192,7 @@ export default function NewProductScreen() {
   const handleSubmit = async () => {
     if (permissionState !== 'authorized') return;
     if (!formData.name.trim()) {
-      SnackBar.Error("Name is required");
+      SnackBar.Error(t('products.messages.nameRequired'));
       return;
     }
 
@@ -226,13 +228,13 @@ export default function NewProductScreen() {
       setCoverImageFile(null);
       setProductMediaFiles([]);
 
-      SnackBar.Success("Product created successfully");
+      SnackBar.Success(t('products.messages.created'));
       router.replace("/products/list");
     } catch (error) {
       if (error instanceof Error) {
-        SnackBar.Error(`Failed to create product: ${error.message}`);
+        SnackBar.Error(t('products.messages.createFailed', { message: error.message }));
       } else {
-        SnackBar.Error("Failed to create product. Please try again.");
+        SnackBar.Error(t('products.messages.createFailedFallback'));
       }
     } finally {
       setLoading(false);
@@ -256,7 +258,7 @@ export default function NewProductScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerBarTitle}>
-          New Product
+          {t('products.actions.new')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -264,10 +266,10 @@ export default function NewProductScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.permissionState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.permissionText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.permissionText}>{t('products.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} />
       ) : <KeyboardAwareScrollView
         contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 40 }}
         enableOnAndroid={true}
@@ -276,9 +278,9 @@ export default function NewProductScreen() {
         className="bg-background"
       >
         <View style={styles.field}>
-          <Label className="text-foreground">Name *</Label>
+          <Label className="text-foreground">{t('products.fields.name')} *</Label>
           <Input
-            placeholder="Enter product name"
+            placeholder={t('products.placeholders.name')}
             value={formData.name}
             onChangeText={(value) => handleInputChange("name", value)}
             className="mt-2"
@@ -287,9 +289,9 @@ export default function NewProductScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Description *</Label>
+          <Label className="text-foreground">{t('products.fields.description')} *</Label>
           <Textarea
-            placeholder="Enter description"
+            placeholder={t('products.placeholders.description')}
             value={formData.description}
             onChangeText={(value) => handleInputChange("description", value)}
             editable={!loading}
@@ -297,43 +299,43 @@ export default function NewProductScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Brand *</Label>
+          <Label className="text-foreground">{t('products.fields.brand')} *</Label>
           <DropdownModel
             items={brands}
             value={formData.brand}
-            placeholder="Select brand"
-            title="Select Brand"
+            placeholder={t('products.placeholders.brand')}
+            title={t('products.placeholders.brand')}
             disabled={loading || loadingOptions || brands.length === 0}
             onSelect={(item) => handleInputChange("brand", item.value)}
           />
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Category *</Label>
+          <Label className="text-foreground">{t('products.fields.category')} *</Label>
           <DropdownModel
             items={categories}
             value={formData.category}
-            placeholder="Select category"
-            title="Select Category"
+            placeholder={t('products.placeholders.category')}
+            title={t('products.placeholders.category')}
             disabled={loading || loadingOptions || categories.length === 0}
             onSelect={(item) => handleInputChange("category", item.value)}
           />
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Unit *</Label>
+          <Label className="text-foreground">{t('products.fields.unit')} *</Label>
           <DropdownModel
             items={units}
             value={formData.unit}
-            placeholder="Select unit"
-            title="Select Unit"
+            placeholder={t('products.placeholders.unit')}
+            title={t('products.placeholders.unit')}
             disabled={loading || loadingOptions || units.length === 0}
             onSelect={(item) => handleInputChange("unit", item.value)}
           />
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Sale Price *</Label>
+          <Label className="text-foreground">{t('products.fields.salePrice')} *</Label>
           <Input
             placeholder="0"
             value={formData.salePrice}
@@ -345,12 +347,12 @@ export default function NewProductScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Current Stock</Label>
+          <Label className="text-foreground">{t('products.fields.currentStock')}</Label>
           <Text className="text-muted-foreground">0</Text>
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Minimum Stock *</Label>
+          <Label className="text-foreground">{t('products.fields.minimumStock')} *</Label>
           <Input
             placeholder="0"
             value={formData.minimumStock}
@@ -367,11 +369,11 @@ export default function NewProductScreen() {
             onCheckedChange={setIsActive}
             disabled={loading}
           />
-          <Text className="text-foreground ml-2">Active Product</Text>
+          <Text className="text-foreground ml-2">{t('products.fields.activeProduct')}</Text>
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Cover Image</Label>
+          <Label className="text-foreground">{t('products.fields.coverImage')}</Label>
           {coverImageUri ? (
             <View style={styles.coverImagePreviewContainer}>
               <Image
@@ -383,7 +385,7 @@ export default function NewProductScreen() {
                 onPress={removeCoverImage}
                 disabled={loading}
               >
-                <Text className="text-foreground">Remove image</Text>
+                <Text className="text-foreground">{t('products.actions.removeImage')}</Text>
               </Button>
             </View>
           ) : (
@@ -392,13 +394,13 @@ export default function NewProductScreen() {
               onPress={pickCoverImage}
               disabled={loading}
             >
-              <Text className="text-foreground">Select cover image</Text>
+              <Text className="text-foreground">{t('products.actions.selectCoverImage')}</Text>
             </Button>
           )}
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Product Images</Label>
+          <Label className="text-foreground">{t('products.fields.productImages')}</Label>
           {productMediaFiles.length > 0
             ? productMediaFiles.map((file, index) => (
                 <View
@@ -414,7 +416,7 @@ export default function NewProductScreen() {
                     onPress={() => removeProductMedia(index)}
                     disabled={loading}
                   >
-                    <Text className="text-foreground">Remove</Text>
+                    <Text className="text-foreground">{t('products.actions.remove')}</Text>
                   </Button>
                 </View>
               ))
@@ -424,7 +426,7 @@ export default function NewProductScreen() {
             onPress={pickProductMedia}
             disabled={loading}
           >
-            <Text className="text-foreground">Select product images</Text>
+            <Text className="text-foreground">{t('products.actions.selectProductImages')}</Text>
           </Button>
         </View>
 
@@ -435,7 +437,7 @@ export default function NewProductScreen() {
             onPress={() => router.back()}
             disabled={loading}
           >
-            <Text className="text-foreground">Cancel</Text>
+            <Text className="text-foreground">{t('products.actions.cancel')}</Text>
           </Button>
           <Button
             style={[styles.submitButton, { backgroundColor: theme.primary }]}
@@ -445,7 +447,7 @@ export default function NewProductScreen() {
             {loading ? (
               <ActivityIndicator color={theme.primaryForeground} size="small" />
             ) : (
-              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Save</Text>
+              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('products.actions.save')}</Text>
             )}
           </Button>
         </View>

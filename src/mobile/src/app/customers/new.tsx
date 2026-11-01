@@ -14,6 +14,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerS
 
 export default function NewCustomerScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
     const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
     const permissionState = usePagePermission('/customers/new');
@@ -94,7 +96,7 @@ export default function NewCustomerScreen() {
     const handleSubmit = async () => {
         if (permissionState !== 'authorized') return;
         if (!formData.name.trim()) {
-            SnackBar.Error('Name is required');
+            SnackBar.Error(t('customers.messages.nameRequired'));
             return;
         }
 
@@ -127,13 +129,13 @@ export default function NewCustomerScreen() {
                 await customerService.uploadCustomerProfilePicture(createdCustomer.id, imageFile);
             }
 
-            SnackBar.Success('Customer created successfully');
+            SnackBar.Success(t('customers.messages.created'));
             router.back();
         } catch (error) {
             if (error instanceof Error) {
-                SnackBar.Error(`Failed to create customer: ${error.message}`);
+                SnackBar.Error(t('customers.messages.createFailed', { message: error.message }));
             } else {
-                SnackBar.Error('Failed to create customer. Please try again.');
+                SnackBar.Error(t('customers.messages.createFailedFallback'));
             }
         } finally {
             setLoading(false);
@@ -154,7 +156,7 @@ export default function NewCustomerScreen() {
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                 </Button>
                 <Text className="text-foreground" style={styles.headerBarTitle}>
-                    New Customer
+                    {t('customers.actions.new')}
                 </Text>
                 <View></View>
             </View>
@@ -162,7 +164,7 @@ export default function NewCustomerScreen() {
             {permissionState === 'checking' ? (
                 <View style={styles.centeredState}>
                     <ActivityIndicator size="large" color={theme.primary} />
-                    <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+                    <Text className="text-muted-foreground" style={styles.stateText}>{t('customers.form.checkingPermission')}</Text>
                 </View>
             ) : permissionState === 'denied' ? (
                 <UnauthorizedView />
@@ -197,15 +199,15 @@ export default function NewCustomerScreen() {
                     <Pressable style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]} onPress={() => setShowPhotoModal(false)}>
                         <Pressable style={[styles.modalSheet, { backgroundColor: theme.card }]} onPress={() => undefined}>
                             <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
-                            <Text className="text-foreground" style={styles.sheetTitle}>Choose photo</Text>
+                            <Text className="text-foreground" style={styles.sheetTitle}>{t('customers.photo.choosePhoto')}</Text>
                             <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('library')} disabled={loading}>
-                                <Text>Choose from gallery</Text>
+                                <Text>{t('customers.photo.chooseFromGallery')}</Text>
                             </Button>
                             <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('camera')} disabled={loading}>
-                                <Text>Take photo</Text>
+                                <Text>{t('customers.photo.takePhoto')}</Text>
                             </Button>
                             <Button variant="ghost" style={styles.sheetButton} onPress={() => setShowPhotoModal(false)}>
-                                <Text>Cancel</Text>
+                                <Text>{t('customers.actions.cancel')}</Text>
                             </Button>
                         </Pressable>
                     </Pressable>
@@ -213,10 +215,10 @@ export default function NewCustomerScreen() {
 
                 <View style={styles.field}>
                     <Label className="text-foreground">
-                        Name <Text style={{ color: theme.destructive }}>*</Text>
+                        {t('customers.fields.name')} <Text style={{ color: theme.destructive }}>*</Text>
                     </Label>
                     <Input
-                        placeholder="Enter customer name"
+                        placeholder={t('customers.placeholders.name')}
                         value={formData.name}
                         onChangeText={(value) => handleInputChange('name', value)}
                         className="mt-2"
@@ -226,9 +228,9 @@ export default function NewCustomerScreen() {
 
                 {/* Phone Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">Phone</Label>
+                    <Label className="text-foreground">{t('customers.fields.phone')}</Label>
                     <Input
-                        placeholder="Enter phone number"
+                        placeholder={t('customers.placeholders.phone')}
                         value={formData.phone}
                         onChangeText={(value) => handleInputChange('phone', value)}
                         className="mt-2"
@@ -239,9 +241,9 @@ export default function NewCustomerScreen() {
 
                 {/* Email Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">Email</Label>
+                    <Label className="text-foreground">{t('customers.fields.email')}</Label>
                     <Input
-                        placeholder="Enter email address"
+                        placeholder={t('customers.placeholders.email')}
                         value={formData.email}
                         onChangeText={(value) => handleInputChange('email', value)}
                         className="mt-2"
@@ -252,9 +254,9 @@ export default function NewCustomerScreen() {
 
                 {/* National ID Number Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">National ID Number</Label>
+                    <Label className="text-foreground">{t('customers.fields.nationalIdNumber')}</Label>
                     <Input
-                        placeholder="Enter national ID number"
+                        placeholder={t('customers.placeholders.nationalIdNumber')}
                         value={formData.nationalIdNumber}
                         onChangeText={(value) => handleInputChange('nationalIdNumber', value)}
                         className="mt-2"
@@ -264,9 +266,9 @@ export default function NewCustomerScreen() {
 
                 {/* Address Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">Address</Label>
+                    <Label className="text-foreground">{t('customers.fields.address')}</Label>
                     <Input
-                        placeholder="Enter street address"
+                        placeholder={t('customers.placeholders.address')}
                         value={formData.address}
                         onChangeText={(value) => handleInputChange('address', value)}
                         className="mt-2"
@@ -276,9 +278,9 @@ export default function NewCustomerScreen() {
 
                 {/* City Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">City</Label>
+                    <Label className="text-foreground">{t('customers.fields.city')}</Label>
                     <Input
-                        placeholder="Enter city"
+                        placeholder={t('customers.placeholders.city')}
                         value={formData.city}
                         onChangeText={(value) => handleInputChange('city', value)}
                         className="mt-2"
@@ -288,9 +290,9 @@ export default function NewCustomerScreen() {
 
                 {/* Country Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">Country</Label>
+                    <Label className="text-foreground">{t('customers.fields.country')}</Label>
                     <Input
-                        placeholder="Enter country"
+                        placeholder={t('customers.placeholders.country')}
                         value={formData.country}
                         onChangeText={(value) => handleInputChange('country', value)}
                         className="mt-2"
@@ -300,9 +302,9 @@ export default function NewCustomerScreen() {
 
                 {/* Postal Code Field */}
                 <View style={styles.field}>
-                    <Label className="text-foreground">Postal Code</Label>
+                    <Label className="text-foreground">{t('customers.fields.postalCode')}</Label>
                     <Input
-                        placeholder="Enter postal code"
+                        placeholder={t('customers.placeholders.postalCode')}
                         value={formData.postalCode}
                         onChangeText={(value) => handleInputChange('postalCode', value)}
                         className="mt-2"
@@ -317,7 +319,7 @@ export default function NewCustomerScreen() {
                         onCheckedChange={setIsActive}
                         disabled={loading}
                     />
-                    <Text className="text-foreground ml-2">Active Customer</Text>
+                    <Text className="text-foreground ml-2">{t('customers.fields.activeCustomer')}</Text>
                 </View>
 
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
@@ -328,7 +330,7 @@ export default function NewCustomerScreen() {
                         onPress={() => router.back()}
                         disabled={loading}
                     >
-                        <Text className="text-foreground">Cancel</Text>
+                        <Text className="text-foreground">{t('customers.actions.cancel')}</Text>
                     </Button>
                     <Button
                         style={[styles.submitButton, { backgroundColor: theme.primary }]}
@@ -338,7 +340,7 @@ export default function NewCustomerScreen() {
                         {loading ? (
                             <ActivityIndicator color={theme.primaryForeground} size="small" />
                         ) : (
-                            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Create Customer</Text>
+                            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('customers.actions.create')}</Text>
                         )}
                     </Button>
                 </View>

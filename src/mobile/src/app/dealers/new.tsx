@@ -21,9 +21,11 @@ import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function NewDealerScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/new');
@@ -50,7 +52,7 @@ export default function NewDealerScreen() {
   const pickLogo = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status !== ImagePicker.PermissionStatus.GRANTED) {
-      SnackBar.Error('Permission to access photos is required.');
+      SnackBar.Error(t('dealers.messages.photosPermission'));
       return;
     }
 
@@ -85,7 +87,7 @@ export default function NewDealerScreen() {
   const handleSubmit = async () => {
     if (permissionState !== 'authorized') return;
     if (!formData.dealerName.trim()) {
-      SnackBar.Error('Dealer name is required.');
+      SnackBar.Error(t('dealers.messages.dealerNameRequired'));
       return;
     }
 
@@ -106,10 +108,10 @@ export default function NewDealerScreen() {
         await service.uploadDealerLogo(createdDealer.id, logoFile);
       }
 
-      SnackBar.Success('Dealer created successfully.');
+      SnackBar.Success(t('dealers.messages.createSuccess'));
       router.back();
     } catch (error: any) {
-      SnackBar.Error(error?.message || 'Unable to create dealer.');
+      SnackBar.Error(error?.message || t('dealers.messages.unableSave'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +126,7 @@ export default function NewDealerScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          New Dealer
+          {t('dealers.newDealer')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -132,10 +134,10 @@ export default function NewDealerScreen() {
       {permissionState === 'checking' ? (
         <View style={styles.permissionState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground">Checking permission...</Text>
+          <Text className="text-muted-foreground">{t('dealers.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('dealers.unauthorized.title')} message={t('dealers.unauthorized.description')} />
       ) : <KeyboardAwareScrollView
         contentContainerStyle={styles.contentContainer}
         enableOnAndroid={true}
@@ -156,17 +158,17 @@ export default function NewDealerScreen() {
 
           {logoImage ? (
             <Button variant="ghost" onPress={removeLogo} style={styles.removeButton}>
-              <Text className="text-destructive">Remove logo</Text>
+              <Text className="text-destructive">{t('dealers.actions.removeLogo')}</Text>
             </Button>
           ) : null}
         </View>
 
         <View style={styles.field}>
           <Label className="text-foreground">
-            Dealer Name <Text style={{ color: theme.destructive }}>*</Text>
+            {t('dealers.fields.dealerName')} <Text style={{ color: theme.destructive }}>*</Text>
           </Label>
           <Input
-            placeholder="Enter dealer name"
+            placeholder={t('dealers.placeholders.dealerName')}
             value={formData.dealerName}
             onChangeText={(value) => handleFieldChange('dealerName', value)}
             className="mt-2"
@@ -175,9 +177,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Email</Label>
+          <Label className="text-foreground">{t('dealers.fields.email')}</Label>
           <Input
-            placeholder="Enter email address"
+            placeholder={t('dealers.placeholders.emailAddress')}
             value={formData.email}
             onChangeText={(value) => handleFieldChange('email', value)}
             className="mt-2"
@@ -187,9 +189,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Phone</Label>
+          <Label className="text-foreground">{t('dealers.fields.phone')}</Label>
           <Input
-            placeholder="Enter phone number"
+            placeholder={t('dealers.placeholders.phone')}
             value={formData.phoneNumber}
             onChangeText={(value) => handleFieldChange('phoneNumber', value)}
             className="mt-2"
@@ -199,9 +201,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Address</Label>
+          <Label className="text-foreground">{t('dealers.fields.address')}</Label>
           <Input
-            placeholder="Enter address"
+            placeholder={t('dealers.placeholders.address')}
             value={formData.address}
             onChangeText={(value) => handleFieldChange('address', value)}
             className="mt-2"
@@ -210,9 +212,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">State / Division</Label>
+          <Label className="text-foreground">{t('dealers.fields.stateDivision')}</Label>
           <Input
-            placeholder="Enter state or division"
+            placeholder={t('dealers.placeholders.stateDivision')}
             value={formData.stateDivision}
             onChangeText={(value) => handleFieldChange('stateDivision', value)}
             className="mt-2"
@@ -221,9 +223,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">City</Label>
+          <Label className="text-foreground">{t('dealers.fields.city')}</Label>
           <Input
-            placeholder="Enter city"
+            placeholder={t('dealers.placeholders.city')}
             value={formData.city}
             onChangeText={(value) => handleFieldChange('city', value)}
             className="mt-2"
@@ -232,9 +234,9 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.field}>
-          <Label className="text-foreground">Country</Label>
+          <Label className="text-foreground">{t('dealers.fields.country')}</Label>
           <Input
-            placeholder="Enter country"
+            placeholder={t('dealers.placeholders.country')}
             value={formData.country}
             onChangeText={(value) => handleFieldChange('country', value)}
             className="mt-2"
@@ -243,26 +245,26 @@ export default function NewDealerScreen() {
         </View>
 
         <View style={styles.switchRow}>
-          <Text className="text-foreground" style={styles.switchLabel}>Active Dealer</Text>
+          <Text className="text-foreground" style={styles.switchLabel}>{t('dealers.fields.activeDealer')}</Text>
           <Button
             variant={formData.isActive ? 'default' : 'outline'}
             size="sm"
             onPress={() => handleFieldChange('isActive', !formData.isActive)}
             disabled={loading}
           >
-            <Text className={formData.isActive ? 'text-primary-foreground' : 'text-foreground'}>{formData.isActive ? 'Active' : 'Inactive'}</Text>
+            <Text className={formData.isActive ? 'text-primary-foreground' : 'text-foreground'}>{formData.isActive ? t('dealers.status.active') : t('dealers.status.inactive')}</Text>
           </Button>
         </View>
 
         <View style={styles.actionRow}>
           <Button variant="outline" style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
-            <Text className="text-foreground">Cancel</Text>
+            <Text className="text-foreground">{t('dealers.actions.cancel')}</Text>
           </Button>
           <Button style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
             {loading ? (
               <ActivityIndicator color={theme.primaryForeground} size="small" />
             ) : (
-              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Create Dealer</Text>
+              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t('dealers.actions.createDealer')}</Text>
             )}
           </Button>
         </View>

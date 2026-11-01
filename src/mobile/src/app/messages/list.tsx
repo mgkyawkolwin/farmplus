@@ -13,6 +13,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, CheckCheck, ChevronLeft, Mail } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -45,6 +46,7 @@ function getPreview(text: string) {
 
 export default function MessagesListScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const [messages, setMessages] = React.useState<CustomerMessage[]>([]);
@@ -62,7 +64,7 @@ export default function MessagesListScreen() {
       setHasMore(result.length === PAGE_SIZE);
     } catch (error) {
       if (!append) setMessages([]);
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to load messages');
+      SnackBar.Error(error instanceof Error ? error.message : t('messages.errorLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,7 +93,7 @@ export default function MessagesListScreen() {
       await messageService.markRead(message.id);
     } catch (error) {
       setMessages((current) => current.map((item) => item.id === message.id ? { ...item, isRead: false } : item));
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to mark message as read');
+      SnackBar.Error(error instanceof Error ? error.message : t('messages.errorMarkRead'));
     }
   };
 
@@ -109,7 +111,7 @@ export default function MessagesListScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Messages</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('messages.headerList')}</Text>
         <View style={styles.headerMeta}>
           <Icon className="text-muted-foreground" as={CheckCheck} size={16} />
           <Text className="text-muted-foreground" style={styles.unreadCount}>{unreadCount}</Text>
@@ -119,15 +121,15 @@ export default function MessagesListScreen() {
       {loading && messages.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading messages...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('messages.loadingList')}</Text>
         </View>
       ) : messages.length === 0 ? (
         <View style={styles.centeredState}>
           <View style={[styles.emptyIcon, { backgroundColor: theme.secondary }]}>
             <Bell size={22} color={theme.primary} />
           </View>
-          <Text className="text-foreground" style={styles.stateTitle}>You’re all caught up</Text>
-          <Text className="text-muted-foreground" style={styles.stateText}>New messages will appear here.</Text>
+          <Text className="text-foreground" style={styles.stateTitle}>{t('messages.emptyListTitle')}</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('messages.emptyListBody')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -147,7 +149,11 @@ export default function MessagesListScreen() {
             <Pressable
               key={message.id}
               accessibilityRole="button"
-              accessibilityLabel={`${message.title}, ${message.isRead ? 'Read' : 'Unread'}, ${formatDate(message.sentAtUtc)}`}
+              accessibilityLabel={t('messages.accessibilityLabel', {
+                title: message.title || t(message.audience === 'Broadcast' ? 'messages.announcement' : 'messages.messageUntitled'),
+                status: t(message.isRead ? 'messages.read' : 'messages.unread'),
+                date: formatDate(message.sentAtUtc),
+              })}
               onPress={() => void openMessage(message)}
               style={[
                 styles.messageRow,
@@ -160,7 +166,7 @@ export default function MessagesListScreen() {
               <View style={styles.messageBody}>
                 <View style={styles.messageHeader}>
                   <Text className="text-foreground" style={styles.messageTitle} numberOfLines={1}>
-                    {message.title || (message.audience === 'Broadcast' ? 'Announcement' : 'Message')}
+                    {message.title || t(message.audience === 'Broadcast' ? 'messages.announcement' : 'messages.messageUntitled')}
                   </Text>
                   <Text className="text-muted-foreground" style={styles.date}>{formatDate(message.sentAtUtc)}</Text>
                 </View>
@@ -180,14 +186,14 @@ export default function MessagesListScreen() {
                       { color: message.isRead ? theme.mutedForeground : theme.primary },
                     ]}
                   >
-                    {message.isRead ? 'Read' : 'Unread'}
+                    {t(message.isRead ? 'messages.read' : 'messages.unread')}
                   </Text>
                 </View>
               </View>
             </Pressable>
           ))}
           {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color={theme.primary} /> : null}
-          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of messages</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>{t('messages.endOfList')}</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>

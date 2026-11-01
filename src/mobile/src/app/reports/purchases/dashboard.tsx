@@ -42,6 +42,7 @@ import { container, DI_TOKENS } from "@/di";
 import { Purchase } from "@/models/purchase";
 import { IPurchaseService } from "@/services/purchaseService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
 
@@ -102,6 +103,7 @@ function Section({
   onViewAll?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View>
       <View style={styles.sectionHeading}>
@@ -111,7 +113,7 @@ function Section({
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
+            <Text style={styles.seeAllText}>{t('reports.common.viewAll')}</Text>
             <ChevronRight size={14} color={COLORS.green} />
           </Pressable>
         ) : null}
@@ -165,6 +167,7 @@ type ProductStats = { id: string; name: string; orders: number; spend: number; u
 
 export default function PurchaseReportDashboardScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const permissionState = usePagePermission('/reports/purchases/dashboard');
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -183,12 +186,12 @@ export default function PurchaseReportDashboardScreen() {
       setPurchases(all);
     } catch (error) {
       setPurchases([]);
-      SnackBar.Error(error instanceof Error ? error.message : "Unable to load purchases report");
+      SnackBar.Error(error instanceof Error ? error.message : t('reports.common.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -215,7 +218,7 @@ export default function PurchaseReportDashboardScreen() {
       const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
       return {
         key: monthKey(date),
-        label: date.toLocaleDateString("en-US", { month: "short" }),
+        label: date.toLocaleDateString(i18n.language, { month: "short" }),
         spend: 0,
         orders: 0,
         suppliers: new Set<string>(),
@@ -309,7 +312,7 @@ export default function PurchaseReportDashboardScreen() {
       largestOrder,
       averageDailySpend,
     };
-  }, [purchases]);
+  }, [purchases, i18n.language]);
 
   const purchaseListRoute = "/purchases/list" as Href;
   const openPurchase = (id: string) =>
@@ -322,14 +325,14 @@ export default function PurchaseReportDashboardScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Purchase Report</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('reports.purchases.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>{t('reports.common.checkingPermission')}</Text></View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('reports.common.unauthorizedTitle')} message={t('reports.common.unauthorizedDescription')} />
       ) : <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -340,51 +343,51 @@ export default function PurchaseReportDashboardScreen() {
         }
       >
         <View>
-          <Text style={styles.eyebrow}>Purchase analytics</Text>
-          <Text style={styles.title}>Purchase overview</Text>
+          <Text style={styles.eyebrow}>{t('reports.purchases.eyebrow')}</Text>
+          <Text style={styles.title}>{t('reports.purchases.overview')}</Text>
           <Text style={styles.subtitle}>
-            {count(purchases.length)} purchase orders · filtered to the selected shop when active
+            {t('reports.purchases.subtitle', { count: count(purchases.length) })}
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Net purchases" value={money(report.totalSpend)} caption={`${count(purchases.length)} purchase orders`} icon={ShoppingCart} tone="green" />
-          <Kpi label="Subtotal" value={money(report.subtotal)} caption="Before discount and tax" icon={Receipt} tone="blue" />
-          <Kpi label="Average order" value={money(report.averageOrder)} caption="Net value per order" icon={ClipboardList} tone="blue" />
-          <Kpi label="Spend · month" value={money(report.thisMonth)} caption={report.growth === null ? "No prior month" : `${report.growth >= 0 ? "+" : ""}${report.growth}% vs last month`} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
-          <Kpi label="Orders · 30 days" value={count(report.ordersLast30)} caption="Purchase orders" icon={CalendarDays} tone="blue" />
-          <Kpi label="Units purchased" value={count(report.totalUnits)} caption={`${count(report.averageUnits)} avg units per order`} icon={Package} tone="green" />
-          <Kpi label="Discounts" value={money(report.discounts)} caption="Applied to purchase orders" icon={Percent} tone="amber" />
-          <Kpi label="Purchase tax" value={money(report.taxes)} caption="Across all purchase orders" icon={Banknote} tone="blue" />
-          <Kpi label="Daily average" value={money(report.averageDailySpend)} caption="On purchasing days" icon={Wallet} tone="green" />
-          <Kpi label="Largest order" value={money(report.largestOrder?.netTotal ?? 0)} caption={report.largestOrder?.supplierName ?? "No purchases"} icon={TrendingUp} tone="amber" />
+          <Kpi label={t('reports.purchases.kpi.netPurchases')} value={money(report.totalSpend)} caption={t('reports.purchases.caption.orderCount', { count: count(purchases.length) })} icon={ShoppingCart} tone="green" />
+          <Kpi label={t('reports.purchases.kpi.subtotal')} value={money(report.subtotal)} caption={t('reports.purchases.caption.beforeDiscountTax')} icon={Receipt} tone="blue" />
+          <Kpi label={t('reports.purchases.kpi.averageOrder')} value={money(report.averageOrder)} caption={t('reports.purchases.caption.netPerOrder')} icon={ClipboardList} tone="blue" />
+          <Kpi label={t('reports.purchases.kpi.spendMonth')} value={money(report.thisMonth)} caption={report.growth === null ? t('reports.purchases.caption.noPriorMonth') : t('reports.purchases.caption.growth', { growth: `${report.growth >= 0 ? "+" : ""}${report.growth}` })} icon={TrendingUp} tone={report.growth !== null && report.growth < 0 ? "red" : "green"} />
+          <Kpi label={t('reports.purchases.kpi.orders30')} value={count(report.ordersLast30)} caption={t('reports.purchases.caption.purchaseOrders')} icon={CalendarDays} tone="blue" />
+          <Kpi label={t('reports.purchases.kpi.unitsPurchased')} value={count(report.totalUnits)} caption={t('reports.purchases.caption.avgUnits', { count: count(report.averageUnits) })} icon={Package} tone="green" />
+          <Kpi label={t('reports.purchases.kpi.discounts')} value={money(report.discounts)} caption={t('reports.purchases.caption.appliedDiscounts')} icon={Percent} tone="amber" />
+          <Kpi label={t('reports.purchases.kpi.purchaseTax')} value={money(report.taxes)} caption={t('reports.purchases.caption.acrossOrders')} icon={Banknote} tone="blue" />
+          <Kpi label={t('reports.purchases.kpi.dailyAverage')} value={money(report.averageDailySpend)} caption={t('reports.purchases.caption.purchasingDays')} icon={Wallet} tone="green" />
+          <Kpi label={t('reports.purchases.kpi.largestOrder')} value={money(report.largestOrder?.netTotal ?? 0)} caption={report.largestOrder?.supplierName ?? t('reports.purchases.caption.noPurchases')} icon={TrendingUp} tone="amber" />
         </View>
 
-        <Section title="Purchase spend trend" subtitle="Last 12 months · net purchase value">
+        <Section title={t('reports.purchases.section.spendTrend')} subtitle={t('reports.purchases.subtitleSection.spendTrend')}>
           <LineChart
             labels={report.months.map((month) => month.label)}
-            series={[{ name: "Net purchases", color: COLORS.green, values: report.months.map((month) => month.spend) }]}
+            series={[{ name: t('reports.purchases.series.netPurchases'), color: COLORS.green, values: report.months.map((month) => month.spend) }]}
           />
         </Section>
 
-        <Section title="Order volume" subtitle="Purchase orders by month">
+        <Section title={t('reports.purchases.section.orderVolume')} subtitle={t('reports.purchases.subtitleSection.ordersByMonth')}>
           <BarChart
             data={report.months.map((month) => ({ label: month.label, values: [month.orders] }))}
-            series={[{ name: "Purchase orders", color: COLORS.blue }]}
+            series={[{ name: t('reports.purchases.series.purchaseOrders'), color: COLORS.blue }]}
             height={160}
           />
         </Section>
 
-        <Section title="Purchases by supplier" subtitle="Share of net spend">
+        <Section title={t('reports.purchases.section.bySupplier')} subtitle={t('reports.purchases.subtitleSection.shareSpend')}>
           <DonutChart
-            centerLabel="Purchases"
+            centerLabel={t('reports.purchases.chart.purchases')}
             centerValue={compactNumber(report.totalSpend)}
             slices={report.supplierList.slice(0, 5).map((supplier, index) => ({
               label: supplier.name,
               value: supplier.spend,
               color: [COLORS.green, COLORS.blue, COLORS.amber, COLORS.purple, COLORS.red][index],
             })).concat(report.supplierList.length > 5 ? [{
-              label: "Other",
+              label: t('reports.purchases.chart.other'),
               value: Math.max(report.totalSpend - report.supplierList.slice(0, 5).reduce((sum, supplier) => sum + supplier.spend, 0), 0),
               color: COLORS.slate,
             }] : [])}
@@ -392,75 +395,75 @@ export default function PurchaseReportDashboardScreen() {
           />
         </Section>
 
-        <Section title="Purchase cost components" subtitle="Subtotal, discounts, and tax">
+        <Section title={t('reports.purchases.section.costComponents')} subtitle={t('reports.purchases.subtitleSection.components')}>
           <BarChart
-            data={[{ label: "All orders", values: [report.subtotal, report.discounts, report.taxes] }]}
+            data={[{ label: t('reports.purchases.chart.allOrders'), values: [report.subtotal, report.discounts, report.taxes] }]}
             series={[
-              { name: "Subtotal", color: COLORS.blue },
-              { name: "Discounts", color: COLORS.amber },
-              { name: "Tax", color: COLORS.green },
+              { name: t('reports.purchases.series.subtotal'), color: COLORS.blue },
+              { name: t('reports.purchases.series.discounts'), color: COLORS.amber },
+              { name: t('reports.purchases.series.tax'), color: COLORS.green },
             ]}
             height={160}
           />
         </Section>
 
-        <Section title="Spend concentration" subtitle="Top suppliers by lifetime purchase value">
+        <Section title={t('reports.purchases.section.spendConcentration')} subtitle={t('reports.purchases.subtitleSection.topSuppliers')}>
           <RankedBars
             items={report.supplierList.slice(0, 6).map((supplier) => ({
               label: supplier.name,
               value: supplier.spend,
-              caption: `${count(supplier.orders)} orders · ${count(supplier.units)} units · ${percent(supplier.spend, report.totalSpend)}% of spend`,
+              caption: t('reports.purchases.labels.shareSpend', { count: count(supplier.orders), units: count(supplier.units), percent: percent(supplier.spend, report.totalSpend) }),
             }))}
             color={COLORS.green}
             formatValue={money}
-            emptyText="No purchase orders to display."
+            emptyText={t('reports.purchases.empty.noOrdersToDisplay')}
           />
         </Section>
 
-        <Section title="Most purchased products" subtitle="By line value">
+        <Section title={t('reports.purchases.section.mostPurchased')} subtitle={t('reports.purchases.subtitleSection.byLineValue')}>
           <RankedBars
             items={report.productList.slice(0, 8).map((product) => ({
               label: product.name,
               value: product.spend,
-              caption: `${count(product.units)} units · ${count(product.orders)} purchase lines`,
+              caption: t('reports.purchases.labels.lineItems', { count: count(product.orders) }),
             }))}
             color={COLORS.blue}
             formatValue={money}
-            emptyText="No purchase line items to display."
+            emptyText={t('reports.purchases.empty.noLineItems')}
           />
         </Section>
 
-        <Section title="Purchases by shop" subtitle="Net spend and order count">
+        <Section title={t('reports.purchases.section.byShop')} subtitle={t('reports.purchases.subtitleSection.netSpendOrders')}>
           <RankedBars
             items={report.shopList.slice(0, 8).map((shop) => ({
-              label: shop.name,
+              label: shop.name === 'Unknown shop' ? t('reports.purchases.labels.unknownShop') : shop.name,
               value: shop.spend,
-              caption: `${count(shop.orders)} orders · ${count(shop.units)} units`,
+              caption: t('reports.purchases.labels.ordersUnits', { orders: count(shop.orders), units: count(shop.units) }),
             }))}
             color={COLORS.purple}
             formatValue={money}
-            emptyText="No shop details available on purchases."
+            emptyText={t('reports.purchases.empty.noShopDetails')}
           />
         </Section>
 
-        <Section title="Recent purchase orders" subtitle="Latest purchases" onViewAll={() => router.push(purchaseListRoute)}>
+        <Section title={t('reports.purchases.section.recentOrders')} subtitle={t('reports.purchases.subtitleSection.latestPurchases')} onViewAll={() => router.push(purchaseListRoute)}>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Supplier</Text>
-              <Text style={[styles.th, styles.tdNum]}>Date</Text>
-              <Text style={[styles.th, styles.tdNum]}>Total</Text>
+              <Text style={[styles.th, styles.tdWide]}>{t('reports.purchases.field.supplier')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.purchases.field.date')}</Text>
+              <Text style={[styles.th, styles.tdNum]}>{t('reports.purchases.field.total')}</Text>
             </View>
             {report.recentPurchases.map((purchase) => (
               <Pressable key={purchase.id} style={styles.tableRow} onPress={() => openPurchase(purchase.id)}>
                 <View style={styles.tdWide}>
                   <Text style={styles.td} numberOfLines={1}>{purchase.supplierName}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{count(purchase.totalProducts)} units · {purchase.shopName || "Shop unavailable"}</Text>
+                  <Text style={styles.tdSub} numberOfLines={1}>{t('reports.purchases.labels.units', { count: count(purchase.totalProducts) })} · {purchase.shopName || t('reports.purchases.labels.shopUnavailable')}</Text>
                 </View>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>{new Date(timestamp(purchase.purchaseDate)).toLocaleDateString()}</Text>
                 <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>{compactNumber(purchase.netTotal)}</Text>
               </Pressable>
             ))}
-            {report.recentPurchases.length === 0 ? <Text style={styles.empty}>No purchase orders recorded.</Text> : null}
+            {report.recentPurchases.length === 0 ? <Text style={styles.empty}>{t('reports.purchases.empty.noOrders')}</Text> : null}
           </View>
         </Section>
       </ScrollView>}

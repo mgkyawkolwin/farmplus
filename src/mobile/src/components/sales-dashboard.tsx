@@ -18,6 +18,7 @@ import { ISaleService } from '@/services/saleService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { RolePermissionServiceClient } from '@/services/rolePermissionService';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const permissionService = new RolePermissionServiceClient();
@@ -67,14 +68,14 @@ function Metric({
   );
 }
 
-function getPaymentStatus(sale: Sale) {
-  if (sale.status === 'Voided') return { label: 'VOID', color: '#B91C1C', bg: '#FEE2E2' };
-  if (sale.paidAmount > 0 && sale.balance <= 0) return { label: 'PAID', color: '#047857', bg: '#D1FAE5' };
-  return { label: 'UNPAID', color: '#B45309', bg: '#FEF3C7' };
+function getPaymentStatus(sale: Sale, t: (key: string) => string) {
+  if (sale.status === 'Voided') return { label: t('sales.status.void'), color: '#B91C1C', bg: '#FEE2E2' };
+  if (sale.paidAmount > 0 && sale.balance <= 0) return { label: t('sales.status.paid'), color: '#047857', bg: '#D1FAE5' };
+  return { label: t('sales.status.unpaid'), color: '#B45309', bg: '#FEF3C7' };
 }
 
-function RecentSaleRow({ sale }: { sale: Sale }) {
-  const status = getPaymentStatus(sale);
+function RecentSaleRow({ sale, t }: { sale: Sale; t: (key: string) => string }) {
+  const status = getPaymentStatus(sale, t);
   return (
     <View style={styles.saleRow}>
       <View style={styles.customerCell}>
@@ -95,7 +96,7 @@ function RecentSaleRow({ sale }: { sale: Sale }) {
 
 export function SalesDashboardContent({
   showHeader = true,
-  title = 'Sales Dashboard',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -103,6 +104,7 @@ export function SalesDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const pathname = usePathname();
@@ -134,12 +136,12 @@ export function SalesDashboardContent({
     try {
       setDashboard(await saleService.getDashboard());
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Unable to load sales dashboard');
+      SnackBar.Error(error instanceof Error ? error.message : t('sales.messages.unableLoadDashboard'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -163,13 +165,13 @@ export function SalesDashboardContent({
             <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
               <Icon className="text-foreground" as={ChevronLeft} size={22} />
             </Button>
-            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('sales.dashboard.title')}</Text>
             <View style={styles.headerButton} />
           </View>
         ) : null}
         <View style={styles.accessState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.accessText}>Loading...</Text>
+          <Text className="text-muted-foreground" style={styles.accessText}>{t('sales.dashboard.loadingPermission')}</Text>
         </View>
       </View>
     );
@@ -183,11 +185,11 @@ export function SalesDashboardContent({
             <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
               <Icon className="text-foreground" as={ChevronLeft} size={22} />
             </Button>
-            <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+            <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('sales.dashboard.title')}</Text>
             <View style={styles.headerButton} />
           </View>
         ) : null}
-        <UnauthorizedView />
+        <UnauthorizedView title={t('sales.unauthorized.title')} message={t('sales.unauthorized.description')} />
       </View>
     );
   }
@@ -200,7 +202,7 @@ export function SalesDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+          <Text className="text-foreground" style={styles.headerTitle}>{title ?? t('sales.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -208,7 +210,7 @@ export function SalesDashboardContent({
       {loading && !dashboard ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading sales...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('sales.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -219,12 +221,12 @@ export function SalesDashboardContent({
           }} />}
         >
           <View style={styles.metricsGrid}>
-            <Metric label="Today Sale" value={money(dashboard?.todaySales ?? 0)} icon={Wallet} tone="green" theme={theme} />
-            <Metric label="This Month Sales" value={money(dashboard?.thisMonthSales ?? 0)} icon={TrendingUp} tone="blue" theme={theme} />
-            <Metric label="Total Unpaid Sales" value={(dashboard?.unpaidSales ?? 0).toLocaleString('en-US')} icon={ReceiptText} tone="red" theme={theme} />
-            <Metric label="Total Unpaid Amt" value={money(dashboard?.unpaidAmount ?? 0)} icon={Wallet} tone="red" theme={theme} />
-            <Metric label="Total Products" value={(dashboard?.totalProducts ?? 0).toLocaleString('en-US')} icon={Package} tone="amber" theme={theme} />
-            <Metric label="Total Customers" value={(dashboard?.totalCustomers ?? 0).toLocaleString('en-US')} icon={ContactRound} tone="blue" theme={theme} />
+            <Metric label={t('sales.dashboard.today')} value={money(dashboard?.todaySales ?? 0)} icon={Wallet} tone="green" theme={theme} />
+            <Metric label={t('sales.dashboard.thisMonth')} value={money(dashboard?.thisMonthSales ?? 0)} icon={TrendingUp} tone="blue" theme={theme} />
+            <Metric label={t('sales.dashboard.totalUnpaidSales')} value={(dashboard?.unpaidSales ?? 0).toLocaleString('en-US')} icon={ReceiptText} tone="red" theme={theme} />
+            <Metric label={t('sales.dashboard.totalUnpaidAmount')} value={money(dashboard?.unpaidAmount ?? 0)} icon={Wallet} tone="red" theme={theme} />
+            <Metric label={t('sales.dashboard.totalProducts')} value={(dashboard?.totalProducts ?? 0).toLocaleString('en-US')} icon={Package} tone="amber" theme={theme} />
+            <Metric label={t('sales.dashboard.totalCustomers')} value={(dashboard?.totalCustomers ?? 0).toLocaleString('en-US')} icon={ContactRound} tone="blue" theme={theme} />
           </View>
 
           <View style={styles.actionRow}>
@@ -233,7 +235,7 @@ export function SalesDashboardContent({
               onPress={() => router.push('/sales/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color="#FFFFFF" />
-              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>New Sale</Text>
+              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>{t('sales.dashboard.newSale')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -241,35 +243,35 @@ export function SalesDashboardContent({
               onPress={() => router.push('/sales/list' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color="#16794B" />
-              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>View Sales</Text>
+              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>{t('sales.dashboard.viewSales')}</Text>
             </Button>
           </View>
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Recent Sales</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('sales.dashboard.recentSales')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={styles.seeAllButton}
                 onPress={() => router.push('/sales/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={styles.seeAllText}>View all</Text>
+                <Text style={styles.seeAllText}>{t('sales.dashboard.viewAll')}</Text>
                 <ChevronRight size={14} color="#16794B" />
               </Button>
             </View>
 
             <View style={styles.tableHeader}>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.customerColumn]}>Customer / Date</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.qtyColumn]}>Qty</Text>
-              <Text className="text-muted-foreground" style={[styles.headerCell, styles.totalColumn]}>Total</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.customerColumn]}>{t('sales.fields.customerDate')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.qtyColumn]}>{t('sales.fields.quantity')}</Text>
+              <Text className="text-muted-foreground" style={[styles.headerCell, styles.totalColumn]}>{t('sales.fields.total')}</Text>
             </View>
             {(dashboard?.recentSales ?? []).length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No sales recorded yet.</Text>
+                <Text className="text-muted-foreground">{t('sales.dashboard.noSales')}</Text>
               </View>
-            ) : dashboard?.recentSales.map((sale) => <RecentSaleRow key={sale.id} sale={sale} />)}
+            ) : dashboard?.recentSales.map((sale) => <RecentSaleRow key={sale.id} sale={sale} t={t} />)}
           </View>
         </ScrollView>
       )}

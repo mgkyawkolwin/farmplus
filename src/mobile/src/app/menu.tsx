@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart3,
   Boxes,
@@ -47,50 +48,50 @@ const COLUMNS = 4;
 const GRID_GAP = 8;
 const CONTENT_PADDING = 16;
 
-const sections: { title: string; tone: Tone; items: { label: string; icon: typeof Users; path: string }[] }[] = [
+const sections: { titleKey: string; tone: Tone; items: { labelKey: string; icon: typeof Users; path: string }[] }[] = [
     {
-      title: 'Users, Roles & Permissions',
+      titleKey: 'menu.sections.usersRolesPermissions',
       tone: 'blue',
       items: [
-        { label: 'Users', icon: Users, path: '/users/list' },
-        { label: 'Roles', icon: ShieldCheck, path: '/roles/list' },
-        { label: 'Role Permissions', icon: UserCog, path: '/rolepermissions/rolepermissions' },
+        { labelKey: 'menu.items.users', icon: Users, path: '/users/list' },
+        { labelKey: 'menu.items.roles', icon: ShieldCheck, path: '/roles/list' },
+        { labelKey: 'menu.items.rolePermissions', icon: UserCog, path: '/rolepermissions/rolepermissions' },
       ],
     },
     {
-      title: 'Configuration',
+      titleKey: 'menu.sections.configuration',
       tone: 'amber',
       items: [
-        { label: 'Unit', icon: Boxes, path: '/units/units' },
-        { label: 'Category', icon: Boxes, path: '/categories/categories' },
-        { label: 'Brand', icon: Briefcase, path: '/brands/brands' },
-        { label: 'Shop', icon: Store, path: '/shops/shops' },
+        { labelKey: 'menu.items.unit', icon: Boxes, path: '/units/units' },
+        { labelKey: 'menu.items.category', icon: Boxes, path: '/categories/categories' },
+        { labelKey: 'menu.items.brand', icon: Briefcase, path: '/brands/brands' },
+        { labelKey: 'menu.items.shop', icon: Store, path: '/shops/shops' },
       ],
     },
     {
-      title: 'Management',
+      titleKey: 'menu.sections.management',
       tone: 'green',
       items: [
-        { label: 'Customer', icon: Users, path: '/customers/dashboard' },
-        { label: 'Dealer', icon: Briefcase, path: '/dealers/dashboard' },
-        { label: 'Supplier', icon: Building, path: '/suppliers/dashboard' },
-        { label: 'Product', icon: Package, path: '/products/dashboard' },
-        { label: 'Inventory', icon: Warehouse, path: '/inventory/dashboard' },
-        { label: 'Sale', icon: ShoppingBag, path: '/sales/dashboard' },
-        { label: 'Purchase', icon: HandCoins, path: '/purchases/dashboard' },
+        { labelKey: 'menu.items.customer', icon: Users, path: '/customers/dashboard' },
+        { labelKey: 'menu.items.dealer', icon: Briefcase, path: '/dealers/dashboard' },
+        { labelKey: 'menu.items.supplier', icon: Building, path: '/suppliers/dashboard' },
+        { labelKey: 'menu.items.product', icon: Package, path: '/products/dashboard' },
+        { labelKey: 'menu.items.inventory', icon: Warehouse, path: '/inventory/dashboard' },
+        { labelKey: 'menu.items.sale', icon: ShoppingBag, path: '/sales/dashboard' },
+        { labelKey: 'menu.items.purchase', icon: HandCoins, path: '/purchases/dashboard' },
       ],
     },
     {
-      title: 'Reports',
+      titleKey: 'menu.sections.reports',
       tone: 'slate',
       items: [
-        { label: 'Customer', icon: Users, path: '/reports/customers/dashboard' },
-        { label: 'Dealer', icon: Briefcase, path: '/reports/dealers/dashboard' },
-        { label: 'Supplier', icon: Building, path: '/reports/suppliers/dashboard' },
-        { label: 'Product', icon: Package, path: '/reports/products/dashboard' },
-        { label: 'Inventory', icon: Warehouse, path: '/reports/inventories/dashboard' },
-        { label: 'Sale', icon: ShoppingBag, path: '/reports/sales/dashboard' },
-        { label: 'Purchase', icon: HandCoins, path: '/reports/purchases/dashboard' },
+        { labelKey: 'menu.items.customer', icon: Users, path: '/reports/customers/dashboard' },
+        { labelKey: 'menu.items.dealer', icon: Briefcase, path: '/reports/dealers/dashboard' },
+        { labelKey: 'menu.items.supplier', icon: Building, path: '/reports/suppliers/dashboard' },
+        { labelKey: 'menu.items.product', icon: Package, path: '/reports/products/dashboard' },
+        { labelKey: 'menu.items.inventory', icon: Warehouse, path: '/reports/inventories/dashboard' },
+        { labelKey: 'menu.items.sale', icon: ShoppingBag, path: '/reports/sales/dashboard' },
+        { labelKey: 'menu.items.purchase', icon: HandCoins, path: '/reports/purchases/dashboard' },
       ],
     },
   ];
@@ -98,12 +99,14 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
   const MenuItemCard = React.memo(
   ({
     item,
+    label,
     tone,
     theme,
     width,
     onPress,
   }: {
     item: (typeof sections)[number]['items'][number];
+    label: string;
     tone: Tone;
     theme: ThemeColors;
     width: number;
@@ -116,13 +119,13 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
         style={[styles.card, { width, backgroundColor: theme.card, borderColor: theme.border }]}
         onPress={() => onPress(item.path)}
         accessibilityRole="button"
-        accessibilityLabel={item.label}
+        accessibilityLabel={label}
       >
         <View style={[styles.iconChip, { backgroundColor: colors.bg, borderColor: colors.border }]}>
           <IconComponent size={18} color={colors.fg} />
         </View>
         <Text style={[styles.cardLabel, { color: theme.cardForeground }]} numberOfLines={2}>
-          {item.label}
+          {label}
         </Text>
       </Pressable>
     );
@@ -133,6 +136,7 @@ MenuItemCard.displayName = 'MenuItemCard';
 
 export default function MenuScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { width: screenWidth } = useWindowDimensions();
@@ -152,7 +156,7 @@ export default function MenuScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>
-          Menu
+          {t('menu.title')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -164,11 +168,11 @@ export default function MenuScreen() {
         contentContainerStyle={styles.contentContainer}
       >
         {sections.map((section) => (
-          <View key={section.title} style={styles.section}>
+          <View key={section.titleKey} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionAccent, { backgroundColor: getToneColors(section.tone, theme).fg }]} />
               <Text className="text-foreground" style={styles.sectionTitle} numberOfLines={1}>
-                {section.title}
+                {t(section.titleKey)}
               </Text>
               <View style={[styles.sectionCount, { backgroundColor: getToneColors(section.tone, theme).bg }]}>
                 <Text style={[styles.sectionCountText, { color: getToneColors(section.tone, theme).fg }]}>{section.items.length}</Text>
@@ -178,8 +182,9 @@ export default function MenuScreen() {
             <View style={styles.grid}>
               {section.items.map((item, index) => (
                 <MenuItemCard
-                  key={`${section.title}-${item.label}-${index}`}
+                  key={`${section.titleKey}-${item.labelKey}-${index}`}
                   item={item}
+                  label={t(item.labelKey)}
                   tone={section.tone}
                   theme={theme}
                   width={cardWidth}

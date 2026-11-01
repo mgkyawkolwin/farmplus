@@ -40,6 +40,7 @@ import { IPurchaseService } from '@/services/purchaseService';
 import { ShopServiceClient } from '@/services/shopService';
 import { SupplierServiceClient } from '@/services/supplierService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
@@ -70,6 +71,7 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
 
 export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const colorScheme = useColorScheme();
   const permissionState = usePagePermission(mode === 'create' ? '/purchases/new' : '/purchases/edit');
@@ -129,7 +131,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
         }
       } catch (error) {
         if (active) {
-          SnackBar.Error(error instanceof Error ? error.message : 'Failed to load purchase form');
+          SnackBar.Error(error instanceof Error ? error.message : t('purchases.messages.failedLoadForm'));
           if (mode === 'edit') router.back();
         }
       } finally {
@@ -143,7 +145,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
     }
     void loadForm();
     return () => { active = false; };
-  }, [mode, permissionState, purchaseId, router]);
+  }, [mode, permissionState, purchaseId, router, t]);
 
   const subtotal = items.reduce((sum, item) => {
     const quantity = Number(item.quantity) || 0;
@@ -173,7 +175,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
       setProductPage(nextPage);
       setHasMoreProducts(nextProducts.length === PRODUCT_PAGE_SIZE);
     } catch {
-      SnackBar.Error('Failed to load more products');
+      SnackBar.Error(t('purchases.messages.failedLoadMoreProducts'));
     } finally {
       setLoadingProducts(false);
     }
@@ -181,7 +183,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
 
   const addProduct = (product: ProductItem) => {
     if (items.some((item) => item.productId === product.id)) {
-      SnackBar.Error('This product is already in the purchase');
+      SnackBar.Error(t('purchases.messages.productAlreadyAdded'));
       return;
     }
     setItems((current) => [...current, {
@@ -204,19 +206,19 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
     if (permissionState !== 'authorized') return;
     const normalizedPurchaseDate = normalizeDate(purchaseDate);
     if (shopMissing) {
-      SnackBar.Error('Select a shop from the top bar before recording a purchase');
+      SnackBar.Error(t('purchases.messages.selectShop'));
       return;
     }
     if (!supplierId) {
-      SnackBar.Error('Supplier is required');
+      SnackBar.Error(t('purchases.messages.supplierRequired'));
       return;
     }
     if (!normalizedPurchaseDate) {
-      SnackBar.Error('Enter a valid purchase date in YYYY-MM-DD format');
+      SnackBar.Error(t('purchases.messages.dateInvalid'));
       return;
     }
     if (items.length === 0) {
-      SnackBar.Error('Add at least one product');
+      SnackBar.Error(t('purchases.messages.productRequired'));
       return;
     }
 
@@ -226,15 +228,15 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
       unitPrice: Number(item.unitPrice),
     }));
     if (requestItems.some((item) => !Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0)) {
-      SnackBar.Error('Enter a positive whole quantity and a valid non-negative price for each product');
+      SnackBar.Error(t('purchases.messages.quantityPriceInvalid'));
       return;
     }
     if (!Number.isFinite(discountAmount) || discountAmount < 0 || discountAmount > subtotal) {
-      SnackBar.Error('Discount must be between zero and the subtotal');
+      SnackBar.Error(t('purchases.messages.discountInvalid'));
       return;
     }
     if (!Number.isFinite(taxAmount) || taxAmount < 0) {
-      SnackBar.Error('Tax must be a non-negative amount');
+      SnackBar.Error(t('purchases.messages.taxInvalid'));
       return;
     }
 
@@ -250,15 +252,15 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
     try {
       if (mode === 'create') {
         await purchaseService.createPurchase(request);
-        SnackBar.Success('Purchase saved successfully');
+        SnackBar.Success(t('purchases.messages.saved'));
       } else {
         if (!purchaseId) return;
         await purchaseService.updatePurchase(purchaseId, { ...request, rowVersion });
-        SnackBar.Success('Purchase updated successfully');
+        SnackBar.Success(t('purchases.messages.updated'));
       }
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to save purchase');
+      SnackBar.Error(error instanceof Error ? error.message : t('purchases.messages.failedSave'));
     } finally {
       setLoading(false);
     }
@@ -277,21 +279,21 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>{mode === 'create' ? 'New Purchase' : 'Edit Purchase'}</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{mode === 'create' ? t('purchases.form.newTitle') : t('purchases.form.updateTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('purchases.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('purchases.unauthorized.title')} message={t('purchases.unauthorized.description')} />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color="#16794B" />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Loading purchase details...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('purchases.form.loadingDetails')}</Text>
         </View>
       ) : (
         <>
@@ -308,11 +310,11 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                   : <Store size={14} color="#16794B" />}
               </View>
               <View style={styles.shopInfo}>
-                <Text style={styles.eyebrow}>{mode === 'create' ? 'Receiving stock into' : 'Shop'}</Text>
+                <Text style={styles.eyebrow}>{mode === 'create' ? t('purchases.shop.receivingStockInto') : t('purchases.shop.label')}</Text>
                 {shopMissing ? (
-                  <Text style={styles.shopWarnText}>No shop selected. Choose one from the top bar first.</Text>
+                  <Text style={styles.shopWarnText}>{t('purchases.shop.noShopSelectedFirst')}</Text>
                 ) : legacyPurchase ? (
-                  <Text style={styles.shopName}>Recorded before shops existed</Text>
+                  <Text style={styles.shopName}>{t('purchases.shop.legacy')}</Text>
                 ) : (
                   <Text style={styles.shopName} numberOfLines={1}>{shopLabel ?? '-'}</Text>
                 )}
@@ -320,15 +322,15 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
             </View>
 
             <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Purchase Details</Text>
+              <Text style={styles.panelTitle}>{t('purchases.form.purchaseDetails')}</Text>
               <View style={styles.field}>
-                <Label className="text-foreground">Supplier <Text className="text-red-500">*</Text></Label>
+                <Label className="text-foreground">{t('purchases.fields.supplier')} <Text className="text-red-500">*</Text></Label>
                 <Select
                   value={selectedSupplier ? { value: selectedSupplier.id, label: selectedSupplier.supplierName } : undefined}
                   onValueChange={(option) => setSupplierId(option?.value ?? '')}
                 >
                   <SelectTrigger className="mt-2 w-full">
-                    <SelectValue placeholder="Choose a supplier" />
+                    <SelectValue placeholder={t('purchases.picker.chooseSupplier')} />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliers.map((supplier) => (
@@ -336,13 +338,13 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                     ))}
                   </SelectContent>
                 </Select>
-                {suppliers.length === 0 ? <Text className="text-muted-foreground" style={styles.helperText}>No suppliers available.</Text> : null}
+                {suppliers.length === 0 ? <Text className="text-muted-foreground" style={styles.helperText}>{t('purchases.empty.noSuppliers')}</Text> : null}
               </View>
 
               <View style={styles.field}>
-                <Label className="text-foreground">Purchase Date <Text className="text-red-500">*</Text></Label>
+                <Label className="text-foreground">{t('purchases.fields.purchaseDate')} <Text className="text-red-500">*</Text></Label>
                 <Input
-                  placeholder="YYYY-MM-DD"
+                  placeholder={t('purchases.placeholders.date')}
                   value={purchaseDate}
                   onChangeText={setPurchaseDate}
                   autoCapitalize="none"
@@ -354,16 +356,16 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
 
             <View style={styles.panel}>
               <View style={styles.panelHeader}>
-                <Text style={styles.panelTitle}>Products</Text>
+                <Text style={styles.panelTitle}>{t('purchases.fields.products')}</Text>
                 <Button variant="outline" onPress={() => setPickerVisible(true)} disabled={loading} style={styles.addProductButton}>
                   <Plus size={14} color="#16794B" />
-                  <Text style={styles.addProductText}>Add Product</Text>
+                  <Text style={styles.addProductText}>{t('purchases.actions.addProduct')}</Text>
                 </Button>
               </View>
 
               {items.length === 0 ? (
                 <View style={styles.emptyProducts}>
-                  <Text className="text-muted-foreground">No products added yet.</Text>
+                  <Text className="text-muted-foreground">{t('purchases.empty.noProductsAdded')}</Text>
                 </View>
               ) : items.map((item) => {
                 const product = productById.get(item.productId);
@@ -381,14 +383,14 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                         <Text className="text-foreground" style={styles.productName} numberOfLines={2}>{item.productName}</Text>
                         <Text style={styles.productMeta} numberOfLines={1}>
                           {[
-                            item.unit ? `Unit: ${item.unit}` : null,
-                            showStock && product ? `In shop: ${(product.currentStock ?? 0).toLocaleString('en-US')}` : null,
+                            item.unit ? t('purchases.labels.unit', { unit: item.unit }) : null,
+                            showStock && product ? t('purchases.labels.inShop', { count: (product.currentStock ?? 0).toLocaleString('en-US') }) : null,
                           ].filter(Boolean).join('  ·  ') || ' '}
                         </Text>
                       </View>
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`Remove ${item.productName}`}
+                        accessibilityLabel={t('purchases.accessibility.removeProduct', { name: item.productName })}
                         onPress={() => setItems((current) => current.filter((line) => line.productId !== item.productId))}
                         style={styles.removeButton}
                       >
@@ -397,7 +399,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                     </View>
                     <View style={styles.lineFields}>
                       <View style={styles.lineField}>
-                        <Label className="text-muted-foreground">Quantity</Label>
+                        <Label className="text-muted-foreground">{t('purchases.fields.quantity')}</Label>
                         <Input
                           value={item.quantity}
                           onChangeText={(value) => updateItem(item.productId, 'quantity', value.replace(/[^0-9]/g, ''))}
@@ -407,7 +409,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                         />
                       </View>
                       <View style={styles.lineField}>
-                        <Label className="text-muted-foreground">Unit price</Label>
+                        <Label className="text-muted-foreground">{t('purchases.fields.unitPrice')}</Label>
                         <Input
                           value={item.unitPrice}
                           onChangeText={(value) => updateItem(item.productId, 'unitPrice', value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
@@ -417,7 +419,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                         />
                       </View>
                       <View style={styles.lineTotalBlock}>
-                        <Text style={styles.eyebrow}>Line total</Text>
+                        <Text style={styles.eyebrow}>{t('purchases.fields.lineTotal')}</Text>
                         <Text className="text-foreground" style={styles.lineTotal}>
                           {formatMoney((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0))}
                         </Text>
@@ -429,10 +431,10 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
             </View>
 
             <View style={styles.panel}>
-              <Text style={styles.panelTitle}>Summary</Text>
-              <SummaryRow label="Subtotal" value={formatMoney(subtotal)} />
+              <Text style={styles.panelTitle}>{t('purchases.fields.summary')}</Text>
+              <SummaryRow label={t('purchases.fields.subtotal')} value={formatMoney(subtotal)} />
               <View style={styles.amountField}>
-                <Label className="text-foreground">Discount</Label>
+                <Label className="text-foreground">{t('purchases.fields.discount')}</Label>
                 <Input
                   value={discount}
                   onChangeText={(value) => setDiscount(value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
@@ -442,7 +444,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                 />
               </View>
               <View style={styles.amountField}>
-                <Label className="text-foreground">Tax</Label>
+                <Label className="text-foreground">{t('purchases.fields.tax')}</Label>
                 <Input
                   value={tax}
                   onChangeText={(value) => setTax(value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
@@ -452,13 +454,13 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                 />
               </View>
               <View style={styles.divider} />
-              <SummaryRow label="Net Total" value={formatMoney(netTotal)} strong />
+              <SummaryRow label={t('purchases.fields.netTotal')} value={formatMoney(netTotal)} strong />
             </View>
           </KeyboardAwareScrollView>
 
           <View style={styles.footer}>
             <View>
-              <Text style={styles.eyebrow}>Net total (MMK)</Text>
+              <Text style={styles.eyebrow}>{t('purchases.labels.netTotalCurrency')}</Text>
               <Text className="text-foreground" style={styles.footerTotal}>{formatMoney(netTotal)}</Text>
             </View>
             <Button
@@ -467,7 +469,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
               style={styles.saveButton}
             >
               {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-                <Text style={styles.saveText}>{mode === 'create' ? 'Save Purchase' : 'Update Purchase'}</Text>
+                <Text style={styles.saveText}>{mode === 'create' ? t('purchases.actions.save') : t('purchases.actions.update')}</Text>
               )}
             </Button>
           </View>
@@ -485,8 +487,8 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View className="bg-background" style={styles.productSheet}>
               <View style={styles.sheetHeader}>
-                <Text className="text-foreground" style={styles.sheetTitle}>Choose Product</Text>
-                <Pressable onPress={() => setPickerVisible(false)} hitSlop={8} accessibilityLabel="Close">
+                <Text className="text-foreground" style={styles.sheetTitle}>{t('purchases.picker.chooseProduct')}</Text>
+                <Pressable onPress={() => setPickerVisible(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('purchases.accessibility.closeProductPicker')}>
                   <X size={20} color="#475569" />
                 </Pressable>
               </View>
@@ -495,7 +497,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                 <TextInput
                   value={productSearch}
                   onChangeText={setProductSearch}
-                  placeholder="Search products"
+                  placeholder={t('purchases.picker.searchProducts')}
                   placeholderTextColor="#9CA3AF"
                   style={styles.searchInput}
                   autoCapitalize="none"
@@ -511,7 +513,7 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                 ListEmptyComponent={
                   <View style={styles.emptyPicker}>
                     <Text className="text-muted-foreground">
-                      {loadingProducts ? 'Loading products...' : 'No products found.'}
+                      {loadingProducts ? t('purchases.dashboard.loadingProducts') : t('purchases.empty.noProductsFound')}
                     </Text>
                   </View>
                 }
@@ -519,6 +521,8 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                   const alreadyAdded = items.some((item) => item.productId === product.id);
                   return (
                     <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={product.name}
                       onPress={() => addProduct(product)}
                       disabled={alreadyAdded}
                     >
@@ -533,11 +537,11 @@ export default function PurchaseFormScreen({ mode }: { mode: 'create' | 'edit' }
                         <View style={styles.productOptionInfo}>
                           <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
                           <Text style={styles.productMeta} numberOfLines={1}>
-                            Enter the purchase price for this item{product.unit ? ` (${product.unit})` : ''}
-                            {showStock ? `  ·  In shop: ${(product.currentStock ?? 0).toLocaleString('en-US')}` : ''}
+                            {t('purchases.labels.purchasePrice')}{product.unit ? ` (${product.unit})` : ''}
+                            {showStock ? `  ·  ${t('purchases.labels.inShop', { count: (product.currentStock ?? 0).toLocaleString('en-US') })}` : ''}
                           </Text>
                         </View>
-                        {alreadyAdded ? <Text style={styles.addedText}>Added</Text> : (
+                        {alreadyAdded ? <Text style={styles.addedText}>{t('purchases.labels.added')}</Text> : (
                           <Plus size={18} color="#16794B" />
                         )}
                       </View>

@@ -27,6 +27,7 @@ import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
@@ -72,7 +73,7 @@ function MetricTile({
 
 export function ProductsDashboardContent({
   showHeader = false,
-  title = 'Products',
+  title,
   onBack,
 }: {
   showHeader?: boolean;
@@ -80,6 +81,7 @@ export function ProductsDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/products/dashboard');
@@ -124,14 +126,14 @@ export function ProductsDashboardContent({
     const outOfStock = products.filter((item) => (item.currentStock ?? 0) <= 0).length;
 
     return [
-      { label: 'Total Products', value: String(totalProducts), icon: Package, tone: 'blue' as const },
-      { label: 'Categories', value: String(categories), icon: Boxes, tone: 'green' as const },
-      { label: 'Active Products', value: String(activeProducts), icon: CheckCircle2, tone: 'green' as const },
-      { label: 'Inactive Products', value: String(inactiveProducts), icon: XCircle, tone: 'amber' as const },
-      { label: 'Low Stock', value: String(lowStock), icon: AlertTriangle, tone: 'amber' as const },
-      { label: 'Out of Stock', value: String(outOfStock), icon: TrendingUp, tone: 'red' as const },
+      { label: t('products.dashboard.totalProducts'), value: String(totalProducts), icon: Package, tone: 'blue' as const },
+      { label: t('products.dashboard.categories'), value: String(categories), icon: Boxes, tone: 'green' as const },
+      { label: t('products.dashboard.activeProducts'), value: String(activeProducts), icon: CheckCircle2, tone: 'green' as const },
+      { label: t('products.dashboard.inactiveProducts'), value: String(inactiveProducts), icon: XCircle, tone: 'amber' as const },
+      { label: t('products.dashboard.lowStock'), value: String(lowStock), icon: AlertTriangle, tone: 'amber' as const },
+      { label: t('products.dashboard.outOfStock'), value: String(outOfStock), icon: TrendingUp, tone: 'red' as const },
     ];
-  }, [products]);
+  }, [products, t]);
 
   const recentProducts = React.useMemo(
     () =>
@@ -152,7 +154,7 @@ export function ProductsDashboardContent({
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title}</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title ?? t('products.dashboard.title')}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
@@ -160,14 +162,14 @@ export function ProductsDashboardContent({
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('products.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} />
       ) : loading && products.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading products...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('products.dashboard.loading')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -196,7 +198,7 @@ export function ProductsDashboardContent({
               onPress={() => router.push('/products/new' as Parameters<typeof router.push>[0])}
             >
               <CirclePlus size={18} color={theme.primaryForeground} />
-              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>New Product</Text>
+              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>{t('products.dashboard.newProduct')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -204,21 +206,21 @@ export function ProductsDashboardContent({
               onPress={() => router.push('/products/list' as Parameters<typeof router.push>[0])}
             >
               <ClipboardList size={18} color={theme.primary} />
-              <Text style={[styles.actionLabel, { color: theme.primary }]}>View Products</Text>
+              <Text style={[styles.actionLabel, { color: theme.primary }]}>{t('products.dashboard.viewProducts')}</Text>
             </Button>
           </View>
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeading}>
               <View>
-                <Text className="text-foreground" style={styles.sectionTitle}>Recent Products</Text>
+                <Text className="text-foreground" style={styles.sectionTitle}>{t('products.dashboard.recentProducts')}</Text>
               </View>
               <Button
                 variant="ghost"
                 style={[styles.seeAllButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 onPress={() => router.push('/products/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={[styles.seeAllText, { color: theme.primary }]}>View all</Text>
+                <Text style={[styles.seeAllText, { color: theme.primary }]}>{t('products.dashboard.viewAll')}</Text>
                 <ChevronRight size={14} color={theme.primary} />
               </Button>
             </View>
@@ -226,18 +228,18 @@ export function ProductsDashboardContent({
             <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
               <View style={styles.photoColumn} />
               <View style={styles.productColumn}>
-                <Text className="text-muted-foreground" style={styles.headerCell}>Product</Text>
+                <Text className="text-muted-foreground" style={styles.headerCell}>{t('products.fields.product')}</Text>
               </View>
               <View style={styles.categoryColumn}>
-                <Text className="text-muted-foreground" style={styles.headerCell}>Category</Text>
+                <Text className="text-muted-foreground" style={styles.headerCell}>{t('products.fields.category')}</Text>
               </View>
               <View style={styles.stockColumn}>
-                <Text className="text-muted-foreground" style={styles.headerCell}>Stock</Text>
+                <Text className="text-muted-foreground" style={styles.headerCell}>{t('products.fields.stock')}</Text>
               </View>
             </View>
             {recentProducts.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text className="text-muted-foreground">No products available.</Text>
+                <Text className="text-muted-foreground">{t('products.dashboard.noProductsAvailable')}</Text>
               </View>
             ) : (
               recentProducts.map((product) => {

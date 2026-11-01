@@ -20,6 +20,7 @@ import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -31,6 +32,7 @@ function formatDate(value?: string) {
 
 export default function BrandsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/brands/brands');
@@ -67,13 +69,13 @@ export default function BrandsScreen() {
       setPage(requestedPage);
       setHasMore(data.length >= 20);
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to load brands.');
+      setErrorMessage(error?.message || t('brands.messages.unableLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [service]);
+  }, [service, t]);
 
   React.useEffect(() => {
     if (permissionState !== 'authorized') return;
@@ -128,7 +130,7 @@ export default function BrandsScreen() {
 
   const handleSubmit = async () => {
     if (!editingBrand?.brand || editingBrand.brand.trim() === '') {
-      SnackBar.Error('Brand name is required.');
+      SnackBar.Error(t('brands.messages.nameRequired'));
       return;
     }
 
@@ -138,15 +140,15 @@ export default function BrandsScreen() {
 
       if (editingBrand.id) {
         await service.updateBrand(editingBrand);
-        SnackBar.Success(`Brand "${editingBrand.brand}" updated successfully.`);
+        SnackBar.Success(t('brands.messages.updated', { name: editingBrand.brand }));
       } else {
         await service.createBrand(editingBrand.brand, editingBrand.isActive);
-        SnackBar.Success(`Brand "${editingBrand.brand}" created successfully.`);
+        SnackBar.Success(t('brands.messages.created', { name: editingBrand.brand }));
       }
       await loadBrands(1, false, false);
       closeModal();
     } catch (error: any) {
-      SnackBar.Error(error?.message || 'Unable to save brand.');
+      SnackBar.Error(error?.message || t('brands.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -154,11 +156,11 @@ export default function BrandsScreen() {
 
   const confirmDelete = (brand: BrandItem) => {
     RNAlert.alert(
-      'Delete brand',
-      `Are you sure you want to delete "${brand.brand}"?`,
+      t('brands.deleteTitle'),
+      t('brands.deleteConfirmation', { name: brand.brand }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => handleDelete(brand) },
+        { text: t('categories.actions.cancel'), style: 'cancel' },
+        { text: t('categories.actions.delete'), style: 'destructive', onPress: () => handleDelete(brand) },
       ]
     );
   };
@@ -166,10 +168,10 @@ export default function BrandsScreen() {
   const handleDelete = async (brand: BrandItem) => {
     try {
       await service.deleteBrand(brand.id);
-      SnackBar.Success(`Brand "${brand.brand}" deleted successfully.`);
+      SnackBar.Success(t('brands.messages.deleted', { name: brand.brand }));
       await loadBrands(1, false, false);
     } catch (error: any) {
-      SnackBar.Error(error?.message || `Unable to delete brand "${brand.brand}".`);
+      SnackBar.Error(error?.message || t('brands.messages.deleteFailed', { name: brand.brand }));
     }
   };
 
@@ -179,7 +181,7 @@ export default function BrandsScreen() {
         <Button variant='ghost' onPress={() => router.back()} style={styles.backButton}>
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
-        <Text className='text-foreground' style={styles.headerTitle}>Brand</Text>
+        <Text className='text-foreground' style={styles.headerTitle}>{t('menu.items.brand')}</Text>
         <View style={[styles.headerCount, { backgroundColor: theme.secondary }]}>
           <Text style={[styles.headerCountText, { color: theme.foreground }]}>{brands.length}</Text>
         </View>
@@ -188,7 +190,7 @@ export default function BrandsScreen() {
       {permissionState === 'checking' ? (
         <View style={[styles.emptyState, styles.permissionState]}>
           <ActivityIndicator size='large' color={theme.primary} />
-          <Text className='text-muted-foreground' style={styles.permissionText}>Checking permissions...</Text>
+          <Text className='text-muted-foreground' style={styles.permissionText}>{t('categories.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -200,14 +202,14 @@ export default function BrandsScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder='Search brands'
+            placeholder={t('brands.placeholders.search')}
             placeholderTextColor={theme.mutedForeground}
             style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize='none'
             autoCorrect={false}
           />
           {query ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel='Clear search'>
+            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel={t('brands.accessibility.clearSearch')}>
               <X size={14} color={theme.mutedForeground} />
             </Pressable>
           ) : null}
@@ -224,7 +226,7 @@ export default function BrandsScreen() {
                 accessibilityState={{ selected }}
               >
                 <Text style={[styles.segmentText, { color: theme.mutedForeground }, selected && [styles.segmentTextSelected, { color: theme.foreground }]]}>
-                  {option === 'all' ? 'All' : option === 'active' ? 'Active' : 'Inactive'}
+                  {option === 'all' ? t('customers.filters.all') : option === 'active' ? t('customers.filters.active') : t('customers.filters.inactive')}
                 </Text>
               </Pressable>
             );
@@ -243,15 +245,15 @@ export default function BrandsScreen() {
         {loading && !refreshing ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text className='text-muted-foreground' style={styles.emptyText}>Loading brands...</Text>
+            <Text className='text-muted-foreground' style={styles.emptyText}>{t('brands.loading')}</Text>
           </View>
         ) : brands.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className='text-muted-foreground' style={styles.emptyText}>No brands yet.</Text>
+            <Text className='text-muted-foreground' style={styles.emptyText}>{t('brands.emptyList')}</Text>
           </View>
         ) : visibleBrands.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className='text-muted-foreground' style={styles.emptyText}>No brands match your search.</Text>
+            <Text className='text-muted-foreground' style={styles.emptyText}>{t('brands.emptyFiltered')}</Text>
           </View>
         ) : (
           <View style={[styles.surface, { borderColor: theme.border, backgroundColor: theme.card }]}>
@@ -260,7 +262,7 @@ export default function BrandsScreen() {
                 key={brand.id}
                 onPress={() => openEditModal(brand)}
                 accessibilityRole='button'
-                accessibilityLabel={`Edit ${brand.brand}`}
+                accessibilityLabel={t('brands.accessibility.editBrand', { name: brand.brand })}
               >
                 <View style={[styles.row, { borderBottomColor: theme.border }, index === visibleBrands.length - 1 && styles.rowLast]}>
                   <Text style={[styles.indexText, { color: theme.mutedForeground }]}>{String(index + 1).padStart(2, '0')}</Text>
@@ -269,12 +271,12 @@ export default function BrandsScreen() {
                       {brand.brand}
                     </Text>
                     <Text style={[styles.brandMeta, { color: theme.mutedForeground }]} numberOfLines={1}>
-                      Updated {formatDate(brand.updatedAtUtc || brand.createdAtUtc)}
+                      {t('brands.updatedOn', { date: formatDate(brand.updatedAtUtc || brand.createdAtUtc) })}
                     </Text>
                   </View>
                   <View style={[styles.chip, { borderColor: brand.isActive ? theme.chart2 : theme.border, backgroundColor: theme.card }]}>
                     <Text style={[styles.chipText, { color: brand.isActive ? theme.chart2 : theme.mutedForeground }]}>
-                      {brand.isActive ? 'Active' : 'Inactive'}
+                      {brand.isActive ? t('categories.active') : t('categories.inactive')}
                     </Text>
                   </View>
                   <Pressable
@@ -282,7 +284,7 @@ export default function BrandsScreen() {
                     hitSlop={8}
                     style={styles.deleteButton}
                     accessibilityRole='button'
-                    accessibilityLabel={`Delete ${brand.brand}`}
+                    accessibilityLabel={t('brands.accessibility.deleteBrand', { name: brand.brand })}
                   >
                     <Trash2 size={16} color={theme.destructive} />
                   </Pressable>
@@ -295,12 +297,12 @@ export default function BrandsScreen() {
         {loadingMore ? (
           <View style={styles.loadMoreRow}>
             <ActivityIndicator size='small' color={theme.primary} />
-            <Text className='text-muted-foreground'>Loading more...</Text>
+            <Text className='text-muted-foreground'>{t('categories.loadingMore')}</Text>
           </View>
         ) : null}
         {errorMessage ? (
           <Alert variant='destructive' icon={X} className='mt-3'>
-            <AlertTitle>Unable to continue</AlertTitle>
+            <AlertTitle>{t('categories.errorTitle')}</AlertTitle>
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -310,7 +312,7 @@ export default function BrandsScreen() {
         onPress={openCreateModal}
         style={[styles.fab, { backgroundColor: theme.primary, shadowColor: theme.foreground }]}
         accessibilityRole='button'
-        accessibilityLabel='Add brand'
+        accessibilityLabel={t('brands.addTitle')}
       >
         <Plus size={24} color={theme.primaryForeground} />
       </Pressable>
@@ -320,15 +322,15 @@ export default function BrandsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalSheet, { backgroundColor: theme.card, borderTopColor: theme.primary }]}>
             <View style={styles.modalHeader}>
-              <Text variant='h4' className='text-foreground'>{editingBrand ? 'Edit brand' : 'Add brand'}</Text>
+              <Text variant='h4' className='text-foreground'>{editingBrand ? t('brands.editTitle') : t('brands.addTitle')}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
                 <Icon as={X} size={20} color={theme.mutedForeground} />
               </Pressable>
             </View>
 
-            <Label className='text-foreground' style={styles.label}>Brand name</Label>
+            <Label className='text-foreground' style={styles.label}>{t('brands.fields.brandName')}</Label>
             <Input
-              placeholder='Enter brand name'
+              placeholder={t('brands.placeholders.brandName')}
               value={editingBrand?.brand}
               onChangeText={(text) => setEditingBrand((prev: BrandItem | null) => ({ ...prev, brand: text } as (BrandItem | null)))}
               autoCapitalize='words'
@@ -336,7 +338,7 @@ export default function BrandsScreen() {
             />
 
             <View style={styles.switchRow}>
-              <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+              <Text className='text-foreground' style={styles.switchLabel}>{t('categories.fields.active')}</Text>
               <Switch
                 value={editingBrand?.isActive}
                 onValueChange={(value) => setEditingBrand((prev: BrandItem | null) => ({ ...prev, isActive: value } as (BrandItem | null)))}
@@ -347,10 +349,10 @@ export default function BrandsScreen() {
 
             <View style={styles.modalActions}>
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
-                <Text className='text-foreground'>Cancel</Text>
+                <Text className='text-foreground'>{t('categories.actions.cancel')}</Text>
               </Button>
               <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, { backgroundColor: theme.primary }]}>
-                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
+                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>{t('categories.actions.save')}</Text>}
               </Button>
             </View>
           </View>

@@ -16,9 +16,11 @@ import { useColorScheme } from 'nativewind';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function ProductGalleryViewerScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ images?: string | string[]; index?: string | string[]; mode?: string | string[] }>();
@@ -126,13 +128,13 @@ export default function ProductGalleryViewerScreen() {
     return (
       <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
-            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.closeGallery')} style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>{t('products.actions.close')}</Text>
           </Pressable>
-          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>{t('products.gallery.title')}</Text>
           <View style={styles.previewSpacer} />
         </View>
-        <View style={styles.emptyState}><Text style={styles.emptyStateText}>Checking permission...</Text></View>
+        <View style={styles.emptyState}><Text style={styles.emptyStateText}>{t('products.gallery.checkingPermission')}</Text></View>
       </View>
     );
   }
@@ -141,13 +143,13 @@ export default function ProductGalleryViewerScreen() {
     return (
       <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
-            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.closeGallery')} style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>{t('products.actions.close')}</Text>
           </Pressable>
-          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>{t('products.gallery.title')}</Text>
           <View style={styles.previewSpacer} />
         </View>
-        <UnauthorizedView />
+        <UnauthorizedView title={t('products.unauthorized.title')} message={t('products.unauthorized.description')} />
       </View>
     );
   }
@@ -155,7 +157,7 @@ export default function ProductGalleryViewerScreen() {
   if (!parsedImages.length) {
     return (
       <View style={[styles.emptyState, { backgroundColor: theme.background }]}>
-        <Text style={[styles.emptyStateText, { color: theme.foreground }]}>No images to display</Text>
+        <Text style={[styles.emptyStateText, { color: theme.foreground }]}>{t('products.empty.noImages')}</Text>
       </View>
     );
   }
@@ -164,10 +166,10 @@ export default function ProductGalleryViewerScreen() {
     return (
       <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
-            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.closeGallery')} style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>{t('products.actions.close')}</Text>
           </Pressable>
-          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>{t('products.gallery.title')}</Text>
           <View style={styles.previewSpacer} />
         </View>
 
@@ -188,8 +190,8 @@ export default function ProductGalleryViewerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
-      <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
-        <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.closeGallery')} style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+        <Text style={[styles.closeButtonText, { color: theme.foreground }]}>{t('products.actions.close')}</Text>
       </Pressable>
 
       <View style={[styles.counterBadge, { backgroundColor: theme.secondary }]}>
@@ -223,10 +225,10 @@ export default function ProductGalleryViewerScreen() {
       </ScrollView>
 
       <View style={styles.navRow}>
-        <Pressable onPress={goToPrevious} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.previousImage')} onPress={goToPrevious} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
           <Text style={[styles.navButtonText, { color: theme.foreground }]}>←</Text>
         </Pressable>
-        <Pressable onPress={goToNext} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('products.accessibility.nextImage')} onPress={goToNext} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
           <Text style={[styles.navButtonText, { color: theme.foreground }]}>→</Text>
         </Pressable>
       </View>

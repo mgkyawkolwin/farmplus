@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,6 +27,7 @@ const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
 
 export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
@@ -49,7 +51,7 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
       setRowVersion(item.rowVersion ?? '');
     }).catch(() => {
       if (active) {
-        SnackBar.Error('Failed to load role details');
+        SnackBar.Error(t('roles.messages.failedLoadDetails'));
         router.back();
       }
     }).finally(() => {
@@ -62,7 +64,7 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const handleSubmit = async () => {
     const normalizedRole = role.trim();
     if (!normalizedRole) {
-      SnackBar.Error('Role is required');
+      SnackBar.Error(t('roles.messages.roleRequired'));
       return;
     }
 
@@ -70,15 +72,15 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
     try {
       if (mode === 'create') {
         await roleService.createRole({ role: normalizedRole });
-        SnackBar.Success('Role created successfully');
+        SnackBar.Success(t('roles.messages.created'));
       } else {
         if (!roleId) return;
         await roleService.updateRole(roleId, { role: normalizedRole, rowVersion });
-        SnackBar.Success('Role updated successfully');
+        SnackBar.Success(t('roles.messages.updated'));
       }
       router.back();
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : `Failed to ${mode} role`);
+      SnackBar.Error(error instanceof Error ? error.message : t(mode === 'create' ? 'roles.messages.createFailed' : 'roles.messages.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -92,21 +94,21 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>{mode === 'create' ? 'New Role' : 'Edit Role'}</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t(mode === 'create' ? 'roles.newTitle' : 'roles.editTitle')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('roles.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.loadingText}>Loading role details...</Text>
+          <Text className="text-muted-foreground" style={styles.loadingText}>{t('roles.loadingDetails')}</Text>
         </View>
       ) : (
         <KeyboardAwareScrollView
@@ -116,9 +118,9 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.field}>
-            <Label className="text-foreground">Role <Text style={{ color: theme.destructive }}>*</Text></Label>
+            <Label className="text-foreground">{t('roles.fieldLabel')} <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
-              placeholder="Enter role"
+              placeholder={t('roles.formPlaceholder')}
               value={role}
               onChangeText={setRole}
               maxLength={50}
@@ -128,11 +130,11 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
           <View style={styles.actions}>
             <Button variant="outline" style={styles.actionButton} onPress={() => router.back()} disabled={loading}>
-              <Text className="text-foreground">Cancel</Text>
+              <Text className="text-foreground">{t('roles.actions.cancel')}</Text>
             </Button>
             <Button style={styles.actionButton} onPress={handleSubmit} disabled={loading}>
               {loading ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
-                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{mode === 'create' ? 'Create Role' : 'Save Changes'}</Text>
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{t(mode === 'create' ? 'roles.actions.create' : 'roles.actions.saveChanges')}</Text>
               )}
             </Button>
           </View>

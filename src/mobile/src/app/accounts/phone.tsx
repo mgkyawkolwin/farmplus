@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function PhoneScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -25,21 +27,21 @@ export default function PhoneScreen() {
                 <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                     <Text className="text-foreground" style={styles.backButtonText}>
-                        Back
+                        {t('accounts.back')}
                     </Text>
                 </Button>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Enter Phone Number
+                    {t('accounts.phone.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    We will send OTP to verify your phone number.
+                    {t('accounts.phone.subtitle')}
                 </Text>
 
                 <View style={styles.field}>
-                    <Label>Phone Number</Label>
+                    <Label>{t('accounts.phone.label')}</Label>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Select>
                         <SelectTrigger>
@@ -54,7 +56,7 @@ export default function PhoneScreen() {
                 </View>
 
                 <Button style={styles.continueButton} onPress={() => router.push('./otp')}>
-                    <Text>Send OTP</Text>
+                    <Text>{t('accounts.phone.sendOtp')}</Text>
                 </Button>
             </ScrollView>
         </View>

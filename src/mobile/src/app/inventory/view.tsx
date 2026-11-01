@@ -33,6 +33,7 @@ import { ProductItem } from "@/models/product";
 import SnackBar from "@/components/ui/snack-bar";
 import Gallery from "@/components/gallery";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { useTranslation } from 'react-i18next';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -56,6 +57,7 @@ function MovementSeparator() {
 
 export default function InventoryProductViewScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const permissionState = usePagePermission('/inventory/view');
   const [product, setProduct] = React.useState<ProductItem | null>(null);
@@ -91,7 +93,7 @@ export default function InventoryProductViewScreen() {
         SnackBar.Error(
           error instanceof Error
             ? error.message
-            : "Unable to load stock details.",
+            : t('inventory.messages.detailsFailed'),
         );
       } finally {
         setLoading(false);
@@ -99,7 +101,7 @@ export default function InventoryProductViewScreen() {
         setLoadingMore(false);
       }
     },
-    [id, page, product],
+    [id, page, product, t],
   );
 
   useFocusEffect(
@@ -108,7 +110,7 @@ export default function InventoryProductViewScreen() {
       setLoading(true);
       void load(true);
       return undefined;
-    }, [id, permissionState]),
+    }, [load, permissionState]),
   );
   const loadMore = () => {
     if (hasMore && !loadingMore && !loading) {
@@ -120,7 +122,7 @@ export default function InventoryProductViewScreen() {
     if (permissionState !== 'authorized') return;
     const amount = Number(quantity);
     if (!id || !movementType || !Number.isInteger(amount) || amount <= 0) {
-      SnackBar.Error("Enter a positive whole quantity.");
+      SnackBar.Error(t('inventory.messages.positiveQuantity'));
       return;
     }
     setSaving(true);
@@ -136,10 +138,10 @@ export default function InventoryProductViewScreen() {
       setRemark("");
       setRefreshing(true);
       await load(true);
-      SnackBar.Success("Stock updated successfully.");
+      SnackBar.Success(t('inventory.messages.stockUpdated'));
     } catch (error) {
       SnackBar.Error(
-        error instanceof Error ? error.message : "Unable to update stock.",
+        error instanceof Error ? error.message : t('inventory.messages.unableUpdateStock'),
       );
     } finally {
       setSaving(false);
@@ -154,14 +156,14 @@ export default function InventoryProductViewScreen() {
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={styles.headerTitle}>Inventory</Text>
+          <Text style={styles.headerTitle}>{t('inventory.fields.inventory')}</Text>
           <View style={styles.headerButton} />
         </View>
-        {permissionState === 'denied' ? <UnauthorizedView /> : (
+        {permissionState === 'denied' ? <UnauthorizedView title={t('inventory.unauthorized.title')} message={t('inventory.unauthorized.description')} /> : (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={COLORS.green} />
             <Text style={styles.loadingText}>
-              {permissionState === 'checking' ? 'Checking permission...' : 'Loading stock...'}
+              {permissionState === 'checking' ? t('inventory.dashboard.checkingPermission') : t('inventory.list.loading')}
             </Text>
           </View>
         )}
@@ -177,28 +179,28 @@ export default function InventoryProductViewScreen() {
   const isLowStock = (product.currentStock ?? 0) < (product.minimumStock ?? 0);
   const modalTitle =
     movementType === "stock-in"
-      ? "Stock In"
+      ? t('inventory.movement.stockIn')
       : movementType === "stock-out"
-        ? "Stock Out"
-        : "Damage";
+        ? t('inventory.movement.stockOut')
+        : t('inventory.movement.damage');
 
   const stockActions = [
     {
-      label: "Stock In",
+      label: t('inventory.actions.stockIn'),
       icon: ArrowDownToLine,
       color: COLORS.green,
       iconWrapStyle: styles.iconWrapGreen,
       onPress: () => setMovementType("stock-in"),
     },
     {
-      label: "Stock Out",
+      label: t('inventory.actions.stockOut'),
       icon: ArrowUpFromLine,
       color: COLORS.amber,
       iconWrapStyle: styles.iconWrapAmber,
       onPress: () => setMovementType("stock-out"),
     },
     {
-      label: "Transfer",
+      label: t('inventory.actions.transfer'),
       icon: ArrowLeftRight,
       color: COLORS.blue,
       iconWrapStyle: styles.iconWrapBlue,
@@ -209,7 +211,7 @@ export default function InventoryProductViewScreen() {
         }),
     },
     {
-      label: "Damage",
+      label: t('inventory.actions.damage'),
       icon: TriangleAlert,
       color: COLORS.red,
       iconWrapStyle: styles.iconWrapRed,
@@ -230,7 +232,7 @@ export default function InventoryProductViewScreen() {
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          Inventory
+          {t('inventory.fields.inventory')}
         </Text>
         <View style={styles.headerButton} />
       </View>
@@ -275,7 +277,7 @@ export default function InventoryProductViewScreen() {
                       {product.name}
                     </Text>
                     <Text style={styles.productMeta} numberOfLines={1}>
-                      {product.category || "Uncategorized"}
+                      {product.category || t('inventory.empty.noUncategorized')}
                     </Text>
                   </View>
                 </View>
@@ -283,7 +285,7 @@ export default function InventoryProductViewScreen() {
 
               <View style={styles.kpiPanel}>
                 <View style={styles.kpiCell}>
-                  <Text style={styles.kpiLabel}>Current Stock</Text>
+                  <Text style={styles.kpiLabel}>{t('inventory.fields.currentStock')}</Text>
                   <Text
                     style={[
                       styles.kpiValue,
@@ -296,17 +298,17 @@ export default function InventoryProductViewScreen() {
                 </View>
                 <View style={styles.kpiDivider} />
                 <View style={styles.kpiCell}>
-                  <Text style={styles.kpiLabel}>Minimum Stock</Text>
+                  <Text style={styles.kpiLabel}>{t('inventory.fields.minimumStock')}</Text>
                   <Text style={styles.kpiValue} numberOfLines={1}>
                     {`${product.minimumStock ?? 0}${unitSuffix}`}
                   </Text>
                 </View>
               </View>
 
-              <Text style={styles.sectionHeading}>Description</Text>
+              <Text style={styles.sectionHeading}>{t('inventory.fields.description')}</Text>
               <View style={styles.panel}>
                 <Text style={styles.descriptionText}>
-                  {product.description || "No description provided."}
+                  {product.description || t('inventory.empty.noDescription')}
                 </Text>
               </View>
 
@@ -329,15 +331,15 @@ export default function InventoryProductViewScreen() {
                 ))}
               </View>
 
-              <Gallery images={otherImages} title="Product Images" />
+              <Gallery images={otherImages} title={t('inventory.fields.productImages')} />
             </View>
 
             <View style={styles.tableHeader}>
               <Text style={[styles.headerCell, styles.headerInfo]}>
-                Stock Movements
+                {t('inventory.fields.stockMovements')}
               </Text>
               <Text style={[styles.headerCell, styles.amountColumn]}>
-                Quantity
+                {t('inventory.fields.quantity')}
               </Text>
             </View>
           </>
@@ -345,9 +347,17 @@ export default function InventoryProductViewScreen() {
         renderItem={({ item }) => (
           <View style={styles.movementRow}>
             <View style={styles.movementInfo}>
-              <Text style={styles.movementType}>{item.type}</Text>
+              <Text style={styles.movementType}>
+                {item.type === 'stock-in'
+                  ? t('inventory.movement.stockIn')
+                  : item.type === 'stock-out'
+                    ? t('inventory.movement.stockOut')
+                    : item.type === 'damage'
+                      ? t('inventory.movement.damage')
+                      : item.type}
+              </Text>
               <Text style={styles.movementRemark} numberOfLines={1}>
-                {item.remark || "No remark"}
+                {item.remark || t('inventory.empty.noRemark')}
               </Text>
             </View>
             <View style={styles.amountColumn}>
@@ -375,7 +385,7 @@ export default function InventoryProductViewScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No stock movements yet.</Text>
+            <Text style={styles.emptyText}>{t('inventory.empty.noStockMovements')}</Text>
           </View>
         }
       />
@@ -389,19 +399,19 @@ export default function InventoryProductViewScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>{modalTitle}</Text>
-            <Label className="text-foreground">Quantity</Label>
+            <Label className="text-foreground">{t('inventory.fields.quantity')}</Label>
             <Input
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="number-pad"
-              placeholder="0"
+              placeholder={t('inventory.placeholders.zero')}
               editable={!saving}
             />
-            <Label className="text-foreground">Remark</Label>
+            <Label className="text-foreground">{t('inventory.fields.remark')}</Label>
             <Input
               value={remark}
               onChangeText={setRemark}
-              placeholder="Optional remark"
+              placeholder={t('inventory.placeholders.optionalRemark')}
               editable={!saving}
             />
             <View style={styles.modalActions}>
@@ -410,10 +420,10 @@ export default function InventoryProductViewScreen() {
                 onPress={() => setMovementType(null)}
                 disabled={saving}
               >
-                <Text className="text-foreground">Cancel</Text>
+                <Text className="text-foreground">{t('inventory.actions.cancel')}</Text>
               </Button>
               <Button onPress={saveMovement} disabled={saving}>
-                <Text className="text-background">Save</Text>
+                <Text className="text-background">{t('inventory.actions.save')}</Text>
               </Button>
             </View>
           </View>

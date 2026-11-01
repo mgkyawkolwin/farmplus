@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { CategoryServiceClient } from '@/services/categoryService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Icon } from '@/components/ui/icon';
 import { CategoryItem } from '@/models/category';
@@ -23,6 +24,7 @@ import { THEME } from '@/lib/theme';
 
 export default function CategoriesScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
     const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
     const permissionState = usePagePermission('/categories/categories');
@@ -57,7 +59,7 @@ export default function CategoriesScreen() {
             setPage(requestedPage);
             setHasMore(data.length >= 20);
         } catch (error: any) {
-            setErrorMessage(error?.message || 'Unable to load categories.');
+            setErrorMessage(error?.message || t('categories.messages.unableLoadCategories'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -109,7 +111,7 @@ export default function CategoriesScreen() {
 
     const handleSubmit = async () => {
         if (!editingCategory?.category || editingCategory.category.trim() === '') {
-            SnackBar.Error('Category name is required.');
+            SnackBar.Error(t('categories.messages.categoryNameRequired'));
             return;
         }
 
@@ -119,15 +121,15 @@ export default function CategoriesScreen() {
 
             if (editingCategory.id) {
                 await service.updateCategory(editingCategory);
-                SnackBar.Success(`Category "${editingCategory.category}" updated successfully.`);
+                SnackBar.Success(t('categories.messages.categoryUpdated', { category: editingCategory.category }));
             } else {
                 await service.createCategory(editingCategory.category, editingCategory.isActive);
-                SnackBar.Success(`Category "${editingCategory.category}" created successfully.`);
+                SnackBar.Success(t('categories.messages.categoryCreated', { category: editingCategory.category }));
             }
             await loadCategories(1, false, false);
             closeModal();
         } catch (error: any) {
-            SnackBar.Error(error?.message || 'Unable to save category.');
+            SnackBar.Error(error?.message || t('categories.messages.unableSaveCategory'));
         } finally {
             setSaving(false);
         }
@@ -135,11 +137,11 @@ export default function CategoriesScreen() {
 
     const confirmDelete = (category: CategoryItem) => {
         RNAlert.alert(
-            'Delete category',
-            `Are you sure you want to delete "${category.category}"?`,
+            t('categories.deleteTitle'),
+            t('categories.deleteConfirmation', { category: category.category }),
             [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => handleDelete(category) },
+                { text: t('categories.actions.cancel'), style: 'cancel' },
+                { text: t('categories.actions.delete'), style: 'destructive', onPress: () => handleDelete(category) },
             ]
         );
     };
@@ -147,10 +149,10 @@ export default function CategoriesScreen() {
     const handleDelete = async (category: CategoryItem) => {
         try {
             await service.deleteCategory(category.id);
-            SnackBar.Success(`Category "${category.category}" deleted successfully.`);
+            SnackBar.Success(t('categories.messages.categoryDeleted', { category: category.category }));
             await loadCategories(1, false, false);
         } catch (error: any) {
-            SnackBar.Error(error?.message || `Unable to delete category "${category.category}".`);
+            SnackBar.Error(error?.message || t('categories.messages.unableDeleteCategory', { category: category.category }));
         }
     };
 
@@ -160,17 +162,17 @@ export default function CategoriesScreen() {
                 <Button variant='ghost' onPress={() => router.back()} style={styles.backButton}>
                     <Icon as={ChevronLeft} size={22} className='text-foreground' />
                 </Button>
-                <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
+                <Text className='text-foreground' style={styles.headerTitle}>{t('categories.category')}</Text>
                 <Button variant='outline' size='sm' onPress={openCreateModal} disabled={permissionState !== 'authorized'} style={[styles.addButton, { borderColor: theme.border, backgroundColor: theme.card }]}>
                     <Icon as={Plus} size={14} color={theme.foreground} />
-                    <Text style={[styles.addButtonText, { color: theme.foreground }]}>New</Text>
+                    <Text style={[styles.addButtonText, { color: theme.foreground }]}>{t('categories.actions.new')}</Text>
                 </Button>
             </View>
 
             {permissionState === 'checking' ? (
                 <View style={styles.emptyState}>
                     <ActivityIndicator size="large" color={theme.primary} />
-                    <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
+                    <Text className='text-muted-foreground' style={styles.emptyText}>{t('categories.checkingPermission')}</Text>
                 </View>
             ) : permissionState === 'denied' ? (
                 <UnauthorizedView />
@@ -186,27 +188,27 @@ export default function CategoriesScreen() {
                 {loading && !refreshing ? (
                     <View style={styles.emptyState}>
                         <ActivityIndicator size="large" color={theme.primary} />
-                        <Text className='text-muted-foreground' style={styles.emptyText}>Loading categories...</Text>
+                        <Text className='text-muted-foreground' style={styles.emptyText}>{t('categories.loading')}</Text>
                     </View>
                 ) : categories.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <Text className='text-muted-foreground' style={styles.emptyText}>No categories yet.</Text>
+                        <Text className='text-muted-foreground' style={styles.emptyText}>{t('categories.emptyList')}</Text>
                     </View>
                 ) : (
                     <View>
                         <View style={[styles.summaryBar, { backgroundColor: theme.primary }]}>
                             <View style={styles.summaryCell}>
-                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Total</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>{t('categories.total')}</Text>
                                 <Text style={[styles.summaryValue, { color: theme.primaryForeground }]}>{categories.length}</Text>
                             </View>
                             <View style={[styles.summaryDivider, { backgroundColor: theme.mutedForeground }]} />
                             <View style={styles.summaryCell}>
-                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Active</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>{t('categories.active')}</Text>
                                 <Text style={[styles.summaryValue, { color: theme.chart2 }]}>{categories.filter((item) => item.isActive).length}</Text>
                             </View>
                             <View style={[styles.summaryDivider, { backgroundColor: theme.mutedForeground }]} />
                             <View style={styles.summaryCell}>
-                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Inactive</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>{t('categories.inactive')}</Text>
                                 <Text style={[styles.summaryValue, { color: theme.destructive }]}>{categories.filter((item) => !item.isActive).length}</Text>
                             </View>
                         </View>
@@ -237,7 +239,7 @@ export default function CategoriesScreen() {
                                             <View style={styles.statusRow}>
                                                 <View style={[styles.statusDot, { backgroundColor: category.isActive ? theme.chart2 : theme.destructive }]} />
                                                 <Text style={[styles.statusLabel, { color: category.isActive ? theme.chart2 : theme.destructive }]}>
-                                                    {category.isActive ? 'Active' : 'Inactive'}
+                                                    {t(category.isActive ? 'categories.active' : 'categories.inactive')}
                                                 </Text>
                                             </View>
                                         </View>
@@ -249,7 +251,7 @@ export default function CategoriesScreen() {
                                             hitSlop={6}
                                             style={styles.actionButton}
                                             accessibilityRole='button'
-                                            accessibilityLabel={`Edit ${category.category}`}
+                                            accessibilityLabel={t('categories.accessibility.editCategory', { category: category.category })}
                                         >
                                             <Pencil size={15} color={theme.primary} />
                                         </Pressable>
@@ -258,7 +260,7 @@ export default function CategoriesScreen() {
                                             hitSlop={6}
                                             style={[styles.actionButton, { borderColor: theme.destructive, backgroundColor: theme.card }]}
                                             accessibilityRole='button'
-                                            accessibilityLabel={`Delete ${category.category}`}
+                                            accessibilityLabel={t('categories.accessibility.deleteCategory', { category: category.category })}
                                         >
                                             <Trash2 size={15} color={theme.destructive} />
                                         </Pressable>
@@ -271,12 +273,12 @@ export default function CategoriesScreen() {
                 {loadingMore ? (
                     <View style={styles.loadMoreRow}>
                         <ActivityIndicator size='small' color={theme.primary} />
-                        <Text className='text-muted-foreground'>Loading more...</Text>
+                        <Text className='text-muted-foreground'>{t('categories.loadingMore')}</Text>
                     </View>
                 ) : null}
                 {errorMessage ? (
                     <Alert variant='destructive' icon={X} className='mt-3'>
-                        <AlertTitle>Unable to continue</AlertTitle>
+                        <AlertTitle>{t('categories.errorTitle')}</AlertTitle>
                         <AlertDescription>{errorMessage}</AlertDescription>
                     </Alert>
                 ) : null}
@@ -288,15 +290,15 @@ export default function CategoriesScreen() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     <View style={[styles.modalSheet, { backgroundColor: theme.card, borderColor: theme.border }]}>
                         <View style={styles.modalHeader}>
-                            <Text variant='h4' className='text-foreground'> {editingCategory ? 'Edit category' : 'Add category'} </Text>
+                            <Text variant='h4' className='text-foreground'>{t(editingCategory ? 'categories.editCategory' : 'categories.newCategory')}</Text>
                             <Pressable onPress={closeModal} style={styles.closeButton}>
                                 <Icon as={X} size={20} color={theme.mutedForeground} />
                             </Pressable>
                         </View>
 
-                        <Label className='text-foreground' style={styles.label}>Category name</Label>
+                        <Label className='text-foreground' style={styles.label}>{t('categories.fields.categoryName')}</Label>
                         <Input
-                            placeholder='Enter category name'
+                            placeholder={t('categories.placeholders.categoryName')}
                             value={editingCategory?.category}
                             onChangeText={(text) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, category: text } as (CategoryItem | null)))}
                             autoCapitalize='words'
@@ -304,7 +306,7 @@ export default function CategoriesScreen() {
                         />
 
                         <View style={styles.switchRow}>
-                            <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
+                            <Text className='text-foreground' style={styles.switchLabel}>{t('categories.fields.active')}</Text>
                             <Switch
                                 value={editingCategory?.isActive}
                                 onValueChange={(value) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, isActive: value } as (CategoryItem | null)))}
@@ -315,10 +317,10 @@ export default function CategoriesScreen() {
 
                         <View style={styles.modalActions}>
                             <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
-                                <Text className='text-foreground'>Cancel</Text>
+                                <Text className='text-foreground'>{t('categories.actions.cancel')}</Text>
                             </Button>
                             <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, { backgroundColor: theme.primary }]}>
-                                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
+                                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>{t('categories.actions.save')}</Text>}
                             </Button>
                         </View>
                     </View>

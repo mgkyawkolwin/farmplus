@@ -30,6 +30,7 @@ import { ShopServiceClient } from '@/services/shopService';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 20;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,6 +62,7 @@ function DetailRow({ icon: RowIcon, value, theme }: { icon: typeof MapPin; value
 }
 
 function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () => void; onDelete: () => void; theme: ThemeColors }) {
+  const { t } = useTranslation();
   const location = locationSummary(shop);
   const addressLine = [shop.address, shop.postalCode].filter(Boolean).join(' ');
   const hasDetails = Boolean(addressLine || shop.phone || shop.email);
@@ -74,7 +76,7 @@ function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () =>
         <View style={styles.cardTitleWrap}>
           <Text className="text-foreground" style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
           <Text className="text-muted-foreground" style={styles.shopLocation} numberOfLines={1}>
-            {location || 'No location'}
+            {location || t('suppliers.dashboard.noLocation')}
           </Text>
         </View>
       </View>
@@ -83,7 +85,7 @@ function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () =>
         {addressLine ? <DetailRow icon={MapPin} value={addressLine} theme={theme} /> : null}
         {shop.phone ? <DetailRow icon={Phone} value={shop.phone} theme={theme} /> : null}
         {shop.email ? <DetailRow icon={Mail} value={shop.email} theme={theme} /> : null}
-        {!hasDetails ? <Text className="text-muted-foreground" style={styles.noDetails}>No contact details</Text> : null}
+        {!hasDetails ? <Text className="text-muted-foreground" style={styles.noDetails}>{t('shops.noContactDetails')}</Text> : null}
       </View>
 
       <View style={[styles.cardFooter, { borderTopColor: theme.border, backgroundColor: theme.muted }]}>
@@ -91,20 +93,20 @@ function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () =>
           onPress={onEdit}
           style={styles.footerAction}
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${shop.name}`}
+          accessibilityLabel={t('shops.accessibility.editShop', { name: shop.name })}
         >
           <Pencil size={14} color={theme.primary} />
-          <Text style={[styles.footerText, { color: theme.primary }]}>Edit</Text>
+          <Text style={[styles.footerText, { color: theme.primary }]}>{t('sales.actions.edit')}</Text>
         </Pressable>
         <View style={[styles.footerDivider, { backgroundColor: theme.border }]} />
         <Pressable
           onPress={onDelete}
           style={styles.footerAction}
           accessibilityRole="button"
-          accessibilityLabel={`Delete ${shop.name}`}
+          accessibilityLabel={t('shops.accessibility.deleteShop', { name: shop.name })}
         >
           <Trash2 size={14} color={theme.destructive} />
-          <Text style={[styles.footerText, { color: theme.destructive }]}>Delete</Text>
+          <Text style={[styles.footerText, { color: theme.destructive }]}>{t('categories.actions.delete')}</Text>
         </Pressable>
       </View>
     </View>
@@ -113,6 +115,7 @@ function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () =>
 
 export default function ShopsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/shops/shops');
@@ -144,13 +147,13 @@ export default function ShopsScreen() {
       setPage(requestedPage);
       setHasMore(data.length >= PAGE_SIZE);
     } catch (error: any) {
-      setErrorMessage(error?.message || 'Unable to load shops.');
+      setErrorMessage(error?.message || t('shops.messages.unableLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [service]);
+  }, [service, t]);
 
   React.useEffect(() => {
     if (permissionState !== 'authorized') return undefined;
@@ -206,9 +209,9 @@ export default function ShopsScreen() {
 
   const handleSubmit = async () => {
     const errors: { name?: string; email?: string } = {};
-    if (!form.name.trim()) errors.name = 'Shop name is required.';
+    if (!form.name.trim()) errors.name = t('shops.messages.nameRequired');
     const email = (form.email ?? '').trim();
-    if (email && !EMAIL_PATTERN.test(email)) errors.email = 'Enter a valid email address.';
+    if (email && !EMAIL_PATTERN.test(email)) errors.email = t('profile.messages.invalidEmail');
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -216,15 +219,15 @@ export default function ShopsScreen() {
       setSaving(true);
       if (form.id) {
         await service.updateShop({ ...form, name: form.name.trim() });
-        SnackBar.Success(`Shop "${form.name.trim()}" updated successfully.`);
+        SnackBar.Success(t('shops.messages.updated', { name: form.name.trim() }));
       } else {
         await service.createShop({ ...form, name: form.name.trim() });
-        SnackBar.Success(`Shop "${form.name.trim()}" created successfully.`);
+        SnackBar.Success(t('shops.messages.created', { name: form.name.trim() }));
       }
       setModalVisible(false);
       await loadShops(1, false, false);
     } catch (error: any) {
-      SnackBar.Error(error?.message || 'Unable to save shop.');
+      SnackBar.Error(error?.message || t('shops.messages.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -232,11 +235,11 @@ export default function ShopsScreen() {
 
   const confirmDelete = (shop: Shop) => {
     RNAlert.alert(
-      'Delete shop',
-      `Are you sure you want to delete "${shop.name}"?`,
+      t('shops.deleteTitle'),
+      t('shops.deleteConfirmation', { name: shop.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => void handleDelete(shop) },
+        { text: t('categories.actions.cancel'), style: 'cancel' },
+        { text: t('categories.actions.delete'), style: 'destructive', onPress: () => void handleDelete(shop) },
       ],
     );
   };
@@ -244,10 +247,10 @@ export default function ShopsScreen() {
   const handleDelete = async (shop: Shop) => {
     try {
       await service.deleteShop(shop.id);
-      SnackBar.Success(`Shop "${shop.name}" deleted successfully.`);
+      SnackBar.Success(t('shops.messages.deleted', { name: shop.name }));
       await loadShops(1, false, false);
     } catch (error: any) {
-      SnackBar.Error(error?.message || `Unable to delete shop "${shop.name}".`);
+      SnackBar.Error(error?.message || t('shops.messages.deleteFailed', { name: shop.name }));
     }
   };
 
@@ -257,17 +260,17 @@ export default function ShopsScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
           <Icon as={ChevronLeft} size={22} className="text-foreground" />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Shops</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('shops.title')}</Text>
         <Button onPress={openCreate} disabled={permissionState !== 'authorized'} style={[styles.addButton, { backgroundColor: theme.primary }]}>
           <Plus size={14} color={theme.primaryForeground} />
-          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>New Shop</Text>
+          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>{t('shops.newTitle')}</Text>
         </Button>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text className="text-muted-foreground" style={styles.emptyText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.emptyText}>{t('categories.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -279,20 +282,20 @@ export default function ShopsScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search by name, city, phone or email"
+            placeholder={t('shops.placeholders.search')}
             placeholderTextColor={theme.mutedForeground}
             style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {query ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel={t('shops.accessibility.clearSearch')}>
               <X size={14} color={theme.mutedForeground} />
             </Pressable>
           ) : null}
         </View>
         <Text className="text-muted-foreground" style={styles.countText}>
-          {visibleShops.length} {visibleShops.length === 1 ? 'shop' : 'shops'}
+          {t('shops.count', { count: visibleShops.length })}
         </Text>
       </View>
 
@@ -307,21 +310,21 @@ export default function ShopsScreen() {
         {loading && !refreshing ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="large" color={theme.primary} />
-            <Text className="text-muted-foreground" style={styles.emptyText}>Loading shops...</Text>
+            <Text className="text-muted-foreground" style={styles.emptyText}>{t('shops.loading')}</Text>
           </View>
         ) : errorMessage && shops.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className="text-foreground" style={styles.emptyTitle}>Unable to load shops</Text>
+            <Text className="text-foreground" style={styles.emptyTitle}>{t('shops.loadFailedTitle')}</Text>
             <Text className="text-muted-foreground" style={styles.emptyText}>{errorMessage}</Text>
           </View>
         ) : shops.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className="text-foreground" style={styles.emptyTitle}>No shops yet</Text>
-            <Text className="text-muted-foreground" style={styles.emptyText}>Tap New Shop to add your first one.</Text>
+            <Text className="text-foreground" style={styles.emptyTitle}>{t('shops.emptyTitle')}</Text>
+            <Text className="text-muted-foreground" style={styles.emptyText}>{t('shops.emptyDescription')}</Text>
           </View>
         ) : visibleShops.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text className="text-muted-foreground" style={styles.emptyText}>No shops match your search.</Text>
+            <Text className="text-muted-foreground" style={styles.emptyText}>{t('shops.emptyFiltered')}</Text>
           </View>
         ) : (
           visibleShops.map((shop) => (
@@ -337,19 +340,19 @@ export default function ShopsScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View style={[styles.sheet, { backgroundColor: theme.card }]}>
               <View style={[styles.sheetHeader, { borderBottomColor: theme.border }]}>
-                <Text className="text-foreground" style={styles.sheetTitle}>{form.id ? 'Edit Shop' : 'New Shop'}</Text>
-                <Pressable onPress={closeModal} hitSlop={8} accessibilityLabel="Close">
+                <Text className="text-foreground" style={styles.sheetTitle}>{form.id ? t('shops.editTitle') : t('shops.newTitle')}</Text>
+                <Pressable onPress={closeModal} hitSlop={8} accessibilityLabel={t('products.actions.close')}>
                   <X size={20} color={theme.mutedForeground} />
                 </Pressable>
               </View>
 
               <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
                 <View style={styles.field}>
-                  <Label className="text-foreground">Shop name <Text style={{ color: theme.destructive }}>*</Text></Label>
+                  <Label className="text-foreground">{t('shops.fields.shopName')} <Text style={{ color: theme.destructive }}>*</Text></Label>
                   <Input
                     value={form.name}
                     onChangeText={(value) => setField('name', value)}
-                    placeholder="Enter shop name"
+                    placeholder={t('shops.placeholders.shopName')}
                     autoCapitalize="words"
                     editable={!saving}
                     maxLength={100}
@@ -358,11 +361,11 @@ export default function ShopsScreen() {
                 </View>
 
                 <View style={styles.field}>
-                  <Label className="text-foreground">Address</Label>
+                  <Label className="text-foreground">{t('customers.fields.address')}</Label>
                   <Input
                     value={form.address}
                     onChangeText={(value) => setField('address', value)}
-                    placeholder="Street address"
+                    placeholder={t('shops.placeholders.address')}
                     editable={!saving}
                     maxLength={200}
                   />
@@ -370,32 +373,32 @@ export default function ShopsScreen() {
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldHalf}>
-                    <Label className="text-foreground">City</Label>
-                    <Input value={form.city} onChangeText={(value) => setField('city', value)} placeholder="City" editable={!saving} maxLength={100} />
+                    <Label className="text-foreground">{t('customers.fields.city')}</Label>
+                    <Input value={form.city} onChangeText={(value) => setField('city', value)} placeholder={t('customers.fields.city')} editable={!saving} maxLength={100} />
                   </View>
                   <View style={styles.fieldHalf}>
-                    <Label className="text-foreground">State / Division</Label>
-                    <Input value={form.stateDivision} onChangeText={(value) => setField('stateDivision', value)} placeholder="State / Division" editable={!saving} maxLength={100} />
+                    <Label className="text-foreground">{t('dealers.fields.stateDivision')}</Label>
+                    <Input value={form.stateDivision} onChangeText={(value) => setField('stateDivision', value)} placeholder={t('dealers.fields.stateDivision')} editable={!saving} maxLength={100} />
                   </View>
                 </View>
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldHalf}>
-                    <Label className="text-foreground">Country</Label>
-                    <Input value={form.country} onChangeText={(value) => setField('country', value)} placeholder="Country" editable={!saving} maxLength={100} />
+                    <Label className="text-foreground">{t('customers.fields.country')}</Label>
+                    <Input value={form.country} onChangeText={(value) => setField('country', value)} placeholder={t('customers.fields.country')} editable={!saving} maxLength={100} />
                   </View>
                   <View style={styles.fieldHalf}>
-                    <Label className="text-foreground">Postal code</Label>
-                    <Input value={form.postalCode} onChangeText={(value) => setField('postalCode', value)} placeholder="Postal code" editable={!saving} maxLength={20} />
+                    <Label className="text-foreground">{t('shops.fields.postalCode')}</Label>
+                    <Input value={form.postalCode} onChangeText={(value) => setField('postalCode', value)} placeholder={t('shops.placeholders.postalCode')} editable={!saving} maxLength={20} />
                   </View>
                 </View>
 
                 <View style={styles.field}>
-                  <Label className="text-foreground">Phone</Label>
+                  <Label className="text-foreground">{t('customers.fields.phone')}</Label>
                   <Input
                     value={form.phone}
                     onChangeText={(value) => setField('phone', value)}
-                    placeholder="Phone number"
+                    placeholder={t('shops.placeholders.phone')}
                     keyboardType="phone-pad"
                     editable={!saving}
                     maxLength={30}
@@ -403,7 +406,7 @@ export default function ShopsScreen() {
                 </View>
 
                 <View style={styles.field}>
-                  <Label className="text-foreground">Email</Label>
+                  <Label className="text-foreground">{t('customers.fields.email')}</Label>
                   <Input
                     value={form.email}
                     onChangeText={(value) => setField('email', value)}
@@ -420,10 +423,10 @@ export default function ShopsScreen() {
 
               <View style={[styles.sheetFooter, { borderTopColor: theme.border }]}>
                 <Button variant="outline" onPress={closeModal} disabled={saving} style={styles.sheetButton}>
-                  <Text className="text-foreground">Cancel</Text>
+                  <Text className="text-foreground">{t('categories.actions.cancel')}</Text>
                 </Button>
                 <Button onPress={handleSubmit} disabled={saving} style={[styles.sheetButton, { backgroundColor: theme.primary }]}>
-                  {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text style={[styles.saveText, { color: theme.primaryForeground }]}>Save Shop</Text>}
+                  {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text style={[styles.saveText, { color: theme.primaryForeground }]}>{t('shops.actions.save')}</Text>}
                 </Button>
               </View>
             </View>

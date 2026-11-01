@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColorScheme } from 'nativewind';
 import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Leaf, Settings, ShieldCheck } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const authService = container.resolve<IAuthService>(DI_TOKENS.IAuthService);
 export default function SignInScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { setAuthUser } = useAuthContext();
@@ -34,7 +36,7 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     if (!userName.trim() || !password) {
-      SnackBar.Error('Enter your username and password.');
+      SnackBar.Error(t('auth.signIn.messages.enterCredentials'));
       return;
     }
 
@@ -47,7 +49,7 @@ export default function SignInScreen() {
       }
       router.replace('/home/dashboard');
     } catch (error) {
-      SnackBar.Error(error instanceof CustomError ? error.message : 'Unable to sign in. Please try again.');
+      SnackBar.Error(error instanceof CustomError ? error.message : t('auth.signIn.messages.signInFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -65,20 +67,20 @@ export default function SignInScreen() {
             <Icon as={Leaf} size={23} color={theme.primaryForeground} />
           </View>
           <Text style={[styles.brandName, { color: theme.foreground }]}>FARM PLUS</Text>
-          <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>BUSINESS MANAGEMENT</Text>
+          <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>{t('auth.brandCaption')}</Text>
         </View>
 
         <View style={styles.heading}>
-          <Text style={[styles.eyebrow, { color: theme.primary }]}>WELCOME BACK</Text>
-          <Text variant="h2" style={[styles.title, { color: theme.foreground }]}>Sign in to your workspace</Text>
-          <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>Manage your operations with a single secure account.</Text>
+          <Text style={[styles.eyebrow, { color: theme.primary }]}>{t('auth.signIn.eyebrow')}</Text>
+          <Text variant="h2" style={[styles.title, { color: theme.foreground }]}>{t('auth.signIn.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>{t('auth.signIn.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Label>Username</Label>
+            <Label>{t('auth.signIn.username')}</Label>
             <Input
-              placeholder="Enter your username"
+              placeholder={t('auth.signIn.usernamePlaceholder')}
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="username"
@@ -91,9 +93,9 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.field}>
-            <Label>Password</Label>
+            <Label>{t('auth.signIn.password')}</Label>
             <Input
-              placeholder="Enter your password"
+              placeholder={t('auth.signIn.passwordPlaceholder')}
               secureTextEntry
               textContentType="password"
               autoComplete="current-password"
@@ -106,30 +108,30 @@ export default function SignInScreen() {
           </View>
 
           <Button style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleSignIn} disabled={isSubmitting}>
-            <Text style={[styles.primaryButtonText, { color: theme.primaryForeground }]}>{isSubmitting ? 'Signing in…' : 'Sign In'}</Text>
+            <Text style={[styles.primaryButtonText, { color: theme.primaryForeground }]}>{isSubmitting ? t('auth.signIn.signingIn') : t('auth.signIn.signIn')}</Text>
           </Button>
         </View>
 
         <View style={[styles.registerPrompt, { borderTopColor: theme.border }]}>
-          <Text style={[styles.promptText, { color: theme.mutedForeground }]}>New to Farm Plus?</Text>
+          <Text style={[styles.promptText, { color: theme.mutedForeground }]}>{t('auth.signIn.newToFarmPlus')}</Text>
           <Button
             variant="outline"
             style={[styles.registerButton, { borderColor: theme.border, backgroundColor: theme.card }]}
             onPress={() => router.push('./register')}
           >
-            <Text style={[styles.registerButtonText, { color: theme.primary }]}>Create an account</Text>
+            <Text style={[styles.registerButtonText, { color: theme.primary }]}>{t('auth.signIn.createAccount')}</Text>
           </Button>
         </View>
 
         <View style={styles.securityNote}>
           <Icon as={ShieldCheck} size={16} color={theme.mutedForeground} />
-          <Text style={[styles.securityText, { color: theme.mutedForeground }]}>Your account is protected with secure sign-in.</Text>
+          <Text style={[styles.securityText, { color: theme.mutedForeground }]}>{t('auth.securityNote')}</Text>
         </View>
-      <Text style={[styles.footer, { color: theme.mutedForeground }]}>Farm Plus · Business tools for growing businesses</Text>
+      <Text style={[styles.footer, { color: theme.mutedForeground }]}>{t('auth.footer')}</Text>
       </ScrollView>
       <Button
         variant="ghost"
-        accessibilityLabel="Settings"
+        accessibilityLabel={t('title.settings')}
         onPress={() => router.push('../settings')}
         style={[styles.settingsButton, { top: insets.top + 8, backgroundColor: theme.card, borderColor: theme.border }]}
       >

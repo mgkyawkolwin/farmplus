@@ -18,6 +18,7 @@ import { Purchase } from '@/models/purchase';
 import { IPurchaseService } from '@/services/purchaseService';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { THEME } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
 type ThemeColors = typeof THEME.light;
@@ -67,6 +68,7 @@ function SummaryRow({ label, value, strong, theme }: { label: string; value: str
 
 export default function PurchaseViewScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
   const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/purchases/view');
@@ -87,12 +89,12 @@ export default function PurchaseViewScreen() {
     try {
       setPurchase(await purchaseService.getPurchaseById(purchaseId));
     } catch (error) {
-      SnackBar.Error(error instanceof Error ? error.message : 'Failed to load purchase details');
+      SnackBar.Error(error instanceof Error ? error.message : t('purchases.messages.failedLoadDetails'));
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [purchaseId, router]);
+  }, [purchaseId, router, t]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -108,19 +110,19 @@ export default function PurchaseViewScreen() {
   const confirmDelete = () => {
     if (permissionState !== 'authorized') return;
     if (!purchase) return;
-    Alert.alert('Delete purchase', `Delete the purchase from ${purchase.supplierName}? Stock will be adjusted.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('purchases.view.deleteTitle'), t('purchases.messages.deleteConfirm', { supplier: purchase.supplierName }), [
+      { text: t('purchases.actions.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('purchases.actions.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(true);
           try {
             await purchaseService.deletePurchase(purchase.id);
-            SnackBar.Success('Purchase deleted successfully');
+            SnackBar.Success(t('purchases.messages.deleted'));
             router.back();
           } catch (error) {
-            SnackBar.Error(error instanceof Error ? error.message : 'Failed to delete purchase');
+            SnackBar.Error(error instanceof Error ? error.message : t('purchases.messages.deleteFailed'));
           } finally {
             setDeleting(false);
           }
@@ -135,62 +137,62 @@ export default function PurchaseViewScreen() {
         <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text className="text-foreground" style={styles.headerTitle}>Purchase Details</Text>
+        <Text className="text-foreground" style={styles.headerTitle}>{t('purchases.view.title')}</Text>
         <View style={styles.headerButton} />
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('purchases.dashboard.checkingPermission')}</Text>
         </View>
       ) : permissionState === 'denied' ? (
-        <UnauthorizedView />
+        <UnauthorizedView title={t('purchases.unauthorized.title')} message={t('purchases.unauthorized.description')} />
       ) : loading && !purchase ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={theme.chart2} />
-          <Text className="text-muted-foreground" style={styles.stateText}>Loading purchase...</Text>
+          <Text className="text-muted-foreground" style={styles.stateText}>{t('purchases.view.loading')}</Text>
         </View>
       ) : purchase ? (
         <ScrollView contentContainerStyle={styles.content}>
-          <ShopBanner name={purchase.shopName} emptyText="Recorded before shops existed" />
+          <ShopBanner label={t('purchases.shop.label')} name={purchase.shopName} emptyText={t('purchases.shop.legacy')} />
 
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.titleRow}>
               <View style={styles.titleInfo}>
-                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Purchase Order</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('purchases.view.purchaseOrder')}</Text>
                 <Text style={[styles.docNo, { color: theme.foreground }]}>#{purchase.id.slice(0, 8).toUpperCase()}</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <View style={styles.infoCell}>
-                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Supplier</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('purchases.fields.supplier')}</Text>
                 <Text style={[styles.infoValue, { color: theme.foreground }]} numberOfLines={2}>{purchase.supplierName}</Text>
               </View>
               <View style={styles.infoCell}>
-                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Date</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('purchases.fields.date')}</Text>
                 <Text style={[styles.infoValue, { color: theme.foreground }]}>{formatDateTime(purchase.purchaseDate)}</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <View style={styles.infoCell}>
-                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Products</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('purchases.fields.products')}</Text>
                 <Text style={[styles.infoValue, { color: theme.foreground }]}>{items.length || purchase.totalProducts}</Text>
               </View>
               <View style={styles.infoCell}>
-                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Total Qty</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>{t('purchases.fields.totalQty')}</Text>
                 <Text style={[styles.infoValue, { color: theme.foreground }]}>{totalQty}</Text>
               </View>
             </View>
           </View>
 
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items ({items.length})</Text>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>{t('purchases.fields.items')} ({items.length})</Text>
 
             {items.length === 0 ? (
-              <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No item details available.</Text>
+              <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>{t('purchases.empty.noItemDetails')}</Text>
             ) : items.map((item, index) => (
               <View key={item.id ?? `${item.productId}-${index}`} style={[styles.itemCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={[styles.itemIcon, { backgroundColor: theme.secondary }]}>
@@ -210,12 +212,12 @@ export default function PurchaseViewScreen() {
           </View>
 
           <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Summary</Text>
-            <SummaryRow label="Subtotal" value={money(purchase.subTotal)} theme={theme} />
-            <SummaryRow label="Tax" value={money(purchase.tax)} theme={theme} />
-            <SummaryRow label="Discount" value={`- ${money(purchase.discount)}`} theme={theme} />
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>{t('purchases.fields.summary')}</Text>
+            <SummaryRow label={t('purchases.fields.subtotal')} value={money(purchase.subTotal)} theme={theme} />
+            <SummaryRow label={t('purchases.fields.tax')} value={money(purchase.tax)} theme={theme} />
+            <SummaryRow label={t('purchases.fields.discount')} value={`- ${money(purchase.discount)}`} theme={theme} />
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <SummaryRow label="Net Total" value={money(purchase.netTotal)} strong theme={theme} />
+            <SummaryRow label={t('purchases.fields.netTotal')} value={money(purchase.netTotal)} strong theme={theme} />
           </View>
         </ScrollView>
       ) : null}
@@ -223,7 +225,7 @@ export default function PurchaseViewScreen() {
       {purchase ? (
         <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
           <ActionButton
-            label="Edit"
+            label={t('purchases.actions.edit')}
             icon={Pencil}
             color={theme.primary}
             theme={theme}
@@ -231,7 +233,7 @@ export default function PurchaseViewScreen() {
             onPress={() => router.push(`/purchases/edit?id=${encodeURIComponent(purchase.id)}` as Parameters<typeof router.push>[0])}
           />
           <ActionButton
-            label="Delete"
+            label={t('purchases.actions.delete')}
             icon={Trash2}
             color={theme.destructive}
             theme={theme}

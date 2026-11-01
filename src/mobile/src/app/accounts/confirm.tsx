@@ -5,6 +5,7 @@ import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Crown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { Separator } from '@rn-primitives/context-menu';
 
 export default function ConfirmScreen() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
 
     return (
@@ -28,29 +30,29 @@ export default function ConfirmScreen() {
                 <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
                     <Icon className="text-foreground" as={ChevronLeft} size={22} />
                     <Text className="text-foreground" style={styles.backButtonText}>
-                        Back
+                        {t('accounts.back')}
                     </Text>
                 </Button>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="h2" style={styles.header}>
-                    Plan Summary
+                    {t('accounts.confirm.title')}
                 </Text>
                 <Text style={styles.subtitle}>
-                    Start with a plan that suits your business.
+                    {t('accounts.planSubtitle')}
                 </Text>
                 <Card>
                     <CardContent>
                         <View className="flex flex-row items-center gap-3">
                             <Icon className="text-foreground" as={Crown} size={48} />
-                            <Label htmlFor="freemium" className="text-text text-lg font-bold">Freemium</Label>
+                            <Label htmlFor="freemium" className="text-text text-lg font-bold">{t('accounts.plans.freemium')}</Label>
                         </View>
                         <View>
-                            <Text className="text-text-muted text-lg">License</Text>
-                            <Text className="text-text text-lg font-bold">1 Year</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.license')}</Text>
+                            <Text className="text-text text-lg font-bold">{t('accounts.oneYear')}</Text>
                             <Separator className="bg-text-muted h-1 my-2" />
-                            <Text className="text-text-muted text-lg">Price</Text>
+                            <Text className="text-text-muted text-lg">{t('accounts.price')}</Text>
                             <Text className="text-text text-lg font-bold">XXX,XXX,XXX</Text>
                         </View>
                     </CardContent>
@@ -58,19 +60,19 @@ export default function ConfirmScreen() {
                 <Card>
                     <CardContent>
                         <View className="flex flex-row items-center gap-3">
-                            <Label htmlFor="premium" className="text-text text-lg">Includes</Label>
+                            <Label htmlFor="premium" className="text-text text-lg">{t('accounts.includes')}</Label>
                         </View>
                         <View className="flex flex-col gap-2">
-                            <Text className="text-text-muted text-sm">✔ Unlimited Shops</Text>
-                            <Text className="text-text-muted text-sm">✔ Unlimited Users</Text>
-                            <Text className="text-text-muted text-sm">✔ Full Features</Text>
-                            <Text className="text-text-muted text-sm">✔ Unlimited Transactions</Text>
+                            <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedShops')}</Text>
+                            <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedUsers')}</Text>
+                            <Text className="text-text-muted text-sm">✔ {t('accounts.features.fullFeatures')}</Text>
+                            <Text className="text-text-muted text-sm">✔ {t('accounts.features.unlimitedTransactions')}</Text>
                         </View>
                     </CardContent>
                 </Card>
 
                 <Button style={styles.continueButton} onPress={() => router.push('./shop')}>
-                    <Text>Confirm Plan</Text>
+                    <Text>{t('accounts.confirm.confirmPlan')}</Text>
                 </Button>
             </ScrollView>
         </View>
