@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pre
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Package, Plus, Search, Store, Trash2, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -24,6 +25,7 @@ import { DealerServiceClient } from '@/services/dealerService';
 import { IProductService } from '@/services/productService';
 import { ISaleService } from '@/services/saleService';
 import { ShopServiceClient } from '@/services/shopService';
+import { THEME } from '@/lib/theme';
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
@@ -31,24 +33,25 @@ const dealerService = new DealerServiceClient();
 const shopService = new ShopServiceClient();
 
 type SelectedProduct = { product: ProductItem; quantity: string };
+type ThemeColors = typeof THEME.light;
 
 function money(value: number) {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function SummaryRow({ label, value, strong, color }: { label: string; value: string; strong?: boolean; color?: string }) {
+function SummaryRow({ label, value, strong, color, theme }: { label: string; value: string; strong?: boolean; color?: string; theme: ThemeColors }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={[styles.summaryLabel, strong && styles.summaryLabelStrong]}>{label}</Text>
-      <Text style={[styles.summaryValue, strong && styles.summaryValueStrong, color ? { color } : null]}>{value}</Text>
+      <Text style={[styles.summaryLabel, { color: theme.mutedForeground }, strong && [styles.summaryLabelStrong, { color: theme.foreground }]]}>{label}</Text>
+      <Text style={[styles.summaryValue, { color: theme.foreground }, strong && styles.summaryValueStrong, color ? { color } : null]}>{value}</Text>
     </View>
   );
 }
 
-function InputRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InputRow({ label, children, theme }: { label: string; children: React.ReactNode; theme: ThemeColors }) {
   return (
     <View style={styles.inputRow}>
-      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={[styles.summaryLabel, { color: theme.mutedForeground }]}>{label}</Text>
       <View style={styles.inputRowControl}>{children}</View>
     </View>
   );
@@ -56,6 +59,8 @@ function InputRow({ label, children }: { label: string; children: React.ReactNod
 
 export default function DealerSaleScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/sales');
   const params = useLocalSearchParams<{ dealerId?: string | string[] }>();
   const dealerId = Array.isArray(params.dealerId) ? params.dealerId[0] : params.dealerId;
@@ -200,14 +205,14 @@ export default function DealerSaleScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
         </View>
       ) : (
@@ -219,10 +224,10 @@ export default function DealerSaleScreen() {
               emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
             />
 
-            <View style={styles.panel}>
+            <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <Text style={styles.sectionTitle}>Dealer</Text>
-              <View style={styles.dealerRow}>
-                <View style={styles.dealerIcon}>
+              <View style={[styles.dealerRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View style={[styles.dealerIcon, { backgroundColor: theme.secondary }]}>
                   <Icon className="text-muted-foreground" as={Store} size={14} />
                 </View>
                 <Text className="text-foreground" style={styles.dealerText} numberOfLines={1}>
@@ -231,7 +236,7 @@ export default function DealerSaleScreen() {
               </View>
             </View>
 
-            <View style={styles.panel}>
+            <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderInfo}>
                   <Text style={styles.sectionTitle}>Items ({selectedProducts.length})</Text>
@@ -242,10 +247,10 @@ export default function DealerSaleScreen() {
                   disabled={saving}
                   accessibilityRole="button"
                   accessibilityLabel="Add product"
-                  style={styles.addButton}
+                  style={[styles.addButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 >
-                  <Icon as={Plus} size={14} color="#16794B" />
-                  <Text style={styles.addButtonText}>Add</Text>
+                  <Icon as={Plus} size={14} color={theme.primary} />
+                  <Text style={[styles.addButtonText, { color: theme.primary }]}>Add</Text>
                 </Pressable>
               </View>
 
@@ -254,9 +259,9 @@ export default function DealerSaleScreen() {
                   <Text style={styles.helperText}>No products added yet.</Text>
                 </View>
               ) : selectedProducts.map(({ product, quantity }) => (
-                <View key={product.id} style={styles.lineCard}>
+                <View key={product.id} style={[styles.lineCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={styles.lineHeader}>
-                    <View style={styles.lineIcon}>
+                    <View style={[styles.lineIcon, { backgroundColor: theme.secondary }]}>
                       <Icon className="text-muted-foreground" as={Package} size={16} />
                     </View>
                     <View style={styles.productInfo}>
@@ -274,7 +279,7 @@ export default function DealerSaleScreen() {
                       <Icon className="text-destructive" as={Trash2} size={16} />
                     </Pressable>
                   </View>
-                  <View style={styles.quantityRow}>
+                  <View style={[styles.quantityRow, { borderTopColor: theme.border }]}>
                     <Text style={styles.qtyLabel}>Qty</Text>
                     <Input
                       value={quantity}
@@ -283,7 +288,7 @@ export default function DealerSaleScreen() {
                       editable={!saving}
                       style={styles.quantityInput}
                     />
-                    <Text style={styles.lineTotal}>
+                      <Text style={[styles.lineTotal, { color: theme.foreground }]}>
                       {money((Number(quantity) || 0) * (product.salePrice ?? 0))}
                     </Text>
                   </View>
@@ -291,10 +296,10 @@ export default function DealerSaleScreen() {
               ))}
             </View>
 
-            <View style={styles.panel}>
+            <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <Text style={styles.sectionTitle}>Summary</Text>
-              <SummaryRow label="Subtotal" value={money(subtotal)} />
-              <InputRow label="Discount">
+              <SummaryRow label="Subtotal" value={money(subtotal)} theme={theme} />
+              <InputRow label="Discount" theme={theme}>
                 <Input
                   value={discount}
                   onChangeText={setDiscount}
@@ -303,7 +308,7 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <InputRow label="Tax %">
+              <InputRow label="Tax %" theme={theme}>
                 <Input
                   value={taxRate}
                   onChangeText={setTaxRate}
@@ -312,10 +317,10 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <SummaryRow label="Tax Amount" value={money(taxAmount)} />
-              <View style={styles.divider} />
-              <SummaryRow label="Net Total" value={money(netTotal)} strong />
-              <InputRow label="Paid">
+              <SummaryRow label="Tax Amount" value={money(taxAmount)} theme={theme} />
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+              <SummaryRow label="Net Total" value={money(netTotal)} strong theme={theme} />
+              <InputRow label="Paid" theme={theme}>
                 <Input
                   value={paidAmount}
                   onChangeText={setPaidAmount}
@@ -324,41 +329,41 @@ export default function DealerSaleScreen() {
                   style={styles.compactInput}
                 />
               </InputRow>
-              <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? '#B45309' : '#047857'} />
+              <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
             </View>
           </ScrollView>
 
-          <View style={styles.actionBar}>
+          <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
             <View style={styles.actionTotal}>
-              <Text style={styles.eyebrow}>Net Total</Text>
-              <Text style={styles.actionTotalValue} numberOfLines={1}>{money(netTotal)}</Text>
+              <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Net Total</Text>
+              <Text style={[styles.actionTotalValue, { color: theme.foreground }]} numberOfLines={1}>{money(netTotal)}</Text>
             </View>
-            <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={styles.saveButton}>
-              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Complete Sale</Text>}
+            <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={[styles.saveButton, { backgroundColor: theme.primary }]}>
+              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Complete Sale</Text>}
             </Button>
           </View>
         </>
       )}
 
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setPickerVisible(false)} />
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-            <View className="bg-background" style={styles.productSheet}>
+            <View style={[styles.productSheet, { backgroundColor: theme.card }]}>
               <View style={styles.sheetHeader}>
                 <Text className="text-foreground" style={styles.sheetTitle}>Choose Product</Text>
                 <Button variant="ghost" onPress={() => setPickerVisible(false)} style={styles.closeButton}>
                   <Icon className="text-foreground" as={X} size={20} />
                 </Button>
               </View>
-              <View style={styles.searchBox}>
+              <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.card }]}>
                 <Icon className="text-muted-foreground" as={Search} size={16} />
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
                   placeholder="Search products"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.searchInput}
+                  placeholderTextColor={theme.mutedForeground}
+                  style={[styles.searchInput, { color: theme.foreground }]}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
@@ -375,9 +380,9 @@ export default function DealerSaleScreen() {
                     <Pressable
                       onPress={() => addProduct(product)}
                       disabled={stock <= 0 || added}
-                      style={[styles.productOption, (stock <= 0 || added) && styles.productOptionDisabled]}
+                      style={[styles.productOption, { borderBottomColor: theme.border }, (stock <= 0 || added) && styles.productOptionDisabled]}
                     >
-                      <View style={styles.productOptionIcon}>
+                      <View style={[styles.productOptionIcon, { backgroundColor: theme.secondary }]}>
                         <Icon className="text-muted-foreground" as={Package} size={18} />
                       </View>
                       <View style={styles.productOptionInfo}>
@@ -405,54 +410,54 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 44 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
   content: { padding: 12, paddingBottom: 24, gap: 12 },
-  panel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 8 },
-  eyebrow: { fontSize: 9, color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  panel: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 8 },
+  eyebrow: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sectionHeaderInfo: { flex: 1 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: 0.4 },
-  helperText: { fontSize: 11, color: '#64748B' },
-  dealerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#D9DEE5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#FFFFFF' },
-  dealerIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  helperText: { fontSize: 11 },
+  dealerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  dealerIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   dealerText: { flex: 1, fontSize: 14, fontWeight: '600' },
-  addButton: { height: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, borderWidth: 1, borderColor: '#16794B', borderRadius: 6, backgroundColor: '#F4FAF6' },
-  addButtonText: { fontSize: 12, fontWeight: '700', color: '#16794B' },
-  emptyProducts: { paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#CBD5E1', borderRadius: 8 },
-  lineCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
+  addButton: { height: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, borderWidth: 1, borderRadius: 6 },
+  addButtonText: { fontSize: 12, fontWeight: '700' },
+  emptyProducts: { paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 8 },
+  lineCard: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
   lineHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  lineIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  lineIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   productInfo: { flex: 1, minWidth: 0, gap: 1 },
   productName: { fontSize: 13, fontWeight: '600' },
   removeButton: { padding: 6 },
-  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E2E8F0' },
-  qtyLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  qtyLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   quantityInput: { width: 64, height: 34, textAlign: 'center', paddingVertical: 0 },
-  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '800', color: '#0F172A' },
+  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '800' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
-  summaryLabel: { fontSize: 12, color: '#475569' },
-  summaryLabelStrong: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  summaryValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
+  summaryLabel: { fontSize: 12 },
+  summaryLabelStrong: { fontSize: 14, fontWeight: '800' },
+  summaryValue: { fontSize: 12, fontWeight: '600' },
   summaryValueStrong: { fontSize: 15, fontWeight: '800' },
   inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   inputRowControl: { width: 120 },
   compactInput: { height: 34, textAlign: 'right', paddingVertical: 0 },
-  divider: { height: 1, backgroundColor: '#CBD5E1', marginVertical: 4 },
-  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
+  divider: { height: 1, marginVertical: 4 },
+  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1 },
   actionTotal: { flex: 1, minWidth: 0 },
-  actionTotalValue: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  actionTotalValue: { fontSize: 18, fontWeight: '800' },
   saveButton: { minWidth: 150 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 8 },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.38)' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
   sheetWrap: { justifyContent: 'flex-end', maxHeight: '90%' },
   productSheet: { height: '82%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sheetTitle: { fontSize: 18, fontWeight: '700' },
   closeButton: { minWidth: 40 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, marginBottom: 8 },
-  searchInput: { flex: 1, height: '100%', color: '#111827', fontSize: 14 },
-  productOption: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D1D5DB', paddingVertical: 9 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 8 },
+  searchInput: { flex: 1, height: '100%', fontSize: 14 },
+  productOption: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 9 },
   productOptionDisabled: { opacity: 0.5 },
-  productOptionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F4' },
+  productOptionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   productOptionInfo: { flex: 1, gap: 4 },
   emptyPicker: { paddingVertical: 24, textAlign: 'center' },
 });

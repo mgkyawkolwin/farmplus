@@ -7,11 +7,12 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, ChevronRight, Plus, User } from "lucide-react-native";
+import { useColorScheme } from 'nativewind';
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,19 +24,14 @@ import { Supplier } from "@/models/supplier";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from '@/lib/theme';
 
 const PAGE_SIZE = 20;
 
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  rowBorder: "#CBD5E1",
-  green: "#16794B",
-};
-
 export default function SupplierListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/list');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
@@ -84,10 +80,10 @@ export default function SupplierListScreen() {
   const listLabel = `Supplier · ${suppliers.length}${hasMore ? "+" : ""}`;
 
   return (
-    <SafeAreaView style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+      <StatusBar />
 
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Button
           variant="ghost"
           onPress={() => router.back()}
@@ -95,22 +91,22 @@ export default function SupplierListScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={styles.headerTitle}>Suppliers</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Suppliers</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="New supplier"
           onPress={() => router.push("/suppliers/new")}
           disabled={permissionState !== 'authorized'}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
-          <Plus size={18} color="#FFFFFF" />
+          <Plus size={18} color={theme.primaryForeground} />
         </Pressable>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
-          <Text style={styles.stateText}>Checking permission...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
@@ -124,7 +120,7 @@ export default function SupplierListScreen() {
               setRefreshing(true);
               void loadSuppliers();
             }}
-            tintColor={COLORS.green}
+            tintColor={theme.primary}
           />
         }
         onMomentumScrollEnd={({ nativeEvent }) => {
@@ -138,16 +134,16 @@ export default function SupplierListScreen() {
       >
         {loading && suppliers.length === 0 ? (
           <View style={styles.centeredState}>
-            <ActivityIndicator size="large" color={COLORS.green} />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : suppliers.length === 0 ? (
           <View style={styles.centeredState}>
-            <Text style={styles.stateTitle}>No suppliers found</Text>
-            <Text style={styles.stateText}>Add a supplier to get started.</Text>
+            <Text style={[styles.stateTitle, { color: theme.foreground }]}>No suppliers found</Text>
+            <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Add a supplier to get started.</Text>
           </View>
         ) : (
           <>
-            <View style={styles.tableHeader}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
               <Text style={[styles.headerCell, styles.headerInfo]}>
                 {listLabel}
               </Text>
@@ -163,7 +159,7 @@ export default function SupplierListScreen() {
                   key={supplier.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Supplier ${supplier.supplierName}`}
-                  style={styles.row}
+                  style={[styles.row, { borderBottomColor: theme.border, backgroundColor: theme.card }]}
                   onPress={() =>
                     router.push({
                       pathname: "/suppliers/view",
@@ -171,7 +167,7 @@ export default function SupplierListScreen() {
                     })
                   }
                 >
-                  <View style={styles.logoWrapper}>
+                  <View style={[styles.logoWrapper, { backgroundColor: theme.muted }]}>
                     {supplier.logoUrl ? (
                       <Image
                         source={{ uri: supplier.logoUrl }}
@@ -179,7 +175,7 @@ export default function SupplierListScreen() {
                         resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.logoPlaceholder}>
+                      <View style={[styles.logoPlaceholder, { backgroundColor: theme.secondary }]}>
                         <Icon
                           as={User}
                           size={18}
@@ -212,17 +208,13 @@ export default function SupplierListScreen() {
                     <View
                       style={[
                         styles.statusPill,
-                        supplier.isActive
-                          ? styles.statusActive
-                          : styles.statusInactive,
+                        { backgroundColor: theme.secondary },
                       ]}
                     >
                       <Text
                         style={[
                           styles.statusText,
-                          supplier.isActive
-                            ? styles.statusTextActive
-                            : styles.statusTextInactive,
+                          { color: supplier.isActive ? theme.chart2 : theme.destructive },
                         ]}
                       >
                         {supplier.isActive ? "ACTIVE" : "INACTIVE"}
@@ -242,7 +234,7 @@ export default function SupplierListScreen() {
         )}
         {loadingMore ? (
           <View style={styles.loadMoreRow}>
-            <ActivityIndicator size="small" color={COLORS.green} />
+            <ActivityIndicator size="small" color={theme.primary} />
           </View>
         ) : null}
       </ScrollView>}
@@ -251,16 +243,14 @@ export default function SupplierListScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#FFFFFF" },
+  page: { flex: 1 },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerButton: { minWidth: 44 },
   headerTitle: {
@@ -268,7 +258,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontWeight: "700",
-    color: COLORS.ink,
   },
   addButton: {
     width: 34,
@@ -277,7 +266,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.green,
   },
   scrollView: { flex: 1 },
   contentContainer: { paddingBottom: 24 },
@@ -288,21 +276,18 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 24,
   },
-  stateTitle: { fontSize: 15, fontWeight: "700", color: COLORS.ink },
-  stateText: { fontSize: 13, color: COLORS.muted, textAlign: "center" },
+  stateTitle: { fontSize: 15, fontWeight: "700" },
+  stateText: { fontSize: 13, textAlign: "center" },
   tableHeader: {
     minHeight: 34,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#F1F5F9",
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   headerCell: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -318,14 +303,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
-    backgroundColor: "#FFFFFF",
   },
   logoWrapper: {
     width: 44,
     height: 44,
     borderRadius: 6,
-    backgroundColor: "#E5E7EB",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -336,21 +318,16 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E5E7EB",
   },
   infoColumn: { flex: 1, minWidth: 0, gap: 4 },
-  supplierName: { fontSize: 15, fontWeight: "700", color: COLORS.ink },
-  supplierDetail: { fontSize: 12, color: COLORS.muted },
+  supplierName: { fontSize: 15, fontWeight: "700" },
+  supplierDetail: { fontSize: 12 },
   statusColumn: { width: 84, alignItems: "flex-start" },
   statusPill: {
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  statusActive: { backgroundColor: "#D1FAE5" },
-  statusInactive: { backgroundColor: "#FEE2E2" },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
-  statusTextActive: { color: "#047857" },
-  statusTextInactive: { color: "#B91C1C" },
   loadMoreRow: { paddingVertical: 16, alignItems: "center" },
 });

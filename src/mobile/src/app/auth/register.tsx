@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ScrollView, StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useRouter } from 'expo-router';
 import { Leaf, ShieldCheck } from 'lucide-react-native';
 
@@ -14,12 +17,14 @@ import CustomError from '@/lib/customError';
 import SnackBar from '@/components/ui/snack-bar';
 import { container, DI_TOKENS } from '@/di';
 import { IAuthService } from '../../services/authService';
+import { THEME } from '@/lib/theme';
 
 const authService = container.resolve<IAuthService>(DI_TOKENS.IAuthService);
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmedPassword, setConfirmedPassword] = useState('');
@@ -49,29 +54,29 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.page}
-      keyboardShouldPersistTaps="handled"
-    >
-      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <View style={styles.card}>
+    <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar />
+      <ScrollView
+        contentContainerStyle={[styles.page, { backgroundColor: theme.background }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.brand}>
-          <View style={styles.brandMark}>
-            <Icon as={Leaf} size={23} color="#FFFFFF" />
+          <View style={[styles.brandMark, { backgroundColor: theme.primary }]}>
+            <Icon as={Leaf} size={23} color={theme.primaryForeground} />
           </View>
-          <Text style={styles.brandName}>FARM PLUS</Text>
-          <Text style={styles.brandCaption}>BUSINESS MANAGEMENT</Text>
+          <Text style={[styles.brandName, { color: theme.foreground }]}>FARM PLUS</Text>
+          <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>BUSINESS MANAGEMENT</Text>
         </View>
 
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>GET STARTED</Text>
-          <Text variant="h2" style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>Set up your secure Farm Plus workspace access.</Text>
+          <Text style={[styles.eyebrow, { color: theme.primary }]}>GET STARTED</Text>
+          <Text variant="h2" style={[styles.title, { color: theme.foreground }]}>Create your account</Text>
+          <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>Set up your secure Farm Plus workspace access.</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Label>Username <Text style={styles.required}>*</Text></Label>
+            <Label>Username <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Choose a username"
               autoCapitalize="none"
@@ -81,12 +86,12 @@ export default function RegisterScreen() {
               value={userName}
               onChangeText={setUserName}
               returnKeyType="next"
-              style={styles.input}
+              style={[styles.input, { borderColor: theme.input, backgroundColor: theme.card, color: theme.foreground }]}
             />
           </View>
 
           <View style={styles.field}>
-            <Label>Password <Text style={styles.required}>*</Text></Label>
+            <Label>Password <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Create a password"
               secureTextEntry
@@ -95,12 +100,12 @@ export default function RegisterScreen() {
               value={password}
               onChangeText={setPassword}
               returnKeyType="next"
-              style={styles.input}
+              style={[styles.input, { borderColor: theme.input, backgroundColor: theme.card, color: theme.foreground }]}
             />
           </View>
 
           <View style={styles.field}>
-            <Label>Confirm password <Text style={styles.required}>*</Text></Label>
+            <Label>Confirm password <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Re-enter your password"
               secureTextEntry
@@ -110,12 +115,12 @@ export default function RegisterScreen() {
               onChangeText={setConfirmedPassword}
               onSubmitEditing={handleRegister}
               returnKeyType="done"
-              style={styles.input}
+              style={[styles.input, { borderColor: theme.input, backgroundColor: theme.card, color: theme.foreground }]}
             />
           </View>
 
-          <Button style={styles.primaryButton} onPress={handleRegister} disabled={isSubmitting}>
-            <Text style={styles.primaryButtonText}>{isSubmitting ? 'Creating account…' : 'Create Account'}</Text>
+          <Button style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleRegister} disabled={isSubmitting}>
+            <Text style={[styles.primaryButtonText, { color: theme.primaryForeground }]}>{isSubmitting ? 'Creating account…' : 'Create Account'}</Text>
           </Button>
         </View>
 
@@ -124,42 +129,27 @@ export default function RegisterScreen() {
           style={styles.signInButton}
           onPress={() => router.replace('/auth/signin')}
         >
-          <Text style={styles.signInButtonText}>Already have an account? Sign in</Text>
+          <Text style={[styles.signInButtonText, { color: theme.primary }]}>Already have an account? Sign in</Text>
         </Button>
 
-        <View style={styles.securityNote}>
-          <Icon as={ShieldCheck} size={16} color="#64748B" />
-          <Text style={styles.securityText}>Your account is protected with secure sign-in.</Text>
+        <View style={[styles.securityNote, { borderTopColor: theme.border }]}>
+          <Icon as={ShieldCheck} size={16} color={theme.mutedForeground} />
+          <Text style={[styles.securityText, { color: theme.mutedForeground }]}>Your account is protected with secure sign-in.</Text>
         </View>
-      </View>
-      <Text style={styles.footer}>Farm Plus · Business tools for growing businesses</Text>
-    </ScrollView>
+        <Text style={[styles.footer, { color: theme.mutedForeground }]}>Farm Plus · Business tools for growing businesses</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   page: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingHorizontal: 24,
     paddingVertical: 36,
-    backgroundColor: '#F4F7F5',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 460,
-    paddingHorizontal: 32,
-    paddingVertical: 36,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8E4',
-    shadowColor: '#163B2B',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 28,
-    elevation: 4,
   },
   brand: {
     alignItems: 'center',
@@ -171,17 +161,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#176B45',
     marginBottom: 12,
   },
   brandName: {
-    color: '#173B2B',
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 2,
   },
   brandCaption: {
-    color: '#738078',
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.2,
@@ -192,19 +179,16 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   eyebrow: {
-    color: '#176B45',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.2,
   },
   title: {
-    color: '#172B21',
     fontSize: 27,
     lineHeight: 34,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#65736A',
     fontSize: 15,
     lineHeight: 22,
   },
@@ -214,23 +198,16 @@ const styles = StyleSheet.create({
   field: {
     gap: 8,
   },
-  required: {
-    color: '#B42318',
-  },
   input: {
     height: 48,
     borderRadius: 10,
-    borderColor: '#D8E1DB',
-    backgroundColor: '#FFFFFF',
   },
   primaryButton: {
     height: 50,
     borderRadius: 10,
-    backgroundColor: '#176B45',
     marginTop: 4,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -239,7 +216,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   signInButtonText: {
-    color: '#176B45',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -251,15 +227,12 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#EDF1EE',
   },
   securityText: {
-    color: '#738078',
     fontSize: 12,
   },
   footer: {
     marginTop: 24,
-    color: '#7C8981',
     textAlign: 'center',
     fontSize: 12,
   },

@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View, type TextInputProps } from 'react-native';
 import { ChevronLeft, User } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Text } from '@/components/ui/text';
 import { clearTokens } from '@/lib/authStorage';
 import { useAuthContext } from '@/lib/authContextProvider';
 import { normalizeMediaFile } from '@/lib/mediaFile';
+import { THEME } from '@/lib/theme';
 import { UserServiceClient } from '@/services/userService';
 import type AppUser from '@/models/user';
 
@@ -46,6 +48,8 @@ const toProfileForm = (source?: AppUser | null): ProfileForm => ({
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { authUser, setAuthUser } = useAuthContext();
   const [isUploading, setIsUploading] = useState(false);
   const [isSourceSheetVisible, setIsSourceSheetVisible] = useState(false);
@@ -245,7 +249,7 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1 bg-background" style={styles.container}>
       <View className="bg-background border-b-separator" style={styles.topBar}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => router.back()} activeOpacity={0.7}>
-          <Icon className="text-icon" as={ChevronLeft} size={24} />
+          <Icon className="text-foreground" as={ChevronLeft} size={24} />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Profile</Text>
         <Button variant="destructive" style={styles.signOutButton} onPress={handleSignOut}>
@@ -268,11 +272,11 @@ export default function ProfileScreen() {
               disabled={isUploading}
               activeOpacity={0.8}
             >
-              <Avatar alt={displayName} style={styles.avatar}>
+              <Avatar alt={displayName} style={[styles.avatar, { borderColor: theme.border }]}>
                 {authUser?.profilePictureUrl ? (
                   <AvatarImage source={{ uri: authUser.profilePictureUrl }} style={styles.avatarImage} />
                 ) : null}
-                <AvatarFallback style={styles.avatarFallback}>
+                <AvatarFallback style={[styles.avatarFallback, { backgroundColor: theme.muted }]}>
                   <Icon as={User} className="text-icon" size={56} />
                 </AvatarFallback>
               </Avatar>
@@ -281,7 +285,7 @@ export default function ProfileScreen() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email}>{authUser?.email ?? 'No email provided'}</Text>
+            <Text style={[styles.email, { color: theme.mutedForeground }]}>{authUser?.email ?? 'No email provided'}</Text>
           </View>
         </View>
 
@@ -327,10 +331,10 @@ export default function ProfileScreen() {
         animationType="slide"
         onRequestClose={() => setIsSourceSheetVisible(false)}
       >
-        <View style={styles.sheetOverlay}>
+        <View style={[styles.sheetOverlay, { backgroundColor: theme.overlay }]}>
           <Pressable style={styles.sheetBackdrop} onPress={() => setIsSourceSheetVisible(false)} />
           <View className="bg-background" style={styles.sheet}>
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
             <Button
               variant="outline"
               style={styles.sheetButton}
@@ -357,10 +361,10 @@ export default function ProfileScreen() {
         animationType="slide"
         onRequestClose={closePasswordSheet}
       >
-        <KeyboardAvoidingView style={styles.sheetOverlay} behavior="padding">
+        <KeyboardAvoidingView style={[styles.sheetOverlay, { backgroundColor: theme.overlay }]} behavior="padding">
           <Pressable style={styles.sheetBackdrop} onPress={closePasswordSheet} />
           <View className="bg-background" style={styles.sheet}>
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
             <Text style={styles.sheetTitle}>Change Password</Text>
 
             <Text style={styles.fieldLabel}>Current password</Text>
@@ -464,7 +468,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
   },
   avatarImage: {
     width: '100%',
@@ -472,7 +475,6 @@ const styles = StyleSheet.create({
     borderRadius: 60,
   },
   avatarFallback: {
-    backgroundColor: '#E5E7EB',
   },
   profileInfo: {
     alignItems: 'center',
@@ -483,13 +485,11 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 14,
-    color: '#6B7280',
     marginTop: 4,
   },
   sheetOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -506,7 +506,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#D1D5DB',
     marginBottom: 6,
   },
   sheetButton: {

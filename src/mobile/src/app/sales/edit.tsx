@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 
@@ -20,6 +21,7 @@ import { container, DI_TOKENS } from '@/di';
 import { Sale } from '@/models/sale';
 import { ISaleService } from '@/services/saleService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 
@@ -31,17 +33,21 @@ function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function PreviewRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+type ThemeColors = typeof THEME.light;
+
+function PreviewRow({ label, value, strong, theme }: { label: string; value: string; strong?: boolean; theme: ThemeColors }) {
   return (
     <View style={styles.previewRow}>
-      <Text style={[styles.previewLabel, strong && styles.previewStrong]}>{label}</Text>
-      <Text style={[styles.previewValue, strong && styles.previewStrong]}>{value}</Text>
+      <Text style={[styles.previewLabel, { color: theme.mutedForeground }, strong && styles.previewStrong]}>{label}</Text>
+      <Text style={[styles.previewValue, { color: theme.foreground }, strong && styles.previewStrong]}>{value}</Text>
     </View>
   );
 }
 
 export default function SaleEditScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/edit');
   const { shopName, shopLoaded } = useSelectedShopName();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -131,14 +137,14 @@ export default function SaleEditScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
         </View>
       ) : sale ? (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -149,7 +155,7 @@ export default function SaleEditScreen() {
               emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
             />
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, { color: theme.mutedForeground }]}>
               Sale #{sale.id.slice(0, 8).toUpperCase()} · {sale.customerName}. Products and quantities cannot be changed; void the sale and create a new one instead.
             </Text>
 
@@ -173,17 +179,17 @@ export default function SaleEditScreen() {
               />
             </View>
 
-            <View style={styles.preview}>
-              <PreviewRow label="Subtotal" value={money(subTotal)} />
-              <PreviewRow label="Tax amount" value={money(taxAmount)} />
-              <PreviewRow label="Discount" value={`- ${money(numericDiscount)}`} />
-              <PreviewRow label="Net total" value={money(netTotal)} strong />
-              <PreviewRow label="Paid" value={money(paidAmount)} />
-              <PreviewRow label="Balance" value={money(balance)} strong />
+            <View style={[styles.preview, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <PreviewRow label="Subtotal" value={money(subTotal)} theme={theme} />
+              <PreviewRow label="Tax amount" value={money(taxAmount)} theme={theme} />
+              <PreviewRow label="Discount" value={`- ${money(numericDiscount)}`} theme={theme} />
+              <PreviewRow label="Net total" value={money(netTotal)} strong theme={theme} />
+              <PreviewRow label="Paid" value={money(paidAmount)} theme={theme} />
+              <PreviewRow label="Balance" value={money(balance)} strong theme={theme} />
             </View>
 
             <Button onPress={save} disabled={saving}>
-              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Save Changes</Text>}
+              {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">Save Changes</Text>}
             </Button>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -200,11 +206,11 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
-  hint: { fontSize: 12, color: '#64748B' },
+  hint: { fontSize: 12 },
   field: { gap: 7 },
-  preview: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12 },
+  preview: { borderWidth: 1, borderRadius: 10, padding: 12 },
   previewRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  previewLabel: { fontSize: 12, color: '#475569' },
-  previewValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
-  previewStrong: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
+  previewLabel: { fontSize: 12 },
+  previewValue: { fontSize: 12, fontWeight: '600' },
+  previewStrong: { fontSize: 14, fontWeight: '800' },
 });

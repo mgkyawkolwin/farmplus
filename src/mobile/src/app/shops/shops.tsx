@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Mail, MapPin, Pencil, Phone, Plus, Search, Store, Trash2, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -28,9 +29,11 @@ import { Shop } from '@/models/shop';
 import { ShopServiceClient } from '@/services/shopService';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 const PAGE_SIZE = 20;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type ThemeColors = typeof THEME.light;
 
 const EMPTY_SHOP: Shop = {
   id: '',
@@ -48,25 +51,25 @@ function locationSummary(shop: Shop) {
   return [shop.city, shop.stateDivision, shop.country].filter(Boolean).join(' · ');
 }
 
-function DetailRow({ icon: RowIcon, value }: { icon: typeof MapPin; value: string }) {
+function DetailRow({ icon: RowIcon, value, theme }: { icon: typeof MapPin; value: string; theme: ThemeColors }) {
   return (
     <View style={styles.detailRow}>
-      <RowIcon size={13} color="#64748B" />
+      <RowIcon size={13} color={theme.mutedForeground} />
       <Text className="text-foreground" style={styles.detailText} numberOfLines={2}>{value}</Text>
     </View>
   );
 }
 
-function ShopCard({ shop, onEdit, onDelete }: { shop: Shop; onEdit: () => void; onDelete: () => void }) {
+function ShopCard({ shop, onEdit, onDelete, theme }: { shop: Shop; onEdit: () => void; onDelete: () => void; theme: ThemeColors }) {
   const location = locationSummary(shop);
   const addressLine = [shop.address, shop.postalCode].filter(Boolean).join(' ');
   const hasDetails = Boolean(addressLine || shop.phone || shop.email);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.cardHeader}>
-        <View style={styles.tile}>
-          <Store size={18} color="#16794B" />
+        <View style={[styles.tile, { backgroundColor: theme.secondary }]}>
+          <Store size={18} color={theme.primary} />
         </View>
         <View style={styles.cardTitleWrap}>
           <Text className="text-foreground" style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
@@ -77,31 +80,31 @@ function ShopCard({ shop, onEdit, onDelete }: { shop: Shop; onEdit: () => void; 
       </View>
 
       <View style={styles.detailList}>
-        {addressLine ? <DetailRow icon={MapPin} value={addressLine} /> : null}
-        {shop.phone ? <DetailRow icon={Phone} value={shop.phone} /> : null}
-        {shop.email ? <DetailRow icon={Mail} value={shop.email} /> : null}
+        {addressLine ? <DetailRow icon={MapPin} value={addressLine} theme={theme} /> : null}
+        {shop.phone ? <DetailRow icon={Phone} value={shop.phone} theme={theme} /> : null}
+        {shop.email ? <DetailRow icon={Mail} value={shop.email} theme={theme} /> : null}
         {!hasDetails ? <Text className="text-muted-foreground" style={styles.noDetails}>No contact details</Text> : null}
       </View>
 
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { borderTopColor: theme.border, backgroundColor: theme.muted }]}>
         <Pressable
           onPress={onEdit}
           style={styles.footerAction}
           accessibilityRole="button"
           accessibilityLabel={`Edit ${shop.name}`}
         >
-          <Pencil size={14} color="#2367A8" />
-          <Text style={[styles.footerText, styles.footerEdit]}>Edit</Text>
+          <Pencil size={14} color={theme.primary} />
+          <Text style={[styles.footerText, { color: theme.primary }]}>Edit</Text>
         </Pressable>
-        <View style={styles.footerDivider} />
+        <View style={[styles.footerDivider, { backgroundColor: theme.border }]} />
         <Pressable
           onPress={onDelete}
           style={styles.footerAction}
           accessibilityRole="button"
           accessibilityLabel={`Delete ${shop.name}`}
         >
-          <Trash2 size={14} color="#B42318" />
-          <Text style={[styles.footerText, styles.footerDelete]}>Delete</Text>
+          <Trash2 size={14} color={theme.destructive} />
+          <Text style={[styles.footerText, { color: theme.destructive }]}>Delete</Text>
         </Pressable>
       </View>
     </View>
@@ -110,6 +113,8 @@ function ShopCard({ shop, onEdit, onDelete }: { shop: Shop; onEdit: () => void; 
 
 export default function ShopsScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/shops/shops');
   const service = React.useMemo(() => new ShopServiceClient(), []);
 
@@ -253,15 +258,15 @@ export default function ShopsScreen() {
           <Icon as={ChevronLeft} size={22} className="text-foreground" />
         </Button>
         <Text className="text-foreground" style={styles.headerTitle}>Shops</Text>
-        <Button onPress={openCreate} disabled={permissionState !== 'authorized'} style={styles.addButton}>
-          <Plus size={14} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>New Shop</Text>
+        <Button onPress={openCreate} disabled={permissionState !== 'authorized'} style={[styles.addButton, { backgroundColor: theme.primary }]}>
+          <Plus size={14} color={theme.primaryForeground} />
+          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>New Shop</Text>
         </Button>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.emptyText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -269,20 +274,20 @@ export default function ShopsScreen() {
       ) : (
         <>
       <View style={styles.toolbar}>
-        <View style={styles.searchBox}>
-          <Search size={15} color="#64748B" />
+        <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <Search size={15} color={theme.mutedForeground} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Search by name, city, phone or email"
-            placeholderTextColor="#94A3B8"
-            style={styles.searchInput}
+            placeholderTextColor={theme.mutedForeground}
+            style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {query ? (
             <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
-              <X size={14} color="#64748B" />
+              <X size={14} color={theme.mutedForeground} />
             </Pressable>
           ) : null}
         </View>
@@ -301,7 +306,7 @@ export default function ShopsScreen() {
       >
         {loading && !refreshing ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" color="#16794B" />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.emptyText}>Loading shops...</Text>
           </View>
         ) : errorMessage && shops.length === 0 ? (
@@ -320,27 +325,27 @@ export default function ShopsScreen() {
           </View>
         ) : (
           visibleShops.map((shop) => (
-            <ShopCard key={shop.id} shop={shop} onEdit={() => openEdit(shop)} onDelete={() => confirmDelete(shop)} />
+            <ShopCard key={shop.id} shop={shop} onEdit={() => openEdit(shop)} onDelete={() => confirmDelete(shop)} theme={theme} />
           ))
         )}
-        {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#16794B" /> : null}
+        {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color={theme.primary} /> : null}
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={closeModal}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
-            <View className="bg-background" style={styles.sheet}>
-              <View style={styles.sheetHeader}>
+            <View style={[styles.sheet, { backgroundColor: theme.card }]}>
+              <View style={[styles.sheetHeader, { borderBottomColor: theme.border }]}>
                 <Text className="text-foreground" style={styles.sheetTitle}>{form.id ? 'Edit Shop' : 'New Shop'}</Text>
                 <Pressable onPress={closeModal} hitSlop={8} accessibilityLabel="Close">
-                  <X size={20} color="#475569" />
+                  <X size={20} color={theme.mutedForeground} />
                 </Pressable>
               </View>
 
               <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
                 <View style={styles.field}>
-                  <Label className="text-foreground">Shop name <Text style={styles.required}>*</Text></Label>
+                  <Label className="text-foreground">Shop name <Text style={{ color: theme.destructive }}>*</Text></Label>
                   <Input
                     value={form.name}
                     onChangeText={(value) => setField('name', value)}
@@ -349,7 +354,7 @@ export default function ShopsScreen() {
                     editable={!saving}
                     maxLength={100}
                   />
-                  {formErrors.name ? <Text style={styles.errorText}>{formErrors.name}</Text> : null}
+                  {formErrors.name ? <Text style={[styles.errorText, { color: theme.destructive }]}>{formErrors.name}</Text> : null}
                 </View>
 
                 <View style={styles.field}>
@@ -409,16 +414,16 @@ export default function ShopsScreen() {
                     editable={!saving}
                     maxLength={100}
                   />
-                  {formErrors.email ? <Text style={styles.errorText}>{formErrors.email}</Text> : null}
+                  {formErrors.email ? <Text style={[styles.errorText, { color: theme.destructive }]}>{formErrors.email}</Text> : null}
                 </View>
               </ScrollView>
 
-              <View style={styles.sheetFooter}>
+              <View style={[styles.sheetFooter, { borderTopColor: theme.border }]}>
                 <Button variant="outline" onPress={closeModal} disabled={saving} style={styles.sheetButton}>
                   <Text className="text-foreground">Cancel</Text>
                 </Button>
-                <Button onPress={handleSubmit} disabled={saving} style={[styles.sheetButton, styles.saveButton]}>
-                  {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.saveText}>Save Shop</Text>}
+                <Button onPress={handleSubmit} disabled={saving} style={[styles.sheetButton, { backgroundColor: theme.primary }]}>
+                  {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text style={[styles.saveText, { color: theme.primaryForeground }]}>Save Shop</Text>}
                 </Button>
               </View>
             </View>
@@ -436,17 +441,17 @@ const styles = StyleSheet.create({
   headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 6 },
   backButton: { minWidth: 40 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#16794B' },
-  addButtonText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
+  addButton: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 12, borderRadius: 6 },
+  addButtonText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
   toolbar: { paddingHorizontal: 16, paddingTop: 12, gap: 6 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, backgroundColor: '#FFFFFF' },
-  searchInput: { flex: 1, height: '100%', fontSize: 13, color: '#0F172A' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, paddingHorizontal: 12, borderWidth: 1, borderRadius: 8 },
+  searchInput: { flex: 1, height: '100%', fontSize: 13 },
   countText: { fontSize: 11, fontWeight: '600' },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 28, gap: 10 },
-  card: { borderWidth: 1, borderColor: '#D9DEE5', borderRadius: 8, backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  card: { borderWidth: 1, borderRadius: 8, overflow: 'hidden' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8 },
-  tile: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F4EC' },
+  tile: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   cardTitleWrap: { flex: 1, minWidth: 0, gap: 2 },
   shopName: { fontSize: 14, fontWeight: '800' },
   shopLocation: { fontSize: 11 },
@@ -454,29 +459,25 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   detailText: { flex: 1, fontSize: 12 },
   noDetails: { fontSize: 11 },
-  cardFooter: { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  cardFooter: { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: StyleSheet.hairlineWidth },
   footerAction: { flex: 1, minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  footerDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#CBD5E1' },
+  footerDivider: { width: StyleSheet.hairlineWidth },
   footerText: { fontSize: 12, fontWeight: '700' },
-  footerEdit: { color: '#2367A8' },
-  footerDelete: { color: '#B42318' },
   emptyState: { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '700' },
   emptyText: { marginTop: 8, textAlign: 'center' },
   loadMore: { marginVertical: 12 },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.38)' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
   sheetWrap: { maxHeight: '92%' },
   sheet: { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingTop: 16 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   sheetTitle: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
   formContent: { paddingHorizontal: 20, paddingVertical: 16, gap: 14 },
   field: { gap: 6 },
   fieldRow: { flexDirection: 'row', gap: 12 },
   fieldHalf: { flex: 1, gap: 6 },
-  required: { color: '#B42318' },
-  errorText: { fontSize: 11, color: '#B42318' },
-  sheetFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#CBD5E1' },
+  errorText: { fontSize: 11 },
+  sheetFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, borderTopWidth: StyleSheet.hairlineWidth },
   sheetButton: { flex: 1, borderRadius: 6 },
-  saveButton: { backgroundColor: '#16794B' },
-  saveText: { color: '#FFFFFF', fontWeight: '700' },
+  saveText: { fontWeight: '700' },
 });

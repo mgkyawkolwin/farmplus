@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
+import { useColorScheme } from 'nativewind';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ import { ShopServiceClient } from "@/services/shopService";
 import { container, DI_TOKENS } from "@/di";
 import { IProductService } from "@/services/productService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from "@/lib/theme";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -24,6 +26,8 @@ const productService = container.resolve<IProductService>(
 
 export default function TransferProductStockScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const permissionState = usePagePermission('/products/transfer');
   const [shops, setShops] = React.useState<DropdownModelItem[]>([]);
@@ -107,7 +111,7 @@ export default function TransferProductStockScreen() {
       </View>
       {permissionState === 'checking' ? (
         <View style={styles.permissionState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground">Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -160,11 +164,11 @@ export default function TransferProductStockScreen() {
             placeholder="Optional remark"
           />
         </View>
-        <Button onPress={transfer} disabled={saving}>
+        <Button onPress={transfer} disabled={saving} style={{ backgroundColor: theme.primary }}>
           {saving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.primaryForeground} />
           ) : (
-            <Text className="text-background">Transfer</Text>
+            <Text style={{ color: theme.primaryForeground }}>Transfer</Text>
           )}
         </Button>
       </ScrollView>}

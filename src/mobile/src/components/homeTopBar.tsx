@@ -6,10 +6,10 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { Text } from "@/components/ui/text";
 import { Button } from "./ui/button";
 import {

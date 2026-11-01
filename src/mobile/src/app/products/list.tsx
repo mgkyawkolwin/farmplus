@@ -7,11 +7,11 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -31,21 +32,16 @@ import { usePagePermission } from '@/lib/usePagePermission';
 import { ProductItem } from '@/models/product';
 import { IProductService } from '@/services/productService';
 import LoadingOverlay from '@/components/loadingOverlay';
+import { THEME } from '@/lib/theme';
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
 );
 
-const COLORS = {
-  ink: '#0F172A',
-  muted: '#64748B',
-  border: '#D9DEE5',
-  green: '#16794B',
-  amber: '#9A6700',
-};
-
 export default function ProductListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/products/list');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -140,11 +136,11 @@ export default function ProductListScreen() {
   const listLabel = `Products · ${products.length}${hasMore ? '+' : ''}`;
 
   return (
-    <SafeAreaView style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+      <StatusBar />
       <LoadingOverlay isLoading={loading} />
 
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Button
           variant="ghost"
           onPress={() => router.back()}
@@ -152,35 +148,35 @@ export default function ProductListScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={styles.headerTitle}>Products</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Products</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="New product"
           onPress={() => router.push('/products/new')}
           disabled={permissionState !== 'authorized'}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
-          <Plus size={18} color="#FFFFFF" />
+          <Plus size={18} color={theme.primaryForeground} />
         </Pressable>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
-          <Text style={styles.stateText}>Checking permission...</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : <>
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBox}>
-          <Search size={16} color={COLORS.muted} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+        <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.muted }]}>
+          <Search size={16} color={theme.mutedForeground} />
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
             placeholder="Search by product name"
-            placeholderTextColor="#94A3B8"
-            style={styles.searchInput}
+            placeholderTextColor={theme.mutedForeground}
+            style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -189,12 +185,12 @@ export default function ProductListScreen() {
 
       {loading && products.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       ) : products.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text style={styles.stateTitle}>No products found</Text>
-          <Text style={styles.stateText}>Add a product to get started.</Text>
+          <Text style={[styles.stateTitle, { color: theme.foreground }]}>No products found</Text>
+          <Text style={[styles.stateText, { color: theme.mutedForeground }]}>Add a product to get started.</Text>
         </View>
       ) : (
         <ScrollView
@@ -204,7 +200,7 @@ export default function ProductListScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={COLORS.green}
+              tintColor={theme.primary}
             />
           }
           onMomentumScrollEnd={({ nativeEvent }) => {
@@ -216,7 +212,7 @@ export default function ProductListScreen() {
               onLoadMore();
           }}
         >
-          <View style={styles.tableHeader}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.headerInfo]}>
               {listLabel}
             </Text>
@@ -241,7 +237,7 @@ export default function ProductListScreen() {
                 key={product.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Product ${product.name}`}
-                style={styles.row}
+                style={[styles.row, { backgroundColor: theme.card, borderBottomColor: theme.border }]}
                 onPress={() =>
                   router.push({
                     pathname: '/products/view',
@@ -249,7 +245,7 @@ export default function ProductListScreen() {
                   })
                 }
               >
-                <View style={styles.thumbWrapper}>
+                  <View style={[styles.thumbWrapper, { borderColor: theme.border, backgroundColor: theme.muted }]}>
                   {product.coverImageUrl ? (
                     <Image
                       source={{ uri: product.coverImageUrl }}
@@ -257,7 +253,7 @@ export default function ProductListScreen() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={styles.thumbPlaceholder}>
+                    <View style={[styles.thumbPlaceholder, { backgroundColor: theme.secondary }]}>
                       <Icon
                         as={Package}
                         size={18}
@@ -268,10 +264,10 @@ export default function ProductListScreen() {
                 </View>
 
                 <View style={styles.infoColumn}>
-                  <Text style={styles.productName} numberOfLines={1}>
+                  <Text style={[styles.productName, { color: theme.foreground }]} numberOfLines={1}>
                     {product.name}
                   </Text>
-                  <Text style={styles.productDetail} numberOfLines={1}>
+                  <Text style={[styles.productDetail, { color: theme.mutedForeground }]} numberOfLines={1}>
                     {detail}
                   </Text>
                 </View>
@@ -280,7 +276,7 @@ export default function ProductListScreen() {
                   <Text
                     style={[
                       styles.numberValue,
-                      isLowStock ? styles.lowStockText : null,
+                      { color: isLowStock ? theme.chart4 : theme.foreground },
                     ]}
                   >
                     {product.currentStock ?? 0}
@@ -288,7 +284,7 @@ export default function ProductListScreen() {
                 </View>
 
                 <View style={styles.priceColumn}>
-                  <Text style={styles.numberValue} numberOfLines={1}>
+                  <Text style={[styles.numberValue, { color: theme.foreground }]} numberOfLines={1}>
                     {product.salePrice != null
                       ? `${product.salePrice} MMK`
                       : '0 MMK'}
@@ -306,7 +302,7 @@ export default function ProductListScreen() {
 
           {loadingMore ? (
             <View style={styles.loadMoreRow}>
-              <ActivityIndicator size="small" color={COLORS.green} />
+              <ActivityIndicator size="small" color={theme.primary} />
             </View>
           ) : null}
         </ScrollView>
@@ -319,7 +315,6 @@ export default function ProductListScreen() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   headerBar: {
     flexDirection: 'row',
@@ -327,9 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerButton: {
     minWidth: 44,
@@ -339,7 +332,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.ink,
   },
   addButton: {
     width: 34,
@@ -348,13 +340,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.green,
   },
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   searchBox: {
     flexDirection: 'row',
@@ -363,14 +353,11 @@ const styles = StyleSheet.create({
     height: 38,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.ink,
     paddingVertical: 0,
   },
   scrollView: {
@@ -389,11 +376,9 @@ const styles = StyleSheet.create({
   stateTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.ink,
   },
   stateText: {
     fontSize: 13,
-    color: COLORS.muted,
     textAlign: 'center',
   },
   tableHeader: {
@@ -402,13 +387,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F1F5F9',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   headerCell: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -427,9 +409,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
   },
   thumbWrapper: {
     width: 44,
@@ -437,8 +417,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: '#F1F5F9',
   },
   thumbImage: {
     width: '100%',
@@ -457,11 +435,9 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.ink,
   },
   productDetail: {
     fontSize: 12,
-    color: COLORS.muted,
   },
   stockColumn: {
     width: 56,
@@ -474,10 +450,6 @@ const styles = StyleSheet.create({
   numberValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.ink,
-  },
-  lowStockText: {
-    color: COLORS.amber,
   },
   loadMoreRow: {
     alignItems: 'center',

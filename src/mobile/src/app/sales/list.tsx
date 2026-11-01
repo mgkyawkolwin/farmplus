@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 
@@ -25,17 +26,10 @@ import { container, DI_TOKENS } from "@/di";
 import { Sale } from "@/models/sale";
 import { ISaleService } from "@/services/saleService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from "@/lib/theme";
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const PAGE_SIZE = 20;
-
-const COLORS = {
-  paid: "#047857",
-  due: "#B45309",
-  void: "#B91C1C",
-  ink: "#0F172A",
-  muted: "#64748B",
-};
 
 function money(value: number) {
   return value.toLocaleString("en-US", {
@@ -55,30 +49,34 @@ function formatDate(value: string) {
       });
 }
 
-function getStatus(sale: Sale) {
+type ThemeColors = typeof THEME.light;
+
+function getStatus(sale: Sale, theme: ThemeColors) {
   if (sale.status === "Voided")
-    return { label: "VOID", color: COLORS.void, bg: "#FEE2E2" };
+    return { label: "VOID", color: theme.destructive, bg: theme.secondary };
   if (sale.paidAmount > 0 && sale.balance <= 0)
-    return { label: "PAID", color: COLORS.paid, bg: "#D1FAE5" };
-  return { label: "UNPAID", color: COLORS.due, bg: "#FEF3C7" };
+    return { label: "PAID", color: theme.chart2, bg: theme.secondary };
+  return { label: "UNPAID", color: theme.chart4, bg: theme.secondary };
 }
 
 function Field({
   label,
   value,
   align,
+  theme,
 }: {
   label: string;
   value: string | number;
   align?: "left" | "right";
+  theme: ThemeColors;
 }) {
   return (
     <View style={[styles.field, align === "right" && styles.fieldRight]}>
-      <Text style={[styles.fieldLabel, align === "right" && styles.textRight]}>
+      <Text style={[styles.fieldLabel, { color: theme.mutedForeground }, align === "right" && styles.textRight]}>
         {label}
       </Text>
       <Text
-        style={[styles.fieldValue, align === "right" && styles.textRight]}
+        style={[styles.fieldValue, { color: theme.foreground }, align === "right" && styles.textRight]}
         numberOfLines={1}
       >
         {value}
@@ -89,6 +87,8 @@ function Field({
 
 export default function SalesListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/list');
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
   const { shopName, shopLoaded } = useSelectedShopName();
@@ -163,7 +163,7 @@ export default function SalesListScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -183,7 +183,7 @@ export default function SalesListScreen() {
 
       {loading && sales.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading sales...
           </Text>
@@ -220,16 +220,14 @@ export default function SalesListScreen() {
           }}
         >
           {sales.map((sale) => {
-            const status = getStatus(sale);
+            const status = getStatus(sale, theme);
             const isVoided = sale.status === "Voided";
             return (
               <Pressable
                 key={sale.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Sale ${sale.id.slice(0, 8)}`}
-                style={[
-                  styles.saleRow
-                ]}
+                style={[styles.saleRow, { backgroundColor: isVoided ? theme.secondary : theme.card, borderColor: theme.border }, isVoided && styles.saleRowVoided]}
                 onPress={() =>
                   router.push({
                     pathname: "/sales/view",
@@ -238,7 +236,7 @@ export default function SalesListScreen() {
                 }
               >
                 <View style={styles.saleTopRow}>
-                  <Text style={styles.saleId}>
+                  <Text style={[styles.saleId, { color: theme.foreground }]}>
                     #{sale.id.slice(0, 8).toUpperCase()}
                   </Text>
                   <View
@@ -248,7 +246,7 @@ export default function SalesListScreen() {
                       {status.label}
                     </Text>
                   </View>
-                  <Text style={styles.saleDate}>
+                  <Text style={[styles.saleDate, { color: theme.mutedForeground }]}>
                     {formatDate(sale.saleDate)}
                   </Text>
                   <Icon
@@ -260,33 +258,37 @@ export default function SalesListScreen() {
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldWide}>
-                    <Field label="Customer" value={sale.customerName} />
+                    <Field label="Customer" value={sale.customerName} theme={theme} />
                   </View>
                   <Field
                     label="Products"
                     value={sale.totalProducts}
                     align="right"
+                    theme={theme}
                   />
                   <Field
                     label="Total Qty"
                     value={sale.totalProducts}
                     align="right"
+                    theme={theme}
                   />
                 </View>
 
-                <View style={styles.amountRow}>
+                <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                   <Field
                     label="Net"
                     value={money(sale.netTotal)}
                     align="right"
+                    theme={theme}
                   />
                   <Field
                     label="Paid"
                     value={money(sale.paidAmount)}
                     align="right"
+                    theme={theme}
                   />
                   <View style={[styles.field, styles.fieldRight]}>
-                    <Text style={[styles.fieldLabel, styles.textRight]}>
+                    <Text style={[styles.fieldLabel, { color: theme.mutedForeground }, styles.textRight]}>
                       Balance
                     </Text>
                     <Text
@@ -295,10 +297,10 @@ export default function SalesListScreen() {
                         styles.textRight,
                         {
                           color: isVoided
-                            ? COLORS.muted
+                            ? theme.mutedForeground
                             : sale.balance > 0
-                              ? COLORS.due
-                              : COLORS.paid,
+                              ? theme.chart4
+                              : theme.chart2,
                         },
                       ]}
                       numberOfLines={1}
@@ -314,10 +316,10 @@ export default function SalesListScreen() {
             <ActivityIndicator
               style={styles.loadMore}
               size="small"
-              color="#16794B"
+              color={theme.chart2}
             />
           ) : null}
-          {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
         </ScrollView>
       )}
       </>}
@@ -345,27 +347,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   saleRow: {
-    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#CBD5E1",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
-  saleRowVoided: { backgroundColor: "#F1F5F9", opacity: 0.7 },
-  saleRowPressed: { backgroundColor: "#EEF2F7" },
+  saleRowVoided: { opacity: 0.7 },
   saleTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   saleId: {
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: COLORS.ink,
     letterSpacing: 0.3,
   },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
-  saleDate: { fontSize: 10, color: COLORS.muted },
+  saleDate: { fontSize: 10 },
   fieldRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   fieldWide: { flex: 1, minWidth: 0 },
   amountRow: {
@@ -373,19 +371,17 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#CBD5E1",
   },
   field: { flex: 1, minWidth: 0 },
   fieldRight: { alignItems: "flex-end" },
   fieldLabel: {
     fontSize: 8.5,
     fontWeight: "700",
-    color: COLORS.muted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
     marginBottom: 2,
   },
-  fieldValue: { fontSize: 12.5, fontWeight: "700", color: COLORS.ink },
+  fieldValue: { fontSize: 12.5, fontWeight: "700" },
   textRight: { textAlign: "right" },
   centeredState: {
     flex: 1,
@@ -399,7 +395,6 @@ const styles = StyleSheet.create({
   endNote: {
     textAlign: "center",
     fontSize: 10,
-    color: COLORS.muted,
     marginVertical: 8,
   },
 });

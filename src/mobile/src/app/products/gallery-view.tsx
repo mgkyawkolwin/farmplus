@@ -12,11 +12,15 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 export default function ProductGalleryViewerScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ images?: string | string[]; index?: string | string[]; mode?: string | string[] }>();
   const permissionState = usePagePermission('/products/gallery-view');
   const { width } = Dimensions.get('window');
@@ -120,12 +124,12 @@ export default function ProductGalleryViewerScreen() {
 
   if (permissionState === 'checking') {
     return (
-      <View style={styles.previewContainer}>
+      <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
-            <Text style={styles.closeButtonText}>Close</Text>
+          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
           </Pressable>
-          <Text style={styles.previewTitle}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
           <View style={styles.previewSpacer} />
         </View>
         <View style={styles.emptyState}><Text style={styles.emptyStateText}>Checking permission...</Text></View>
@@ -135,12 +139,12 @@ export default function ProductGalleryViewerScreen() {
 
   if (permissionState === 'denied') {
     return (
-      <View style={styles.previewContainer}>
+      <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
-            <Text style={styles.closeButtonText}>Close</Text>
+          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
           </Pressable>
-          <Text style={styles.previewTitle}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
           <View style={styles.previewSpacer} />
         </View>
         <UnauthorizedView />
@@ -150,20 +154,20 @@ export default function ProductGalleryViewerScreen() {
 
   if (!parsedImages.length) {
     return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyStateText}>No images to display</Text>
+      <View style={[styles.emptyState, { backgroundColor: theme.background }]}>
+        <Text style={[styles.emptyStateText, { color: theme.foreground }]}>No images to display</Text>
       </View>
     );
   }
 
   if (viewMode === 'preview') {
     return (
-      <View style={styles.previewContainer}>
+      <View style={[styles.previewContainer, { backgroundColor: theme.background }]}>
         <View style={styles.previewHeader}>
-          <Pressable style={styles.closeButton} onPress={() => router.back()}>
-            <Text style={styles.closeButtonText}>Close</Text>
+          <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+            <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
           </Pressable>
-          <Text style={styles.previewTitle}>Images</Text>
+          <Text style={[styles.previewTitle, { color: theme.foreground }]}>Images</Text>
           <View style={styles.previewSpacer} />
         </View>
 
@@ -172,7 +176,7 @@ export default function ProductGalleryViewerScreen() {
             <Pressable
               key={`${image}-${index}`}
               onPress={() => openFullscreenView(index)}
-              style={styles.previewCard}
+              style={[styles.previewCard, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
               <Image source={{ uri: image }} style={styles.previewImage} resizeMode="cover" />
             </Pressable>
@@ -183,13 +187,13 @@ export default function ProductGalleryViewerScreen() {
   }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
-      <Pressable style={styles.closeButton} onPress={() => router.back()}>
-        <Text style={styles.closeButtonText}>Close</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
+      <Pressable style={[styles.closeButton, { backgroundColor: theme.secondary }]} onPress={() => router.back()}>
+        <Text style={[styles.closeButtonText, { color: theme.foreground }]}>Close</Text>
       </Pressable>
 
-      <View style={styles.counterBadge}>
-        <Text style={styles.counterText}>
+      <View style={[styles.counterBadge, { backgroundColor: theme.secondary }]}>
+        <Text style={[styles.counterText, { color: theme.foreground }]}>
           {currentIndex + 1} / {parsedImages.length}
         </Text>
       </View>
@@ -219,11 +223,11 @@ export default function ProductGalleryViewerScreen() {
       </ScrollView>
 
       <View style={styles.navRow}>
-        <Pressable onPress={goToPrevious} style={styles.navButton}>
-          <Text style={styles.navButtonText}>←</Text>
+        <Pressable onPress={goToPrevious} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
+          <Text style={[styles.navButtonText, { color: theme.foreground }]}>←</Text>
         </Pressable>
-        <Pressable onPress={goToNext} style={styles.navButton}>
-          <Text style={styles.navButtonText}>→</Text>
+        <Pressable onPress={goToNext} style={[styles.navButton, { backgroundColor: theme.secondary }]}>
+          <Text style={[styles.navButtonText, { color: theme.foreground }]}>→</Text>
         </Pressable>
       </View>
     </View>
@@ -233,24 +237,20 @@ export default function ProductGalleryViewerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyState: {
     flex: 1,
-    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyStateText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   previewContainer: {
     flex: 1,
-    backgroundColor: '#111827',
   },
   previewHeader: {
     flexDirection: 'row',
@@ -277,9 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     height: 220,
-    backgroundColor: '#1F2937',
     borderWidth: 1,
-    borderColor: '#374151',
   },
   previewImage: {
     width: '100%',
@@ -296,13 +294,11 @@ const styles = StyleSheet.create({
     top: 52,
     left: 16,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   closeButtonText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -311,13 +307,11 @@ const styles = StyleSheet.create({
     top: 54,
     right: 16,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   counterText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -334,12 +328,10 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navButtonText: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 28,

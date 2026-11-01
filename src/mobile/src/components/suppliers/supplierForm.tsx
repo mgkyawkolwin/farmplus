@@ -10,6 +10,7 @@ import {
 import { Image as ImageIcon } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { useColorScheme } from 'nativewind';
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -22,6 +23,7 @@ import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import UnauthorizedView from "@/components/unauthorized-view";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from '@/lib/theme';
 
 type Fields = Pick<
   Supplier,
@@ -46,6 +48,8 @@ const emptyFields: Fields = {
 
 export function SupplierForm({ supplierId }: { supplierId?: string }) {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission(supplierId ? '/suppliers/edit' : '/suppliers/new');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
   const [fields, setFields] = React.useState<Fields>(emptyFields);
@@ -160,7 +164,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   if (permissionState === 'checking')
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={theme.primary} />
         <Text className="text-muted-foreground">Checking permission...</Text>
       </View>
     );
@@ -168,7 +172,7 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
   if (loading)
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   const labels: Array<
@@ -192,9 +196,9 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
       <View style={styles.logoSection}>
         <Pressable onPress={pickLogo} disabled={saving}>
           {logoUri ? (
-            <Image source={{ uri: logoUri }} style={styles.logo} />
+            <Image source={{ uri: logoUri }} style={[styles.logo, { borderColor: theme.border }]} />
           ) : (
-            <View style={styles.logoPlaceholder}>
+            <View style={[styles.logoPlaceholder, { backgroundColor: theme.muted }]}>
               <Icon
                 className="text-muted-foreground"
                 as={ImageIcon}
@@ -224,11 +228,12 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         <Button
           variant={isActive ? "default" : "outline"}
           size="sm"
+          style={isActive ? { backgroundColor: theme.primary } : undefined}
           onPress={() => setIsActive((value) => !value)}
           disabled={saving}
         >
           <Text
-            className={isActive ? "text-primary-foreground" : "text-foreground"}
+            style={{ color: isActive ? theme.primaryForeground : theme.foreground }}
           >
             {isActive ? "Active" : "Inactive"}
           </Text>
@@ -243,11 +248,11 @@ export function SupplierForm({ supplierId }: { supplierId?: string }) {
         >
           <Text className="text-foreground">Cancel</Text>
         </Button>
-        <Button style={styles.action} onPress={submit} disabled={saving}>
+        <Button style={[styles.action, { backgroundColor: theme.primary }]} onPress={submit} disabled={saving}>
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={theme.primaryForeground} />
           ) : (
-            <Text className="text-background font-semibold">Save</Text>
+            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Save</Text>
           )}
         </Button>
       </View>
@@ -266,7 +271,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F4F6",
   },
   field: { marginBottom: 20 },
   activeRow: {

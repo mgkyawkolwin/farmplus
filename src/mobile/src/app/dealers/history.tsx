@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -23,6 +24,7 @@ import { CustomerPayment } from '@/models/customer';
 import { Sale } from '@/models/sale';
 import { DealerServiceClient } from '@/services/dealerService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 const dealerService = new DealerServiceClient();
 const PAGE_SIZE = 20;
@@ -47,6 +49,8 @@ function formatDate(value: string) {
 
 export default function DealerHistoryScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/history');
   const params = useLocalSearchParams<{
     dealerId?: string | string[];
@@ -131,14 +135,14 @@ export default function DealerHistoryScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && itemCount === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading {showingPayments ? 'payments' : 'sales'}...
           </Text>
@@ -173,16 +177,16 @@ export default function DealerHistoryScreen() {
         >
           {showingPayments
             ? payments.map((payment) => (
-                <Pressable key={payment.id} style={styles.historyCard} onPress={() => openSale(payment.saleId)}>
+                <Pressable key={payment.id} style={[styles.historyCard, { borderColor: theme.border, backgroundColor: theme.card }]} onPress={() => openSale(payment.saleId)}>
                   <View style={styles.cardTopRow}>
                     <Text className="text-foreground" style={styles.cardTitle}>Payment</Text>
                     <Text className="text-muted-foreground" style={styles.cardDate}>{formatDate(payment.paidAt)}</Text>
                     <Icon className="text-muted-foreground" as={ChevronRight} size={16} />
                   </View>
-                  <View style={styles.amountRow}>
+                  <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                     <View>
                       <Text className="text-muted-foreground" style={styles.label}>Amount Paid</Text>
-                      <Text style={[styles.amount, styles.paymentAmount]}>{formatMoney(payment.amount)}</Text>
+                      <Text style={[styles.amount, { color: theme.chart2 }]}>{formatMoney(payment.amount)}</Text>
                     </View>
                     <View style={styles.amountRight}>
                       <Text className="text-muted-foreground" style={styles.label}>Balance After</Text>
@@ -192,7 +196,7 @@ export default function DealerHistoryScreen() {
                 </Pressable>
               ))
             : sales.map((sale) => (
-                <Pressable key={sale.id} style={styles.historyCard} onPress={() => openSale(sale.id)}>
+                <Pressable key={sale.id} style={[styles.historyCard, { borderColor: theme.border, backgroundColor: theme.card }]} onPress={() => openSale(sale.id)}>
                   <View style={styles.cardTopRow}>
                     <Text className="text-foreground" style={styles.cardTitle}>
                       #{sale.id.slice(0, 8).toUpperCase()}
@@ -200,22 +204,22 @@ export default function DealerHistoryScreen() {
                     <Text className="text-muted-foreground" style={styles.cardDate}>{formatDate(sale.saleDate)}</Text>
                     <Icon className="text-muted-foreground" as={ChevronRight} size={16} />
                   </View>
-                  <View style={styles.amountRow}>
+                  <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                     <View>
                       <Text className="text-muted-foreground" style={styles.label}>Total</Text>
                       <Text className="text-foreground" style={styles.amount}>{formatMoney(sale.netTotal)}</Text>
                     </View>
                     <View style={styles.amountRight}>
                       <Text className="text-muted-foreground" style={styles.label}>Balance</Text>
-                      <Text style={[styles.amount, { color: sale.balance > 0 ? '#B45309' : '#047857' }]}>
+                      <Text style={[styles.amount, { color: sale.balance > 0 ? theme.chart4 : theme.chart2 }]}>
                         {formatMoney(sale.balance)}
                       </Text>
                     </View>
                   </View>
                 </Pressable>
               ))}
-          {loadingMore ? <ActivityIndicator size="small" color="#16794B" /> : null}
-          {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
+          {loadingMore ? <ActivityIndicator size="small" color={theme.primary} /> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -228,17 +232,16 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 44 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700' },
   content: { padding: 12, gap: 10, paddingBottom: 24 },
-  historyCard: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, backgroundColor: '#FFFFFF', padding: 12, gap: 12 },
+  historyCard: { borderWidth: 1, borderRadius: 6, padding: 12, gap: 12 },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardTitle: { flex: 1, fontSize: 13, fontWeight: '700' },
   cardDate: { fontSize: 12 },
-  amountRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E2E8F0', paddingTop: 10 },
+  amountRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   amountRight: { alignItems: 'flex-end' },
   label: { fontSize: 11, marginBottom: 3 },
   amount: { fontSize: 14, fontWeight: '700' },
-  paymentAmount: { color: '#047857' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   stateTitle: { fontSize: 17, fontWeight: '600' },
   stateText: { marginTop: 8, textAlign: 'center' },
-  endNote: { textAlign: 'center', color: '#64748B', fontSize: 11 },
+  endNote: { textAlign: 'center', fontSize: 11 },
 });

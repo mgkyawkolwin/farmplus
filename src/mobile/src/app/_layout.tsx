@@ -16,18 +16,19 @@ export default function RootLayout() {
   return (
     <AuthContextProvider>
       <SnackBar />
-      <View className='flex-1'>
+      <View className={`flex-1 ${colorScheme === 'dark' ? 'dark' : ''}`}>
         <Stack screenOptions={{ 
           headerShown: false, 
           statusBarAnimation: 'fade',
           statusBarHidden: false,
-          statusBarStyle: colorScheme === 'dark' ? 'dark' : 'light',
+          statusBarStyle: colorScheme === 'dark' ? 'light' : 'dark',
           }} >
           {/* Main Tab flow */}
           <Stack.Screen name="home" options={{ headerShown: false }} />
           
           {/* Sub-screens pushed over tabs will automatically slide in here */}
         </Stack>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <PortalHost />
       </View>
     </AuthContextProvider>

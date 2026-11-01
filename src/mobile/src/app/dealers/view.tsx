@@ -6,13 +6,13 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleProp,
   StyleSheet,
   TextStyle,
   View,
   ViewStyle,
 } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -34,9 +35,12 @@ import { DealerItem } from '@/models/dealer';
 import { DealerServiceClient } from '@/services/dealerService';
 import SnackBar from '@/components/ui/snack-bar';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 export default function DealerViewScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const permissionState = usePagePermission('/dealers/view');
   const dealerId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -73,17 +77,17 @@ export default function DealerViewScreen() {
 
   if (permissionState !== 'authorized' || !dealer) {
     return (
-      <SafeAreaView style={styles.page}>
+      <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
         <View style={styles.headerBar}>
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={styles.headerTitle}>Dealer</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Dealer</Text>
           <View style={styles.headerButton} />
         </View>
         {permissionState === 'denied' ? <UnauthorizedView /> : (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={COLORS.green} />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.loadingText}>
               {permissionState === 'checking' ? 'Checking permission...' : 'Loading dealer...'}
             </Text>
@@ -119,10 +123,10 @@ export default function DealerViewScreen() {
   const owesBalance = (dealer.totalOutstanding ?? 0) > 0;
 
   return (
-    <SafeAreaView style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+      <StatusBar />
 
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Button
           variant="ghost"
           onPress={() => router.back()}
@@ -130,7 +134,7 @@ export default function DealerViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={styles.headerTitle}>Dealer</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Dealer</Text>
         <Button
           variant="ghost"
           onPress={() =>
@@ -146,39 +150,35 @@ export default function DealerViewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profilePanel}>
-          <View style={styles.logoWrap}>
+        <View style={[styles.profilePanel, { backgroundColor: theme.card, borderColor: theme.border, borderTopColor: theme.primary }]}>
+          <View style={[styles.logoWrap, { backgroundColor: theme.secondary }]}>
             {dealer.logoUrl ? (
               <Image
                 source={{ uri: dealer.logoUrl }}
                 style={styles.logoImage}
               />
             ) : (
-              <Text style={styles.logoInitial}>{initial}</Text>
+              <Text style={[styles.logoInitial, { color: theme.primary }]}>{initial}</Text>
             )}
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.dealerName} numberOfLines={1}>
+            <Text style={[styles.dealerName, { color: theme.foreground }]} numberOfLines={1}>
               {dealer.dealerName}
             </Text>
-            <Text style={styles.dealerMeta} numberOfLines={1}>
+            <Text style={[styles.dealerMeta, { color: theme.mutedForeground }]} numberOfLines={1}>
               {subtitle}
             </Text>
             <View
               style={[
                 styles.statusPill,
-                dealer.isActive
-                  ? styles.statusPillActive
-                  : styles.statusPillInactive,
+                { backgroundColor: theme.secondary },
               ]}
             >
               <Text
                 style={[
                   styles.statusText,
-                  dealer.isActive
-                    ? styles.statusTextActive
-                    : styles.statusTextInactive,
+                  { color: dealer.isActive ? theme.chart2 : theme.destructive },
                 ]}
               >
                 {dealer.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -188,6 +188,7 @@ export default function DealerViewScreen() {
         </View>
 
         <Button
+          style={{ backgroundColor: theme.primary }}
           onPress={() =>
             router.push({
               pathname: '/dealers/sales' as '/dealers/view',
@@ -196,21 +197,21 @@ export default function DealerViewScreen() {
           }
           disabled={!dealer.isActive}
         >
-          <Icon className="text-background" as={ShoppingCart} size={16} />
-          <Text className="text-background font-semibold">Sale</Text>
+          <Icon as={ShoppingCart} size={16} color={theme.primaryForeground} />
+          <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Sale</Text>
         </Button>
 
-        <Text style={styles.sectionHeading}>Contact & Location</Text>
-        <View style={styles.panel}>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Contact & Location</Text>
+        <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           {detailRows.map((row, index) => (
             <View
               key={row.label}
               style={[
                 styles.detailRow,
-                index < detailRows.length - 1 ? styles.rowDivider : null,
+                index < detailRows.length - 1 ? [styles.rowDivider, { borderBottomColor: theme.border }] : null,
               ]}
             >
-              <View style={styles.detailIconWrap}>
+              <View style={[styles.detailIconWrap, { backgroundColor: theme.muted }]}>
                 <Icon
                   className="text-muted-foreground"
                   as={row.icon}
@@ -218,8 +219,8 @@ export default function DealerViewScreen() {
                 />
               </View>
               <View style={styles.detailText}>
-                <Text style={styles.fieldLabel}>{row.label}</Text>
-                <Text style={styles.fieldValue} numberOfLines={2}>
+                <Text style={[styles.fieldLabel, { color: theme.mutedForeground }]}>{row.label}</Text>
+                <Text style={[styles.fieldValue, { color: theme.foreground }]} numberOfLines={2}>
                   {row.value}
                 </Text>
               </View>
@@ -227,33 +228,37 @@ export default function DealerViewScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionHeading}>Summary</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Summary</Text>
         <View style={styles.kpiGrid}>
           <KpiTile
             label="Total Sales"
             value={formatMoney(dealer.totalSales)}
-            accent={styles.accentBlue}
+            accent={{ borderTopColor: theme.chart1, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Total Orders"
             value={(dealer.totalOrders ?? 0).toLocaleString('en-US')}
-            accent={styles.accentSlate}
+            accent={{ borderTopColor: theme.mutedForeground, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Total Paid"
             value={formatMoney(dealer.totalPaid)}
-            accent={styles.accentGreen}
+            accent={{ borderTopColor: theme.chart2, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Outstanding"
             value={formatMoney(dealer.totalOutstanding)}
-            accent={owesBalance ? styles.accentAmber : styles.accentGreen}
-            valueStyle={owesBalance ? styles.cellAmber : null}
+            accent={{ borderTopColor: owesBalance ? theme.chart4 : theme.chart2, backgroundColor: theme.secondary }}
+            valueStyle={owesBalance ? { color: theme.chart4 } : undefined}
+            theme={theme}
           />
         </View>
 
         <View style={styles.sectionHeadingRow}>
-          <Text style={styles.sectionHeading}>Recent Sales</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Sales</Text>
           <Button
             variant="ghost"
             style={styles.viewAllButton}
@@ -264,12 +269,12 @@ export default function DealerViewScreen() {
               } as Parameters<typeof router.push>[0])
             }
           >
-            <Text style={styles.viewAllText}>View all</Text>
-            <Icon as={ChevronRight} size={14} color={COLORS.green} />
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
+            <Icon as={ChevronRight} size={14} color={theme.primary} />
           </Button>
         </View>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
+        <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Total</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Balance</Text>
@@ -278,22 +283,22 @@ export default function DealerViewScreen() {
             <Pressable
               key={sale.id}
               accessibilityRole="button"
-              style={styles.tableRow}
+              style={[styles.tableRow, { borderBottomColor: theme.border }]}
               onPress={() =>
                 router.push({ pathname: '/sales/view', params: { id: sale.id } })
               }
             >
-              <Text style={[styles.cell, styles.dateCol]}>
+              <Text style={[styles.cell, styles.dateCol, { color: theme.foreground }]}>
                 {new Date(sale.saleDate).toLocaleDateString()}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(sale.netTotal)}
               </Text>
               <Text
                 style={[
                   styles.cell,
                   styles.amountCol,
-                  sale.balance > 0 ? styles.cellAmber : null,
+                  sale.balance > 0 ? { color: theme.chart4, fontWeight: '700' } : { color: theme.foreground },
                 ]}
               >
                 {formatMoney(sale.balance)}
@@ -301,12 +306,12 @@ export default function DealerViewScreen() {
             </Pressable>
           ))}
           {recentSales.length === 0 ? (
-            <Text style={styles.emptyText}>No sales recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No sales recorded.</Text>
           ) : null}
         </View>
 
         <View style={styles.sectionHeadingRow}>
-          <Text style={styles.sectionHeading}>Recent Payments</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Payments</Text>
           <Button
             variant="ghost"
             style={styles.viewAllButton}
@@ -317,12 +322,12 @@ export default function DealerViewScreen() {
               } as Parameters<typeof router.push>[0])
             }
           >
-            <Text style={styles.viewAllText}>View all</Text>
-            <Icon as={ChevronRight} size={14} color={COLORS.green} />
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
+            <Icon as={ChevronRight} size={14} color={theme.primary} />
           </Button>
         </View>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
+        <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Amount</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Balance After</Text>
@@ -331,7 +336,7 @@ export default function DealerViewScreen() {
             <Pressable
               key={payment.id}
               accessibilityRole="button"
-              style={styles.tableRow}
+              style={[styles.tableRow, { borderBottomColor: theme.border }]}
               onPress={() =>
                 router.push({
                   pathname: '/sales/view',
@@ -339,19 +344,19 @@ export default function DealerViewScreen() {
                 })
               }
             >
-              <Text style={[styles.cell, styles.dateCol]}>
+              <Text style={[styles.cell, styles.dateCol, { color: theme.foreground }]}>
                 {new Date(payment.paidAt).toLocaleDateString()}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(payment.amount)}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(payment.balanceAfter)}
               </Text>
             </Pressable>
           ))}
           {recentPayments.length === 0 ? (
-            <Text style={styles.emptyText}>No payments recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No payments recorded.</Text>
           ) : null}
         </View>
       </ScrollView>
@@ -363,40 +368,30 @@ type KpiTileProps = {
   label: string;
   value: string;
   accent: StyleProp<ViewStyle>;
+  theme: typeof THEME.light;
   valueStyle?: StyleProp<TextStyle>;
 };
 
-function KpiTile({ label, value, accent, valueStyle }: KpiTileProps) {
+function KpiTile({ label, value, accent, theme, valueStyle }: KpiTileProps) {
   return (
     <View style={[styles.kpiTile, accent]}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={[styles.kpiValue, valueStyle]} numberOfLines={1}>
+      <Text style={[styles.fieldLabel, { color: theme.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.kpiValue, { color: theme.foreground }, valueStyle]} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
-const COLORS = {
-  ink: '#0F172A',
-  muted: '#64748B',
-  border: '#D9DEE5',
-  rowBorder: '#CBD5E1',
-  green: '#16794B',
-  greenTint: '#F4FAF6',
-};
-
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  page: { flex: 1 },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerButton: { minWidth: 40 },
   headerTitle: {
@@ -404,11 +399,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '700',
-    color: COLORS.ink,
   },
   content: { padding: 16, gap: 12, paddingBottom: 32 },
   loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 12, fontSize: 13, color: COLORS.muted },
+  loadingText: { marginTop: 12, fontSize: 13 },
   profilePanel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -416,10 +410,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderTopWidth: 3,
-    borderColor: COLORS.border,
-    borderTopColor: COLORS.green,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
   },
   logoWrap: {
     width: 56,
@@ -428,13 +419,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.greenTint,
   },
   logoImage: { width: '100%', height: '100%' },
-  logoInitial: { fontSize: 22, fontWeight: '800', color: COLORS.green },
+  logoInitial: { fontSize: 22, fontWeight: '800' },
   profileInfo: { flex: 1, minWidth: 0, gap: 3 },
-  dealerName: { fontSize: 18, fontWeight: '800', color: COLORS.ink },
-  dealerMeta: { fontSize: 12, color: COLORS.muted },
+  dealerName: { fontSize: 18, fontWeight: '800' },
+  dealerMeta: { fontSize: 12 },
   statusPill: {
     alignSelf: 'flex-start',
     marginTop: 4,
@@ -442,17 +432,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  statusPillActive: { backgroundColor: '#D1FAE5' },
-  statusPillInactive: { backgroundColor: '#FEE2E2' },
   statusText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
-  statusTextActive: { color: '#047857' },
-  statusTextInactive: { color: '#B91C1C' },
   sectionHeading: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: COLORS.muted,
   },
   sectionHeadingRow: {
     flexDirection: 'row',
@@ -466,12 +451,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  viewAllText: { fontSize: 12, fontWeight: '700', color: COLORS.green },
+  viewAllText: { fontSize: 12, fontWeight: '700' },
   panel: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   detailRow: {
@@ -483,7 +466,6 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
   },
   detailIconWrap: {
     width: 32,
@@ -491,7 +473,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
   },
   detailText: { flex: 1, minWidth: 0, gap: 2 },
   fieldLabel: {
@@ -499,9 +480,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-    color: COLORS.muted,
   },
-  fieldValue: { fontSize: 14, fontWeight: '600', color: COLORS.ink },
+  fieldValue: { fontSize: 14, fontWeight: '600' },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   kpiTile: {
     width: '48%',
@@ -509,23 +489,12 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderTopWidth: 3,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
   },
-  accentBlue: { borderTopColor: '#2367A8', backgroundColor: '#F5F9FF' },
-  accentGreen: {
-    borderTopColor: COLORS.green,
-    backgroundColor: COLORS.greenTint,
-  },
-  accentAmber: { borderTopColor: '#9A6700', backgroundColor: '#FFFBEB' },
-  accentSlate: { borderTopColor: COLORS.muted, backgroundColor: '#F8FAFC' },
-  kpiValue: { fontSize: 15, fontWeight: '800', color: COLORS.ink },
+  kpiValue: { fontSize: 15, fontWeight: '800' },
   table: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   tableHeader: {
@@ -533,16 +502,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 32,
     paddingHorizontal: 12,
-    backgroundColor: '#F1F5F9',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerCell: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-    color: COLORS.muted,
   },
   tableRow: {
     flexDirection: 'row',
@@ -551,16 +517,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
   },
-  cell: { fontSize: 12, color: COLORS.ink },
-  cellAmber: { color: '#9A6700', fontWeight: '700' },
+  cell: { fontSize: 12 },
+  cellAmber: { fontWeight: '700' },
   dateCol: { flex: 1.2 },
   amountCol: { flex: 1, textAlign: 'right' },
   emptyText: {
     padding: 14,
     textAlign: 'center',
     fontSize: 12,
-    color: COLORS.muted,
   },
 });

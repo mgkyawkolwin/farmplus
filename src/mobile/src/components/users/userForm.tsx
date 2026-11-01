@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -22,6 +24,7 @@ import { IUserService } from '@/services/userService';
 import { UpdateUserRequest } from '@/models/user';
 import { RoleItem } from '@/models/role';
 import { IRoleService } from '@/services/roleService';
+import { THEME } from '@/lib/theme';
 
 const userService = container.resolve<IUserService>(DI_TOKENS.IUserService);
 const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
@@ -59,7 +62,8 @@ const emptyForm: UserFormState = {
 export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const userId = Array.isArray(params.id) ? params.id[0] : params.id;
   const permissionState = usePagePermission(mode === 'create' ? '/users/new' : '/users/edit');
   const [form, setForm] = React.useState<UserFormState>(emptyForm);
@@ -230,14 +234,14 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.loadingText}>Loading user details...</Text>
         </View>
       ) : (
@@ -249,7 +253,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         >
           {mode === 'create' ? (
             <View style={styles.field}>
-              <Label className="text-foreground">Username <Text className="text-red-500">*</Text></Label>
+              <Label className="text-foreground">Username <Text style={{ color: theme.destructive }}>*</Text></Label>
               <Input
                 placeholder="Enter username"
                 value={form.userName}
@@ -263,7 +267,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           ) : null}
 
           <View style={styles.field}>
-            <Label className="text-foreground">Display Name <Text className="text-red-500">*</Text></Label>
+            <Label className="text-foreground">Display Name <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Enter display name"
               value={form.displayName}
@@ -275,7 +279,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Email <Text className="text-red-500">*</Text></Label>
+            <Label className="text-foreground">Email <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Enter email address"
               value={form.email}
@@ -290,7 +294,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
           {mode === 'create' ? (
             <View style={styles.field}>
-              <Label className="text-foreground">Password <Text className="text-red-500">*</Text></Label>
+              <Label className="text-foreground">Password <Text style={{ color: theme.destructive }}>*</Text></Label>
               <Input
                 placeholder="Create a password"
                 value={form.password}
@@ -380,9 +384,9 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           </View>
 
           <View style={styles.field}>
-            <Label className="text-foreground">Role <Text className="text-red-500">*</Text></Label>
+            <Label className="text-foreground">Role <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Pressable
-              style={styles.roleSelect}
+              style={[styles.roleSelect, { borderColor: theme.border }]}
               onPress={() => setRolePickerVisible(true)}
               disabled={loading}
               accessibilityRole="button"
@@ -402,8 +406,8 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
               <Text className="text-foreground">Cancel</Text>
             </Button>
             <Button style={styles.actionButton} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-                <Text className="text-background font-semibold">{mode === 'create' ? 'Create User' : 'Save Changes'}</Text>
+              {loading ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{mode === 'create' ? 'Create User' : 'Save Changes'}</Text>
               )}
             </Button>
           </View>
@@ -420,16 +424,16 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         </KeyboardAwareScrollView>
       )}
       <Modal transparent visible={rolePickerVisible} animationType="slide" onRequestClose={() => setRolePickerVisible(false)}>
-        <View style={styles.roleModalOverlay}>
+        <View style={[styles.roleModalOverlay, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
           <View className="bg-background" style={styles.rolePicker}>
-            <View style={styles.roleSheetHandle} />
+            <View style={[styles.roleSheetHandle, { backgroundColor: theme.border }]} />
             <Text className="text-foreground" style={styles.rolePickerTitle}>Select Role</Text>
             <ScrollView>
               {roles.map((item) => (
                 <Pressable
                   key={item.id}
-                  style={styles.roleOption}
+                  style={[styles.roleOption, { borderBottomColor: theme.border }]}
                   onPress={() => {
                     updateField('roleId', item.id);
                     setRolePickerVisible(false);
@@ -448,7 +452,7 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
         animationType="slide"
         onRequestClose={closeResetPasswordModal}
       >
-        <KeyboardAvoidingView style={styles.resetPasswordOverlay} behavior="padding">
+        <KeyboardAvoidingView style={[styles.resetPasswordOverlay, { backgroundColor: theme.overlay }]} behavior="padding">
           <Pressable style={styles.resetPasswordBackdrop} onPress={closeResetPasswordModal} />
           <View className="bg-background" style={styles.resetPasswordSheet}>
             <Text className="text-foreground" style={styles.rolePickerTitle}>Reset Password</Text>
@@ -476,8 +480,8 @@ export default function UserFormScreen({ mode }: { mode: 'create' | 'edit' }) {
                 onPress={handleResetPassword}
                 disabled={isResettingPassword}
               >
-                {isResettingPassword ? <ActivityIndicator color="#fff" size="small" /> : (
-                  <Text className="text-background font-semibold">Reset</Text>
+                {isResettingPassword ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
+                  <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Reset</Text>
                 )}
               </Button>
             </View>
@@ -504,17 +508,17 @@ const styles = StyleSheet.create({
   field: { marginBottom: 20 },
   statusField: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   statusCopy: { gap: 4 },
-  roleSelect: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6 },
-  roleModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
+  roleSelect: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingHorizontal: 12, borderWidth: 1, borderRadius: 6 },
+  roleModalOverlay: { flex: 1, justifyContent: 'flex-end' },
   rolePicker: { maxHeight: '70%', padding: 20, paddingBottom: 28, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  roleSheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12, backgroundColor: '#CBD5E1' },
+  roleSheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12 },
   rolePickerTitle: { marginBottom: 10, fontSize: 16, fontWeight: '700' },
-  resetPasswordOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
+  resetPasswordOverlay: { flex: 1, justifyContent: 'flex-end' },
   resetPasswordBackdrop: { ...StyleSheet.absoluteFillObject },
   resetPasswordSheet: { padding: 20, paddingBottom: 32, borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 10 },
   resetPasswordActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
   resetPasswordButton: { width: '100%', marginTop: 12 },
-  roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
+  roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   actionButton: { flex: 1 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },

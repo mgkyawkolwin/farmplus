@@ -18,9 +18,13 @@ import { UnitItem } from '@/models/unit';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { useColorScheme } from 'nativewind';
+import { THEME } from '@/lib/theme';
 
 export default function UnitsScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/units/units');
   const service = React.useMemo(() => new UnitServiceClient(), []);
 
@@ -162,16 +166,16 @@ export default function UnitsScreen() {
           size='sm'
           onPress={openCreateModal}
           disabled={permissionState !== 'authorized'}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
-          <Icon as={Plus} size={14} className='text-primary-foreground' />
-          <Text className='text-primary-foreground' style={styles.addButtonText}>Add</Text>
+          <Icon as={Plus} size={14} color={theme.primaryForeground} />
+          <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>Add</Text>
         </Button>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -187,7 +191,7 @@ export default function UnitsScreen() {
         >
           {loading && !refreshing ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className='text-muted-foreground' style={styles.emptyText}>Loading units...</Text>
           </View>
         ) : units.length === 0 ? (
@@ -201,8 +205,8 @@ export default function UnitsScreen() {
               <Text className='text-muted-foreground' style={styles.sectionCount}>{units.length} {units.length === 1 ? 'record' : 'records'}</Text>
             </View>
 
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
+            <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
+              <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
                 <View style={styles.nameColumn}>
                   <Text className='text-muted-foreground' style={styles.headerCell}>Unit</Text>
                 </View>
@@ -213,15 +217,15 @@ export default function UnitsScreen() {
               </View>
 
               {units.map((unit, index) => (
-                <View key={unit.id} style={[styles.row, index === units.length - 1 && styles.rowLast]}>
+                <View key={unit.id} style={[styles.row, { borderBottomColor: theme.border }, index === units.length - 1 && styles.rowLast]}>
                   <View style={styles.nameColumn}>
-                    <Text className='text-foreground' style={styles.unitName} numberOfLines={1}>
+                    <Text style={[styles.unitName, { color: theme.foreground }]} numberOfLines={1}>
                       {unit.unit}
                     </Text>
                   </View>
                   <View style={styles.statusColumn}>
-                    <View style={[styles.statusPill, unit.isActive ? styles.statusActive : styles.statusInactive]}>
-                      <Text style={[styles.statusText, unit.isActive ? styles.statusTextActive : styles.statusTextInactive]}>
+                    <View style={[styles.statusPill, { backgroundColor: theme.secondary }]}>
+                      <Text style={[styles.statusText, { color: unit.isActive ? theme.chart2 : theme.destructive }]}>
                         {unit.isActive ? 'ACTIVE' : 'INACTIVE'}
                       </Text>
                     </View>
@@ -234,7 +238,7 @@ export default function UnitsScreen() {
                       accessibilityRole='button'
                       accessibilityLabel={`Edit ${unit.unit}`}
                     >
-                      <Pencil size={16} color='#2367A8' />
+                      <Pencil size={16} color={theme.primary} />
                     </Pressable>
                     <Pressable
                       onPress={() => confirmDelete(unit)}
@@ -243,7 +247,7 @@ export default function UnitsScreen() {
                       accessibilityRole='button'
                       accessibilityLabel={`Delete ${unit.unit}`}
                     >
-                      <Trash2 size={16} color='#B42318' />
+                      <Trash2 size={16} color={theme.destructive} />
                     </Pressable>
                   </View>
                 </View>
@@ -253,7 +257,7 @@ export default function UnitsScreen() {
         )}
           {loadingMore ? (
             <View style={styles.loadMoreRow}>
-              <ActivityIndicator size='small' />
+              <ActivityIndicator size='small' color={theme.primary} />
               <Text className='text-muted-foreground'>Loading more...</Text>
             </View>
           ) : null}
@@ -261,13 +265,13 @@ export default function UnitsScreen() {
       )}
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-        <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
+        <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className='bg-card border-border' style={styles.modalSheet}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.card }]}>
             <View style={styles.modalHeader}>
               <Text variant='h4' className='text-foreground'>{editingUnit ? 'Edit unit' : 'Add unit'}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
-                <Icon as={X} size={20} color="#4b5563" />
+                <Icon as={X} size={20} color={theme.mutedForeground} />
               </Pressable>
             </View>
 
@@ -282,7 +286,12 @@ export default function UnitsScreen() {
 
             <View style={styles.switchRow}>
               <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
-              <Switch value={editingUnit?.isActive} onValueChange={(value) => setEditingUnit((prev: UnitItem | null) => ({ ...prev, isActive: value } as (UnitItem | null)))} />
+              <Switch
+                value={editingUnit?.isActive}
+                onValueChange={(value) => setEditingUnit((prev: UnitItem | null) => ({ ...prev, isActive: value } as (UnitItem | null)))}
+                trackColor={{ false: theme.muted, true: theme.primary }}
+                thumbColor={theme.card}
+              />
             </View>
 
             <View style={styles.modalActions}>
@@ -290,7 +299,7 @@ export default function UnitsScreen() {
                 <Text className='text-foreground'>Cancel</Text>
               </Button>
               <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
-                {saving ? <ActivityIndicator size='small' color="#fff" /> : <Text className='text-primary-foreground'>Save</Text>}
+                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
               </Button>
             </View>
           </View>
@@ -326,7 +335,6 @@ const styles = StyleSheet.create({
     gap: 4,
     minWidth: 64,
     borderRadius: 6,
-    backgroundColor: '#16794B',
   },
   addButtonText: {
     fontSize: 12,
@@ -362,10 +370,8 @@ const styles = StyleSheet.create({
   },
   table: {
     borderWidth: 1,
-    borderColor: '#D9DEE5',
     borderRadius: 6,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
   },
   tableHeader: {
     minHeight: 32,
@@ -373,9 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#F1F5F9',
     borderBottomWidth: 1,
-    borderBottomColor: '#D9DEE5',
   },
   headerCell: {
     fontSize: 9,
@@ -390,7 +394,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#CBD5E1',
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -415,25 +418,19 @@ const styles = StyleSheet.create({
   unitName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
   },
   statusPill: {
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  statusActive: { backgroundColor: '#D1FAE5' },
-  statusInactive: { backgroundColor: '#FEE2E2' },
   statusText: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.4 },
-  statusTextActive: { color: '#047857' },
-  statusTextInactive: { color: '#B91C1C' },
   iconButton: {
     width: 28,
     height: 28,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
   },
   emptyState: {
     paddingVertical: 24,
@@ -499,6 +496,5 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   saveButton: {
-    backgroundColor: '#16794B',
   },
 });

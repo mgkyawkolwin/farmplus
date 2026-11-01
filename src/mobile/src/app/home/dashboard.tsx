@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
+import { useColorScheme } from "nativewind";
 import {
   AlertTriangle,
   Boxes,
@@ -49,6 +50,7 @@ import { IPurchaseService } from "@/services/purchaseService";
 import { ISaleService } from "@/services/saleService";
 import { SupplierServiceClient } from "@/services/supplierService";
 import { RolePermissionServiceClient } from "@/services/rolePermissionService";
+import { THEME } from "@/lib/theme";
 
 const saleService = container.resolve<ISaleService>(DI_TOKENS.ISaleService);
 const purchaseService = container.resolve<IPurchaseService>(
@@ -64,28 +66,27 @@ const supplierService = new SupplierServiceClient();
 const dealerService = new DealerServiceClient();
 const permissionService = new RolePermissionServiceClient();
 
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  surface: "#FFFFFF",
-  green: "#16794B",
-  blue: "#2367A8",
-  amber: "#9A6700",
-  red: "#B42318",
-};
-
 type Tone = "green" | "blue" | "amber" | "red";
 
-const TONES: Record<Tone, { fg: string; bg: string; border: string }> = {
-  green: { fg: "#16794B", bg: "#F4FAF6", border: "#D5E9DC" },
-  blue: { fg: "#2367A8", bg: "#F3F8FC", border: "#D6E6F3" },
-  amber: { fg: "#9A6700", bg: "#FFFAEE", border: "#EFE2BF" },
-  red: { fg: "#B42318", bg: "#FFF5F4", border: "#F0D8D5" },
-};
+type ThemeColors = typeof THEME.light;
 
-const CATEGORY_COLORS = ["#2367A8", "#16794B", "#9A6700", "#7C3AED", "#0E7490"];
-const OTHER_COLOR = "#94A3B8";
+function getColors(theme: ThemeColors) {
+  return {
+    ink: theme.foreground,
+    muted: theme.mutedForeground,
+    border: theme.border,
+    surface: theme.card,
+    green: theme.chart2,
+    blue: theme.chart1,
+    amber: theme.chart4,
+    red: theme.destructive,
+  };
+}
+
+function getToneColors(tone: Tone, theme: ThemeColors) {
+  const colors = getColors(theme);
+  return { fg: colors[tone], bg: theme.secondary, border: theme.border };
+}
 
 type DashboardData = {
   saleDashboard: SaleDashboard | null;
@@ -127,30 +128,33 @@ function Section({
   title,
   subtitle,
   onViewAll,
+  theme,
   children,
 }: {
   title: string;
   subtitle?: string;
   onViewAll?: () => void;
+  theme: ThemeColors;
   children: React.ReactNode;
 }) {
+  const colors = getColors(theme);
   return (
     <View>
       <View style={styles.sectionHeading}>
         <View style={styles.sectionTitleBlock}>
-          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>{title}</Text>
           {subtitle ? (
-            <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>{subtitle}</Text>
           ) : null}
         </View>
         {onViewAll ? (
-          <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
-            <ChevronRight size={14} color={COLORS.green} />
+          <Pressable style={[styles.seeAll, { borderColor: theme.border, backgroundColor: theme.secondary }]} onPress={onViewAll}>
+            <Text style={[styles.seeAllText, { color: colors.green }]}>View all</Text>
+            <ChevronRight size={14} color={colors.green} />
           </Pressable>
         ) : null}
       </View>
-      <View style={styles.panel}>{children}</View>
+      <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>{children}</View>
     </View>
   );
 }
@@ -161,14 +165,16 @@ function Kpi({
   caption,
   icon: IconComponent,
   tone,
+  theme,
 }: {
   label: string;
   value: string;
   caption: string;
   icon: typeof Wallet;
   tone: Tone;
+  theme: ThemeColors;
 }) {
-  const palette = TONES[tone];
+  const palette = getToneColors(tone, theme);
   return (
     <View
       style={[
@@ -181,23 +187,23 @@ function Kpi({
       ]}
     >
       <View style={styles.kpiHeader}>
-        <View style={styles.kpiIcon}>
+        <View style={[styles.kpiIcon, { backgroundColor: theme.card }]}>
           <IconComponent size={16} color={palette.fg} />
         </View>
-        <Text style={styles.kpiLabel} numberOfLines={1}>
+        <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]} numberOfLines={1}>
           {label}
         </Text>
       </View>
       <View style={styles.kpiBody}>
         <Text
-          style={styles.kpiValue}
+          style={[styles.kpiValue, { color: theme.foreground }]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.7}
         >
           {value}
         </Text>
-        <Text style={styles.kpiCaption} numberOfLines={1}>
+        <Text style={[styles.kpiCaption, { color: theme.mutedForeground }]} numberOfLines={1}>
           {caption}
         </Text>
       </View>
@@ -210,20 +216,22 @@ function PartnerRow({
   total,
   active,
   color,
+  theme,
 }: {
   label: string;
   total: number;
   active: number;
   color: string;
+  theme: ThemeColors;
 }) {
   const share = total > 0 ? (active / total) * 100 : 0;
   return (
     <View style={styles.partnerRow}>
       <View style={styles.partnerHeader}>
-        <Text style={styles.partnerLabel}>{label}</Text>
-        <Text style={styles.partnerCount}>{count(total)}</Text>
+        <Text style={[styles.partnerLabel, { color: theme.foreground }]}>{label}</Text>
+        <Text style={[styles.partnerCount, { color: theme.foreground }]}>{count(total)}</Text>
       </View>
-      <View style={styles.partnerTrack}>
+      <View style={[styles.partnerTrack, { backgroundColor: theme.border }]}>
         <View
           style={[
             styles.partnerFill,
@@ -231,23 +239,26 @@ function PartnerRow({
           ]}
         />
       </View>
-      <Text style={styles.partnerCaption}>
+      <Text style={[styles.partnerCaption, { color: theme.mutedForeground }]}>
         {count(active)} active · {count(total - active)} inactive
       </Text>
     </View>
   );
 }
 
-function statusOf(sale: Sale) {
+function statusOf(sale: Sale, theme: ThemeColors) {
   if (sale.status === "Voided")
-    return { label: "VOID", color: "#B91C1C", bg: "#FEE2E2" };
+    return { label: "VOID", color: theme.destructive, bg: theme.secondary };
   if (sale.paidAmount > 0 && sale.balance <= 0)
-    return { label: "PAID", color: "#047857", bg: "#D1FAE5" };
-  return { label: "UNPAID", color: "#B45309", bg: "#FEF3C7" };
+    return { label: "PAID", color: theme.chart2, bg: theme.secondary };
+  return { label: "UNPAID", color: theme.chart4, bg: theme.secondary };
 }
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
+  const colors = getColors(theme);
   const [data, setData] = React.useState<DashboardData>(emptyData);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -377,17 +388,18 @@ export default function DashboardScreen() {
       .map(([label, value]) => ({ label, value }))
       .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value);
+    const categoryColors = [theme.chart1, theme.chart2, theme.chart4, theme.chart5, theme.chart3];
     const categorySlices = categoryTotals
-      .slice(0, CATEGORY_COLORS.length)
-      .map((item, index) => ({ ...item, color: CATEGORY_COLORS[index] }));
+      .slice(0, categoryColors.length)
+      .map((item, index) => ({ ...item, color: categoryColors[index] }));
     const otherValue = categoryTotals
-      .slice(CATEGORY_COLORS.length)
+      .slice(categoryColors.length)
       .reduce((sum, item) => sum + item.value, 0);
     if (otherValue > 0) {
       categorySlices.push({
         label: "Other",
         value: otherValue,
-        color: OTHER_COLOR,
+        color: theme.border,
       });
     }
 
@@ -447,7 +459,7 @@ export default function DashboardScreen() {
         .length,
       recentSales: (saleDashboard?.recentSales ?? []).slice(0, 5),
     };
-  }, [data]);
+  }, [data, theme]);
 
   const alerts = metrics.outOfStock + metrics.lowStock;
   const healthTotal = Math.max(
@@ -460,7 +472,7 @@ export default function DashboardScreen() {
       <SafeAreaView className="bg-background" style={styles.page}>
         <HomeTopBar />
         <View style={styles.accessState}>
-          <Text style={styles.accessText}>Loading...</Text>
+          <Text style={[styles.accessText, { color: colors.muted }]}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -494,9 +506,9 @@ export default function DashboardScreen() {
       >
         <View style={styles.titleRow}>
           <View style={styles.titleBlock}>
-            <Text style={styles.eyebrow}>Executive dashboard</Text>
-            <Text style={styles.title}>Business overview</Text>
-            <Text style={styles.date}>
+            <Text style={[styles.eyebrow, { color: colors.muted }]}>Executive dashboard</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>Business overview</Text>
+            <Text style={[styles.date, { color: colors.muted }]}>
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
                 day: "numeric",
@@ -505,9 +517,9 @@ export default function DashboardScreen() {
               })}
             </Text>
           </View>
-          <View style={styles.livePill}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
+          <View style={[styles.livePill, { borderColor: theme.border, backgroundColor: theme.secondary }]}>
+            <View style={[styles.liveDot, { backgroundColor: theme.chart2 }]} />
+            <Text style={[styles.liveText, { color: theme.chart2 }]}>Live</Text>
           </View>
         </View>
 
@@ -518,6 +530,7 @@ export default function DashboardScreen() {
             caption={`${money(metrics.todaySales)} today`}
             icon={TrendingUp}
             tone="green"
+            theme={theme}
           />
           <Kpi
             label="Purchases · month"
@@ -525,6 +538,7 @@ export default function DashboardScreen() {
             caption={`${count(metrics.purchaseOrders)} orders recorded`}
             icon={HandCoins}
             tone="blue"
+            theme={theme}
           />
           <Kpi
             label="Receivables"
@@ -532,6 +546,7 @@ export default function DashboardScreen() {
             caption={`${count(metrics.unpaidInvoices)} unpaid invoices`}
             icon={Receipt}
             tone="amber"
+            theme={theme}
           />
           <Kpi
             label="Inventory value"
@@ -539,6 +554,7 @@ export default function DashboardScreen() {
             caption={`${count(metrics.activeProducts)} active products`}
             icon={Boxes}
             tone="blue"
+            theme={theme}
           />
           <Kpi
             label="Stock alerts"
@@ -546,6 +562,7 @@ export default function DashboardScreen() {
             caption={`${count(metrics.outOfStock)} out of stock`}
             icon={AlertTriangle}
             tone={alerts > 0 ? "red" : "green"}
+            theme={theme}
           />
           <Kpi
             label="Customers"
@@ -553,25 +570,26 @@ export default function DashboardScreen() {
             caption={`${count(metrics.activeCustomers)} active`}
             icon={Users}
             tone="green"
+            theme={theme}
           />
         </View>
 
         <View style={styles.actionRow}>
           <Pressable
-            style={[styles.actionButton, styles.actionPrimary]}
+            style={[styles.actionButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}
             onPress={() => router.push("/sales/new" as Href)}
           >
-            <CirclePlus size={18} color="#FFFFFF" />
-            <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>
+            <CirclePlus size={18} color={theme.primaryForeground} />
+            <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>
               New Sale
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.actionButton, styles.actionSecondary]}
+            style={[styles.actionButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
             onPress={() => router.push("/purchases/new" as Href)}
           >
-            <ClipboardList size={18} color={COLORS.green} />
-            <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>
+            <ClipboardList size={18} color={theme.chart2} />
+            <Text style={[styles.actionLabel, { color: theme.chart2 }]}>
               New Purchase
             </Text>
           </Pressable>
@@ -580,6 +598,7 @@ export default function DashboardScreen() {
         <Section
           title="Sales vs purchases"
           subtitle="Last 6 months · net totals"
+          theme={theme}
         >
           <BarChart
             data={metrics.months.map((month) => ({
@@ -587,13 +606,13 @@ export default function DashboardScreen() {
               values: [month.sales, month.purchases],
             }))}
             series={[
-              { name: "Sales", color: COLORS.green },
-              { name: "Purchases", color: COLORS.blue },
+              { name: "Sales", color: colors.green },
+              { name: "Purchases", color: colors.blue },
             ]}
           />
         </Section>
 
-        <Section title="Collections" subtitle="Paid vs outstanding sales">
+        <Section title="Collections" subtitle="Paid vs outstanding sales" theme={theme}>
           <DonutChart
             centerLabel="Collected"
             centerValue={`${Math.round(
@@ -605,12 +624,12 @@ export default function DashboardScreen() {
               {
                 label: "Collected",
                 value: metrics.collected,
-                color: COLORS.green,
+                color: colors.green,
               },
               {
                 label: "Outstanding",
                 value: metrics.outstanding,
-                color: COLORS.amber,
+                color: colors.amber,
               },
             ]}
           />
@@ -619,6 +638,7 @@ export default function DashboardScreen() {
         <Section
           title="Inventory by category"
           subtitle="Stock value at sale price"
+          theme={theme}
         >
           {metrics.categorySlices.length > 0 ? (
             <DonutChart
@@ -627,7 +647,7 @@ export default function DashboardScreen() {
               slices={metrics.categorySlices}
             />
           ) : (
-            <Text style={styles.empty}>No stock value recorded.</Text>
+            <Text style={[styles.empty, { color: colors.muted }]}>No stock value recorded.</Text>
           )}
         </Section>
 
@@ -635,50 +655,51 @@ export default function DashboardScreen() {
           title="Stock health"
           subtitle="Active products by status"
           onViewAll={() => router.push("/inventory/list" as Href)}
+          theme={theme}
         >
-          <View style={styles.healthBar}>
+          <View style={[styles.healthBar, { backgroundColor: theme.border }]}>
             <View
               style={{
                 flex: metrics.healthy / healthTotal,
-                backgroundColor: COLORS.green,
+                backgroundColor: colors.green,
               }}
             />
             <View
               style={{
                 flex: metrics.lowStock / healthTotal,
-                backgroundColor: COLORS.amber,
+                backgroundColor: colors.amber,
               }}
             />
             <View
               style={{
                 flex: metrics.outOfStock / healthTotal,
-                backgroundColor: COLORS.red,
+                backgroundColor: colors.red,
               }}
             />
           </View>
           <View style={styles.healthLegend}>
             {[
-              { label: "Healthy", value: metrics.healthy, color: COLORS.green },
-              { label: "Low", value: metrics.lowStock, color: COLORS.amber },
-              { label: "Out", value: metrics.outOfStock, color: COLORS.red },
+              { label: "Healthy", value: metrics.healthy, color: colors.green },
+              { label: "Low", value: metrics.lowStock, color: colors.amber },
+              { label: "Out", value: metrics.outOfStock, color: colors.red },
             ].map((item) => (
               <View key={item.label} style={styles.healthItem}>
                 <Text style={[styles.healthValue, { color: item.color }]}>
                   {count(item.value)}
                 </Text>
-                <Text style={styles.healthLabel}>{item.label}</Text>
+                <Text style={[styles.healthLabel, { color: colors.muted }]}>{item.label}</Text>
               </View>
             ))}
           </View>
           <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Needs restocking</Text>
-              <Text style={[styles.th, styles.tdNum]}>On hand</Text>
-              <Text style={[styles.th, styles.tdNum]}>Min</Text>
+            <View style={[styles.tableHeader, { backgroundColor: theme.secondary, borderColor: theme.border }]}>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Needs restocking</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>On hand</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Min</Text>
             </View>
             {metrics.lowStockItems.map((product) => (
-              <View key={product.id} style={styles.tableRow}>
-                <Text style={[styles.td, styles.tdWide]} numberOfLines={1}>
+              <View key={product.id} style={[styles.tableRow, { borderBottomColor: theme.border }]}>
+                <Text style={[styles.td, styles.tdWide, { color: colors.ink }]} numberOfLines={1}>
                   {product.name}
                 </Text>
                 <Text
@@ -688,21 +709,21 @@ export default function DashboardScreen() {
                     {
                       color:
                         Number(product.currentStock ?? 0) <= 0
-                          ? COLORS.red
-                          : COLORS.amber,
+                          ? colors.red
+                          : colors.amber,
                       fontWeight: "700",
                     },
                   ]}
                 >
                   {count(Number(product.currentStock ?? 0))}
                 </Text>
-                <Text style={[styles.td, styles.tdNum]}>
+                <Text style={[styles.td, styles.tdNum, { color: colors.ink }]}>
                   {count(Number(product.minimumStock ?? 0))}
                 </Text>
               </View>
             ))}
             {metrics.lowStockItems.length === 0 ? (
-              <Text style={styles.empty}>
+              <Text style={[styles.empty, { color: colors.muted }]}>
                 All products are sufficiently stocked.
               </Text>
             ) : null}
@@ -713,10 +734,11 @@ export default function DashboardScreen() {
           title="Top customer receivables"
           subtitle="Highest outstanding balances"
           onViewAll={() => router.push("/customers/list" as Href)}
+          theme={theme}
         >
           <RankedBars
             items={metrics.topCustomers}
-            color={COLORS.amber}
+            color={colors.amber}
             formatValue={(value) => money(value)}
             emptyText="No outstanding balances."
           />
@@ -726,34 +748,38 @@ export default function DashboardScreen() {
           title="Top suppliers"
           subtitle="By purchase value"
           onViewAll={() => router.push("/suppliers/list" as Href)}
+          theme={theme}
         >
           <RankedBars
             items={metrics.topSuppliers}
-            color={COLORS.blue}
+            color={colors.blue}
             formatValue={(value) => money(value)}
             emptyText="No purchases recorded."
           />
         </Section>
 
-        <Section title="Partner network" subtitle="Active relationships">
+        <Section title="Partner network" subtitle="Active relationships" theme={theme}>
           <View style={styles.partners}>
             <PartnerRow
               label="Customers"
               total={data.customers.length}
               active={metrics.activeCustomers}
-              color={COLORS.green}
+              color={colors.green}
+              theme={theme}
             />
             <PartnerRow
               label="Suppliers"
               total={data.suppliers.length}
               active={metrics.activeSuppliers}
-              color={COLORS.blue}
+              color={colors.blue}
+              theme={theme}
             />
             <PartnerRow
               label="Dealers"
               total={data.dealers.length}
               active={metrics.activeDealers}
-              color={COLORS.amber}
+              color={colors.amber}
+              theme={theme}
             />
           </View>
         </Section>
@@ -762,26 +788,27 @@ export default function DashboardScreen() {
           title="Recent sales"
           subtitle="Latest transactions"
           onViewAll={() => router.push("/sales/list" as Href)}
+          theme={theme}
         >
           <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Customer</Text>
-              <Text style={[styles.th, styles.tdNum]}>Total</Text>
-              <Text style={[styles.th, styles.tdStatus]}>Status</Text>
+            <View style={[styles.tableHeader, { backgroundColor: theme.secondary, borderColor: theme.border }]}>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Customer</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Total</Text>
+              <Text style={[styles.th, styles.tdStatus, { color: colors.muted }]}>Status</Text>
             </View>
             {metrics.recentSales.map((sale) => {
-              const status = statusOf(sale);
+              const status = statusOf(sale, theme);
               return (
-                <View key={sale.id} style={styles.tableRow}>
+                <View key={sale.id} style={[styles.tableRow, { borderBottomColor: theme.border }]}>
                   <View style={styles.tdWide}>
-                    <Text style={styles.td} numberOfLines={1}>
+                    <Text style={[styles.td, { color: colors.ink }]} numberOfLines={1}>
                       {sale.customerName}
                     </Text>
-                    <Text style={styles.tdSub}>
+                    <Text style={[styles.tdSub, { color: colors.muted }]}>
                       {new Date(sale.saleDate).toLocaleDateString()}
                     </Text>
                   </View>
-                  <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>
+                  <Text style={[styles.td, styles.tdNum, { color: colors.ink }]} numberOfLines={1}>
                     {money(sale.netTotal)}
                   </Text>
                   <View style={styles.tdStatus}>
@@ -802,7 +829,7 @@ export default function DashboardScreen() {
               );
             })}
             {metrics.recentSales.length === 0 ? (
-              <Text style={styles.empty}>No sales recorded.</Text>
+              <Text style={[styles.empty, { color: colors.muted }]}>No sales recorded.</Text>
             ) : null}
           </View>
         </Section>
@@ -812,10 +839,10 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: COLORS.surface },
+  page: { flex: 1 },
   accessState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  accessText: { color: COLORS.muted, fontSize: 14, textAlign: "center" },
-  scrollView: { flex: 1, backgroundColor: COLORS.surface },
+  accessText: { fontSize: 14, textAlign: "center" },
+  scrollView: { flex: 1 },
   content: { padding: 16, paddingBottom: 100, gap: 20 },
   titleRow: {
     flexDirection: "row",
@@ -825,22 +852,19 @@ const styles = StyleSheet.create({
   },
   titleBlock: { flex: 1, gap: 2 },
   eyebrow: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
-  title: { color: COLORS.ink, fontSize: 22, fontWeight: "800" },
-  date: { color: COLORS.muted, fontSize: 12 },
+  title: { fontSize: 22, fontWeight: "800" },
+  date: { fontSize: 12 },
   livePill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#CDE8D6",
-    backgroundColor: "#EAFBF0",
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -848,9 +872,8 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: "#1D9A59",
   },
-  liveText: { color: COLORS.green, fontSize: 11, fontWeight: "700" },
+  liveText: { fontSize: 11, fontWeight: "700" },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   kpi: {
     width: "48%",
@@ -870,19 +893,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFFAA",
   },
   kpiLabel: {
     flex: 1,
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   kpiBody: { gap: 2 },
-  kpiValue: { color: COLORS.ink, fontSize: 18, fontWeight: "800" },
-  kpiCaption: { color: COLORS.muted, fontSize: 10 },
+  kpiValue: { fontSize: 18, fontWeight: "800" },
+  kpiCaption: { fontSize: 10 },
   actionRow: { flexDirection: "row", gap: 10 },
   actionButton: {
     flex: 1,
@@ -894,11 +915,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
-  actionPrimary: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  actionSecondary: { backgroundColor: "#F4FAF6", borderColor: COLORS.green },
   actionLabel: { fontSize: 13, fontWeight: "700", letterSpacing: 0.2 },
-  actionPrimaryLabel: { color: "#FFFFFF" },
-  actionSecondaryLabel: { color: COLORS.green },
   sectionHeading: {
     flexDirection: "row",
     alignItems: "center",
@@ -907,13 +924,12 @@ const styles = StyleSheet.create({
   },
   sectionTitleBlock: { flex: 1, gap: 2 },
   sectionTitle: {
-    color: COLORS.ink,
     fontSize: 15,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
-  sectionSubtitle: { color: COLORS.muted, fontSize: 11 },
+  sectionSubtitle: { fontSize: 11 },
   seeAll: {
     minHeight: 30,
     paddingHorizontal: 10,
@@ -922,20 +938,15 @@ const styles = StyleSheet.create({
     gap: 2,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#CDE8D6",
-    backgroundColor: "#F4FAF6",
   },
   seeAllText: {
-    color: COLORS.green,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
   panel: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: COLORS.surface,
     padding: 12,
   },
   healthBar: {
@@ -943,7 +954,6 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     overflow: "hidden",
-    backgroundColor: COLORS.border,
   },
   healthLegend: {
     flexDirection: "row",
@@ -954,7 +964,6 @@ const styles = StyleSheet.create({
   healthItem: { alignItems: "center", gap: 2 },
   healthValue: { fontSize: 18, fontWeight: "800" },
   healthLabel: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -966,26 +975,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  partnerLabel: { color: COLORS.ink, fontSize: 12, fontWeight: "700" },
-  partnerCount: { color: COLORS.ink, fontSize: 14, fontWeight: "800" },
+  partnerLabel: { fontSize: 12, fontWeight: "700" },
+  partnerCount: { fontSize: 14, fontWeight: "800" },
   partnerTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.border,
     overflow: "hidden",
   },
   partnerFill: { height: "100%", borderRadius: 3 },
-  partnerCaption: { color: COLORS.muted, fontSize: 10 },
+  partnerCaption: { fontSize: 10 },
   table: { marginHorizontal: -12 },
   tableHeader: {
     minHeight: 32,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    backgroundColor: "#F1F5F9",
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#D9DEE5",
   },
   tableRow: {
     minHeight: 48,
@@ -993,24 +999,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#CBD5E1",
   },
   th: {
-    color: COLORS.muted,
     fontSize: 9,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  td: { color: COLORS.ink, fontSize: 12 },
-  tdSub: { color: COLORS.muted, fontSize: 10, marginTop: 1 },
+  td: { fontSize: 12 },
+  tdSub: { fontSize: 10, marginTop: 1 },
   tdWide: { flex: 1.6 },
   tdNum: { flex: 1, textAlign: "right" },
   tdStatus: { width: 64, alignItems: "flex-end" },
   statusPill: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.3 },
   empty: {
-    color: COLORS.muted,
     fontSize: 12,
     textAlign: "center",
     paddingVertical: 14,

@@ -1,6 +1,7 @@
 'use client';
 
-import { ScrollView, StatusBar, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useColorScheme } from 'nativewind';
 import { ChevronLeft, Crown, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';

@@ -18,9 +18,13 @@ import { CategoryItem } from '@/models/category';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { useColorScheme } from 'nativewind';
+import { THEME } from '@/lib/theme';
 
 export default function CategoriesScreen() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+    const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
     const permissionState = usePagePermission('/categories/categories');
     const service = React.useMemo(() => new CategoryServiceClient(), []);
 
@@ -157,15 +161,15 @@ export default function CategoriesScreen() {
                     <Icon as={ChevronLeft} size={22} className='text-foreground' />
                 </Button>
                 <Text className='text-foreground' style={styles.headerTitle}>Category</Text>
-                <Button variant='outline' size='sm' onPress={openCreateModal} disabled={permissionState !== 'authorized'} style={styles.addButton}>
-                    <Icon as={Plus} size={14} color='#0F172A' />
-                    <Text style={styles.addButtonText}>New</Text>
+                <Button variant='outline' size='sm' onPress={openCreateModal} disabled={permissionState !== 'authorized'} style={[styles.addButton, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                    <Icon as={Plus} size={14} color={theme.foreground} />
+                    <Text style={[styles.addButtonText, { color: theme.foreground }]}>New</Text>
                 </Button>
             </View>
 
             {permissionState === 'checking' ? (
                 <View style={styles.emptyState}>
-                    <ActivityIndicator size="large" />
+                    <ActivityIndicator size="large" color={theme.primary} />
                     <Text className='text-muted-foreground' style={styles.emptyText}>Checking permission...</Text>
                 </View>
             ) : permissionState === 'denied' ? (
@@ -181,7 +185,7 @@ export default function CategoriesScreen() {
               >
                 {loading && !refreshing ? (
                     <View style={styles.emptyState}>
-                        <ActivityIndicator size="large" />
+                        <ActivityIndicator size="large" color={theme.primary} />
                         <Text className='text-muted-foreground' style={styles.emptyText}>Loading categories...</Text>
                     </View>
                 ) : categories.length === 0 ? (
@@ -190,29 +194,39 @@ export default function CategoriesScreen() {
                     </View>
                 ) : (
                     <View>
-                        <View style={styles.summaryBar}>
+                        <View style={[styles.summaryBar, { backgroundColor: theme.primary }]}>
                             <View style={styles.summaryCell}>
-                                <Text style={styles.summaryLabel}>Total</Text>
-                                <Text style={styles.summaryValue}>{categories.length}</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Total</Text>
+                                <Text style={[styles.summaryValue, { color: theme.primaryForeground }]}>{categories.length}</Text>
                             </View>
-                            <View style={styles.summaryDivider} />
+                            <View style={[styles.summaryDivider, { backgroundColor: theme.mutedForeground }]} />
                             <View style={styles.summaryCell}>
-                                <Text style={styles.summaryLabel}>Active</Text>
-                                <Text style={[styles.summaryValue, styles.summaryActive]}>{categories.filter((item) => item.isActive).length}</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Active</Text>
+                                <Text style={[styles.summaryValue, { color: theme.chart2 }]}>{categories.filter((item) => item.isActive).length}</Text>
                             </View>
-                            <View style={styles.summaryDivider} />
+                            <View style={[styles.summaryDivider, { backgroundColor: theme.mutedForeground }]} />
                             <View style={styles.summaryCell}>
-                                <Text style={styles.summaryLabel}>Inactive</Text>
-                                <Text style={[styles.summaryValue, styles.summaryInactive]}>{categories.filter((item) => !item.isActive).length}</Text>
+                                <Text style={[styles.summaryLabel, { color: theme.primaryForeground }]}>Inactive</Text>
+                                <Text style={[styles.summaryValue, { color: theme.destructive }]}>{categories.filter((item) => !item.isActive).length}</Text>
                             </View>
                         </View>
 
                         <View style={styles.listContainer}>
                             {categories.map((category) => (
-                                <View key={category.id} style={[styles.card, category.isActive ? styles.cardActive : styles.cardInactive]}>
+                                <View
+                                    key={category.id}
+                                    style={[
+                                        styles.card,
+                                        {
+                                            backgroundColor: category.isActive ? theme.card : theme.muted,
+                                            borderColor: theme.border,
+                                            borderLeftColor: category.isActive ? theme.chart2 : theme.mutedForeground,
+                                        },
+                                    ]}
+                                >
                                     <View style={styles.cardBody}>
-                                        <View style={[styles.tile, category.isActive ? styles.tileActive : styles.tileInactive]}>
-                                            <Text style={[styles.tileText, category.isActive ? styles.tileTextActive : styles.tileTextInactive]}>
+                                        <View style={[styles.tile, { backgroundColor: theme.secondary }]}>
+                                            <Text style={[styles.tileText, { color: category.isActive ? theme.chart2 : theme.mutedForeground }]}>
                                                 {(category.category?.trim().charAt(0) || '?').toUpperCase()}
                                             </Text>
                                         </View>
@@ -221,8 +235,8 @@ export default function CategoriesScreen() {
                                                 {category.category}
                                             </Text>
                                             <View style={styles.statusRow}>
-                                                <View style={[styles.statusDot, category.isActive ? styles.dotActive : styles.dotInactive]} />
-                                                <Text style={[styles.statusLabel, category.isActive ? styles.statusLabelActive : styles.statusLabelInactive]}>
+                                                <View style={[styles.statusDot, { backgroundColor: category.isActive ? theme.chart2 : theme.destructive }]} />
+                                                <Text style={[styles.statusLabel, { color: category.isActive ? theme.chart2 : theme.destructive }]}>
                                                     {category.isActive ? 'Active' : 'Inactive'}
                                                 </Text>
                                             </View>
@@ -237,16 +251,16 @@ export default function CategoriesScreen() {
                                             accessibilityRole='button'
                                             accessibilityLabel={`Edit ${category.category}`}
                                         >
-                                            <Pencil size={15} color='#2367A8' />
+                                            <Pencil size={15} color={theme.primary} />
                                         </Pressable>
                                         <Pressable
                                             onPress={() => confirmDelete(category)}
                                             hitSlop={6}
-                                            style={[styles.actionButton, styles.actionButtonDanger]}
+                                            style={[styles.actionButton, { borderColor: theme.destructive, backgroundColor: theme.card }]}
                                             accessibilityRole='button'
                                             accessibilityLabel={`Delete ${category.category}`}
                                         >
-                                            <Trash2 size={15} color='#B42318' />
+                                            <Trash2 size={15} color={theme.destructive} />
                                         </Pressable>
                                     </View>
                                 </View>
@@ -256,7 +270,7 @@ export default function CategoriesScreen() {
                 )}
                 {loadingMore ? (
                     <View style={styles.loadMoreRow}>
-                        <ActivityIndicator size='small' />
+                        <ActivityIndicator size='small' color={theme.primary} />
                         <Text className='text-muted-foreground'>Loading more...</Text>
                     </View>
                 ) : null}
@@ -270,13 +284,13 @@ export default function CategoriesScreen() {
                         )}
 
             <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-                <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay} 
+                <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                    <View className='bg-card border-border' style={styles.modalSheet}>
+                    <View style={[styles.modalSheet, { backgroundColor: theme.card, borderColor: theme.border }]}>
                         <View style={styles.modalHeader}>
                             <Text variant='h4' className='text-foreground'> {editingCategory ? 'Edit category' : 'Add category'} </Text>
                             <Pressable onPress={closeModal} style={styles.closeButton}>
-                                <Icon as={X} size={20} color="#4b5563" />
+                                <Icon as={X} size={20} color={theme.mutedForeground} />
                             </Pressable>
                         </View>
 
@@ -291,15 +305,20 @@ export default function CategoriesScreen() {
 
                         <View style={styles.switchRow}>
                             <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
-                            <Switch value={editingCategory?.isActive} onValueChange={(value) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, isActive: value } as (CategoryItem | null)))} />
+                            <Switch
+                                value={editingCategory?.isActive}
+                                onValueChange={(value) => setEditingCategory((prev: CategoryItem | null) => ({ ...prev, isActive: value } as (CategoryItem | null)))}
+                                trackColor={{ false: theme.muted, true: theme.primary }}
+                                thumbColor={theme.card}
+                            />
                         </View>
 
                         <View style={styles.modalActions}>
                             <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
                                 <Text className='text-foreground'>Cancel</Text>
                             </Button>
-                            <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
-                                {saving ? <ActivityIndicator size='small' color="#fff" /> : <Text className='text-primary-foreground'>Save</Text>}
+                            <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, { backgroundColor: theme.primary }]}>
+                                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
                             </Button>
                         </View>
                     </View>
@@ -336,13 +355,10 @@ const styles = StyleSheet.create({
         minWidth: 64,
         borderRadius: 6,
         borderWidth: 1.5,
-        borderColor: '#0F172A',
-        backgroundColor: '#FFFFFF',
     },
     addButtonText: {
         fontSize: 12,
         fontWeight: '800',
-        color: '#0F172A',
         letterSpacing: 0.3,
     },
     headerSpacer: {
@@ -361,7 +377,6 @@ const styles = StyleSheet.create({
         alignItems: 'stretch',
         marginBottom: 14,
         paddingVertical: 12,
-        backgroundColor: '#0F172A',
         borderRadius: 8,
     },
     summaryCell: {
@@ -370,12 +385,10 @@ const styles = StyleSheet.create({
     },
     summaryDivider: {
         width: StyleSheet.hairlineWidth,
-        backgroundColor: '#475569',
     },
     summaryLabel: {
         fontSize: 9,
         fontWeight: '700',
-        color: '#94A3B8',
         textTransform: 'uppercase',
         letterSpacing: 0.6,
     },
@@ -383,10 +396,7 @@ const styles = StyleSheet.create({
         marginTop: 3,
         fontSize: 18,
         fontWeight: '800',
-        color: '#FFFFFF',
     },
-    summaryActive: { color: '#6EE7B7' },
-    summaryInactive: { color: '#FCA5A5' },
     listContainer: {
         gap: 8,
     },
@@ -400,10 +410,7 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        backgroundColor: '#FFFFFF',
     },
-    cardActive: { borderColor: '#D9DEE5', borderLeftColor: '#16794B' },
-    cardInactive: { borderColor: '#D9DEE5', borderLeftColor: '#94A3B8', backgroundColor: '#F8FAFC' },
     cardBody: {
         flex: 1,
         minWidth: 0,
@@ -418,11 +425,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    tileActive: { backgroundColor: '#E6F4EC' },
-    tileInactive: { backgroundColor: '#E2E8F0' },
     tileText: { fontSize: 15, fontWeight: '800' },
-    tileTextActive: { color: '#16794B' },
-    tileTextInactive: { color: '#64748B' },
     cardInfo: {
         flex: 1,
         minWidth: 0,
@@ -438,11 +441,7 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     statusDot: { width: 6, height: 6, borderRadius: 3 },
-    dotActive: { backgroundColor: '#16794B' },
-    dotInactive: { backgroundColor: '#94A3B8' },
     statusLabel: { fontSize: 11, fontWeight: '600' },
-    statusLabelActive: { color: '#047857' },
-    statusLabelInactive: { color: '#64748B' },
     actions: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -453,13 +452,8 @@ const styles = StyleSheet.create({
         height: 32,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#BFD4EA',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFFFFF',
-    },
-    actionButtonDanger: {
-        borderColor: '#F0C4BF',
     },
     emptyState: {
         paddingVertical: 24,
@@ -523,8 +517,5 @@ const styles = StyleSheet.create({
     modalButton: {
         minWidth: 96,
         borderRadius: 6,
-    },
-    saveButton: {
-        backgroundColor: '#0F172A',
     },
 });

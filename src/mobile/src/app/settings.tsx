@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight, Globe, Moon } from 'lucide-react-native';
 
 // 1. Import useColorScheme from nativewind, NOT react-native
 import { useColorScheme } from 'nativewind';
+import { THEME } from '@/lib/theme';
 
 interface LanguageOption {
   code: string;
@@ -37,8 +38,8 @@ export default function SettingsScreen() {
 
   // 2. Destructure colorScheme and setColorScheme from NativeWind
   const { colorScheme, setColorScheme } = useColorScheme();
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
 
-  const [isDarkMode, setIsDarkMode] = useState(colorScheme === 'dark');
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   const currentLanguage = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
@@ -51,9 +52,7 @@ export default function SettingsScreen() {
 
   // 3. Update the theme toggle handler
   const handleDarkModeToggle = (value: boolean) => {
-    const nextTheme = value ? 'dark' : 'light';
-    setIsDarkMode(value);
-    setColorScheme(nextTheme); // Switches the NativeWind CSS scope globally
+    setColorScheme(value ? 'dark' : 'light');
   };
 
   return (
@@ -61,7 +60,7 @@ export default function SettingsScreen() {
       {/* Top Navigation Bar */}
       <View className="bg-background border-b-separator" style={styles.topBar}>
         <TouchableOpacity style={styles.topBarButton} onPress={() => router.back()} activeOpacity={0.7}>
-          <Icon className='text-icon' as={ChevronLeft} size={24} />
+          <Icon className='text-foreground' as={ChevronLeft} size={24} />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>
           {t('title.settings')}
@@ -107,9 +106,10 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Switch
-              value={isDarkMode}
+              value={colorScheme === 'dark'}
               onValueChange={handleDarkModeToggle}
-              trackColor={{ false: "grey", true: "green" }}
+              trackColor={{ false: theme.muted, true: theme.primary }}
+              thumbColor={theme.card}
             />
           </View>
         </View>
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
           onPress={() => setLanguageModalVisible(false)}
         >
           <View className='bg-card' style={styles.modalContent}>
-            <View style={styles.modalHandle} />
+            <View style={[styles.modalHandle, { backgroundColor: theme.border }]} />
             <Text className='text-foreground' style={styles.modalTitle}>
               {t('title.selectLanguage')}
             </Text>
@@ -246,7 +246,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#9BA1A6',
     alignSelf: 'center',
     marginTop: 8,
     marginBottom: 8,

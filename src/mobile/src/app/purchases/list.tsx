@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useColorScheme } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react-native";
 
@@ -27,6 +28,7 @@ import { getSelectedShopId } from "@/lib/authStorage";
 import { ShopServiceClient } from "@/services/shopService";
 import ShopBanner from "@/components/shopBanner";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from "@/lib/theme";
 
 const purchaseService = container.resolve<IPurchaseService>(
   DI_TOKENS.IPurchaseService,
@@ -34,10 +36,7 @@ const purchaseService = container.resolve<IPurchaseService>(
 const PAGE_SIZE = 20;
 const shopService = new ShopServiceClient();
 
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-};
+type ThemeColors = typeof THEME.light;
 
 function money(value: number) {
   return value.toLocaleString("en-US", {
@@ -61,18 +60,20 @@ function Field({
   label,
   value,
   align,
+  theme,
 }: {
   label: string;
   value: string | number;
   align?: "left" | "right";
+  theme: ThemeColors;
 }) {
   return (
     <View style={[styles.field, align === "right" && styles.fieldRight]}>
-      <Text style={[styles.fieldLabel, align === "right" && styles.textRight]}>
+      <Text style={[styles.fieldLabel, { color: theme.mutedForeground }, align === "right" && styles.textRight]}>
         {label}
       </Text>
       <Text
-        style={[styles.fieldValue, align === "right" && styles.textRight]}
+        style={[styles.fieldValue, { color: theme.foreground }, align === "right" && styles.textRight]}
         numberOfLines={1}
       >
         {value}
@@ -83,6 +84,8 @@ function Field({
 
 export default function PurchaseListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/purchases/list');
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -182,7 +185,7 @@ export default function PurchaseListScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -198,7 +201,7 @@ export default function PurchaseListScreen() {
 
       {loading && purchases.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading purchases...
           </Text>
@@ -239,9 +242,7 @@ export default function PurchaseListScreen() {
               key={purchase.id}
               accessibilityRole="button"
               accessibilityLabel={`Purchase from ${purchase.supplierName}`}
-              style={[
-                styles.purchaseRow
-              ]}
+              style={[styles.purchaseRow, { backgroundColor: theme.card, borderColor: theme.border }]}
               onPress={() =>
                 router.push({
                   pathname: "/purchases/view",
@@ -250,10 +251,10 @@ export default function PurchaseListScreen() {
               }
             >
               <View style={styles.topRow}>
-                <Text style={styles.purchaseId}>
+                <Text style={[styles.purchaseId, { color: theme.foreground }]}>
                   #{purchase.id.slice(0, 8).toUpperCase()}
                 </Text>
-                <Text style={styles.purchaseDate}>
+                <Text style={[styles.purchaseDate, { color: theme.mutedForeground }]}>
                   {formatDate(purchase.purchaseDate)}
                 </Text>
                 <Icon
@@ -265,30 +266,34 @@ export default function PurchaseListScreen() {
 
               <View style={styles.fieldRow}>
                 <View style={styles.fieldWide}>
-                  <Field label="Supplier" value={purchase.supplierName} />
+                  <Field label="Supplier" value={purchase.supplierName} theme={theme} />
                 </View>
                 <Field
                   label="Products"
                   value={purchase.totalProducts}
                   align="right"
+                  theme={theme}
                 />
               </View>
 
-              <View style={styles.amountRow}>
+              <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                 <Field
                   label="Sub Total"
                   value={money(purchase.subTotal)}
                   align="right"
+                  theme={theme}
                 />
                 <Field
                   label="Discount"
                   value={money(purchase.discount)}
                   align="right"
+                  theme={theme}
                 />
                 <Field
                   label="Net Total"
                   value={money(purchase.netTotal)}
                   align="right"
+                  theme={theme}
                 />
               </View>
             </Pressable>
@@ -297,10 +302,10 @@ export default function PurchaseListScreen() {
             <ActivityIndicator
               style={styles.loadMore}
               size="small"
-              color="#16794B"
+              color={theme.chart2}
             />
           ) : null}
-          {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
         </ScrollView>
       )}
       </>}
@@ -328,24 +333,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   purchaseRow: {
-    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
-  purchaseRowPressed: { backgroundColor: "#EEF2F7" },
   topRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   purchaseId: {
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: COLORS.ink,
     letterSpacing: 0.3,
   },
-  purchaseDate: { fontSize: 10, color: COLORS.muted },
+  purchaseDate: { fontSize: 10 },
   fieldRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   fieldWide: { flex: 1, minWidth: 0 },
   amountRow: {
@@ -353,19 +354,17 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#CBD5E1",
   },
   field: { flex: 1, minWidth: 0 },
   fieldRight: { alignItems: "flex-end" },
   fieldLabel: {
     fontSize: 8.5,
     fontWeight: "700",
-    color: COLORS.muted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
     marginBottom: 2,
   },
-  fieldValue: { fontSize: 12.5, fontWeight: "700", color: COLORS.ink },
+  fieldValue: { fontSize: 12.5, fontWeight: "700" },
   textRight: { textAlign: "right" },
   centeredState: {
     flex: 1,
@@ -379,7 +378,6 @@ const styles = StyleSheet.create({
   endNote: {
     textAlign: "center",
     fontSize: 10,
-    color: COLORS.muted,
     marginVertical: 8,
   },
 });

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import {
   BarChart3,
   Boxes,
@@ -24,15 +25,23 @@ import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ChevronLeft } from 'lucide-react-native';
+import { THEME } from '@/lib/theme';
 
-const TONES = {
-  blue: { fg: '#2367A8', bg: '#EAF3FB', border: '#D6E6F3' },
-  amber: { fg: '#9A6700', bg: '#FFF6E0', border: '#EFE2BF' },
-  green: { fg: '#16794B', bg: '#E6F4EC', border: '#D5E9DC' },
-  slate: { fg: '#475569', bg: '#EEF2F6', border: '#D9DEE5' },
+const TONE_COLOR_KEYS = {
+  blue: 'chart1',
+  amber: 'chart4',
+  green: 'chart2',
+  slate: 'chart3',
 } as const;
 
-type Tone = keyof typeof TONES;
+type Tone = keyof typeof TONE_COLOR_KEYS;
+type ThemeColors = typeof THEME.light;
+
+const getToneColors = (tone: Tone, theme: ThemeColors) => ({
+  fg: theme[TONE_COLOR_KEYS[tone]],
+  bg: theme.secondary,
+  border: theme.border,
+});
 
 const COLUMNS = 4;
 const GRID_GAP = 8;
@@ -90,19 +99,21 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
   ({
     item,
     tone,
+    theme,
     width,
     onPress,
   }: {
     item: (typeof sections)[number]['items'][number];
     tone: Tone;
+    theme: ThemeColors;
     width: number;
     onPress: (path: string) => void;
   }) => {
     const IconComponent = item.icon;
-    const colors = TONES[tone];
+    const colors = getToneColors(tone, theme);
     return (
       <Pressable
-        style={[styles.card, { width }]}
+        style={[styles.card, { width, backgroundColor: theme.card, borderColor: theme.border }]}
         onPress={() => onPress(item.path)}
         accessibilityRole="button"
         accessibilityLabel={item.label}
@@ -110,7 +121,7 @@ const sections: { title: string; tone: Tone; items: { label: string; icon: typeo
         <View style={[styles.iconChip, { backgroundColor: colors.bg, borderColor: colors.border }]}>
           <IconComponent size={18} color={colors.fg} />
         </View>
-        <Text className="text-foreground" style={styles.cardLabel} numberOfLines={2}>
+        <Text style={[styles.cardLabel, { color: theme.cardForeground }]} numberOfLines={2}>
           {item.label}
         </Text>
       </Pressable>
@@ -122,6 +133,8 @@ MenuItemCard.displayName = 'MenuItemCard';
 
 export default function MenuScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = Math.floor((screenWidth - CONTENT_PADDING * 2 - GRID_GAP * (COLUMNS - 1)) / COLUMNS);
 
@@ -153,12 +166,12 @@ export default function MenuScreen() {
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={[styles.sectionAccent, { backgroundColor: TONES[section.tone].fg }]} />
+              <View style={[styles.sectionAccent, { backgroundColor: getToneColors(section.tone, theme).fg }]} />
               <Text className="text-foreground" style={styles.sectionTitle} numberOfLines={1}>
                 {section.title}
               </Text>
-              <View style={[styles.sectionCount, { backgroundColor: TONES[section.tone].bg }]}>
-                <Text style={[styles.sectionCountText, { color: TONES[section.tone].fg }]}>{section.items.length}</Text>
+              <View style={[styles.sectionCount, { backgroundColor: getToneColors(section.tone, theme).bg }]}>
+                <Text style={[styles.sectionCountText, { color: getToneColors(section.tone, theme).fg }]}>{section.items.length}</Text>
               </View>
             </View>
 
@@ -168,6 +181,7 @@ export default function MenuScreen() {
                   key={`${section.title}-${item.label}-${index}`}
                   item={item}
                   tone={section.tone}
+                  theme={theme}
                   width={cardWidth}
                   onPress={handlePress}
                 />
@@ -221,7 +235,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#D9DEE5',
   },
   sectionAccent: {
     width: 3,
@@ -258,8 +271,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#D9DEE5',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     paddingHorizontal: 4,
     gap: 6,

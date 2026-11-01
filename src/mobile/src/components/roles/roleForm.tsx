@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -18,20 +20,21 @@ import UnauthorizedView from '@/components/unauthorized-view';
 import { container, DI_TOKENS } from '@/di';
 import { usePagePermission } from '@/lib/usePagePermission';
 import { IRoleService } from '@/services/roleService';
+import { THEME } from '@/lib/theme';
 
 const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
 
 export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const roleId = Array.isArray(params.id) ? params.id[0] : params.id;
   const permissionState = usePagePermission(mode === 'create' ? '/roles/new' : '/roles/edit');
   const [role, setRole] = React.useState('');
   const [rowVersion, setRowVersion] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(mode === 'edit');
-
   React.useEffect(() => {
     if (mode !== 'edit' || permissionState !== 'authorized') return;
     if (!roleId) {
@@ -83,7 +86,7 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'} />
+      <StatusBar />
       <LoadingOverlay isLoading={loading} />
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
@@ -95,14 +98,14 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.loadingText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.loadingText}>Loading role details...</Text>
         </View>
       ) : (
@@ -113,7 +116,7 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.field}>
-            <Label className="text-foreground">Role <Text className="text-red-500">*</Text></Label>
+            <Label className="text-foreground">Role <Text style={{ color: theme.destructive }}>*</Text></Label>
             <Input
               placeholder="Enter role"
               value={role}
@@ -128,8 +131,8 @@ export default function RoleFormScreen({ mode }: { mode: 'create' | 'edit' }) {
               <Text className="text-foreground">Cancel</Text>
             </Button>
             <Button style={styles.actionButton} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-                <Text className="text-background font-semibold">{mode === 'create' ? 'Create Role' : 'Save Changes'}</Text>
+              {loading ? <ActivityIndicator color={theme.primaryForeground} size="small" /> : (
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>{mode === 'create' ? 'Create Role' : 'Save Changes'}</Text>
               )}
             </Button>
           </View>

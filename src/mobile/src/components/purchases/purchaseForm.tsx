@@ -9,12 +9,12 @@ import {
   Modal,
   Platform,
   Pressable,
-  StatusBar,
   StyleSheet,
   TextInput,
   View,
   useColorScheme,
 } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertTriangle, ChevronLeft, Package, Plus, Search, Store, Trash2, X } from 'lucide-react-native';

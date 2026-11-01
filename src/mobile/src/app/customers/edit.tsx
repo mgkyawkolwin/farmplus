@@ -6,11 +6,11 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  StatusBar,
   StyleSheet,
   View,
-  useColorScheme,
-} from 'react-native';
+  } from 'react-native';
+  import { useColorScheme } from 'nativewind';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, User } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -30,6 +30,7 @@ import LoadingOverlay from '@/components/loadingOverlay';
 import { normalizeMediaFile } from '@/lib/mediaFile';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+  import { THEME } from '@/lib/theme';
 
 const customerService = container.resolve<ICustomerService>(DI_TOKENS.ICustomerService);
 
@@ -60,7 +61,8 @@ const emptyFormState: CustomerFormState = {
 export default function EditCustomerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
-  const colorScheme = useColorScheme();
+    const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+    const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/customers/edit');
   const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -210,10 +212,7 @@ export default function EditCustomerScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar
-        className="bg-background"
-        barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
-      />
+      <StatusBar />
       <LoadingOverlay isLoading={loading || (permissionState === 'authorized' && pageLoading)} />
 
       <View className="bg-background border-b border-border" style={styles.headerBar}>
@@ -228,14 +227,14 @@ export default function EditCustomerScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : pageLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading customer details...
           </Text>
@@ -247,13 +246,13 @@ export default function EditCustomerScreen() {
           keyboardShouldPersistTaps="handled" className="bg-background">
           <View style={styles.photoSection}>
             <Pressable onPress={() => setShowPhotoModal(true)} disabled={loading}>
-              <View style={styles.avatarWrapper}>
+              <View style={[styles.avatarWrapper, { borderColor: theme.border, backgroundColor: theme.muted }]}>
                 {profileImageUri ? (
                   <Avatar alt={formData.name || 'Customer'} style={styles.avatar}>
                     <AvatarImage source={{ uri: profileImageUri }} style={styles.avatarImage} />
                   </Avatar>
                 ) : (
-                  <View style={styles.avatarFallback}>
+                  <View style={[styles.avatarFallback, { backgroundColor: theme.secondary }]}>
                     <Icon className="text-muted-foreground" as={User} size={34} />
                   </View>
                 )}
@@ -267,9 +266,9 @@ export default function EditCustomerScreen() {
             animationType="slide"
             onRequestClose={() => setShowPhotoModal(false)}
           >
-            <Pressable style={styles.modalBackdrop} onPress={() => setShowPhotoModal(false)}>
-              <Pressable style={styles.modalSheet} onPress={() => undefined}>
-                <View style={styles.sheetHandle} />
+            <Pressable style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]} onPress={() => setShowPhotoModal(false)}>
+              <Pressable style={[styles.modalSheet, { backgroundColor: theme.card }]} onPress={() => undefined}>
+                <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
                 <Text className="text-foreground" style={styles.sheetTitle}>Choose photo</Text>
                 <Button variant="outline" style={styles.sheetButton} onPress={() => handlePickProfileImage('library')} disabled={loading}>
                   <Text>Choose from gallery</Text>
@@ -286,7 +285,7 @@ export default function EditCustomerScreen() {
 
           <View style={styles.field}>
             <Label className="text-foreground">
-              Name <Text className="text-red-500">*</Text>
+              Name <Text style={{ color: theme.destructive }}>*</Text>
             </Label>
             <Input
               placeholder="Enter customer name"
@@ -385,11 +384,11 @@ export default function EditCustomerScreen() {
             <Button className="border border-foreground" variant="outline" style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
               <Text className="text-foreground">Cancel</Text>
             </Button>
-            <Button className="bg-foreground" style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+            <Button style={[styles.submitButton, { backgroundColor: theme.primary }]} onPress={handleSubmit} disabled={loading}>
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={theme.primaryForeground} size="small" />
               ) : (
-                <Text className="text-background font-semibold">Update Customer</Text>
+                <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Update Customer</Text>
               )}
             </Button>
           </View>
@@ -439,8 +438,6 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F3F4F6',
   },
   avatar: {
     width: 96,
@@ -455,17 +452,14 @@ const styles = StyleSheet.create({
   avatarFallback: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   modalSheet: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
@@ -476,7 +470,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#D1D5DB',
     alignSelf: 'center',
     marginBottom: 14,
   },

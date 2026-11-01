@@ -12,12 +12,14 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, CheckCheck, ChevronLeft, Mail } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import LoadingOverlay from '@/components/loadingOverlay';
 import SnackBar from '@/components/ui/snack-bar';
+import { THEME } from '@/lib/theme';
 import { CustomerMessage } from '@/models/message';
 import { MessageServiceClient } from '@/services/messageService';
 
@@ -43,6 +45,8 @@ function getPreview(text: string) {
 
 export default function MessagesListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const [messages, setMessages] = React.useState<CustomerMessage[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -114,12 +118,14 @@ export default function MessagesListScreen() {
 
       {loading && messages.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading messages...</Text>
         </View>
       ) : messages.length === 0 ? (
         <View style={styles.centeredState}>
-          <View style={styles.emptyIcon}><Bell size={22} color="#2367A8" /></View>
+          <View style={[styles.emptyIcon, { backgroundColor: theme.secondary }]}>
+            <Bell size={22} color={theme.primary} />
+          </View>
           <Text className="text-foreground" style={styles.stateTitle}>You’re all caught up</Text>
           <Text className="text-muted-foreground" style={styles.stateText}>New messages will appear here.</Text>
         </View>
@@ -143,10 +149,13 @@ export default function MessagesListScreen() {
               accessibilityRole="button"
               accessibilityLabel={`${message.title}, ${message.isRead ? 'Read' : 'Unread'}, ${formatDate(message.sentAtUtc)}`}
               onPress={() => void openMessage(message)}
-              style={[styles.messageRow, !message.isRead && styles.unreadMessage]}
+              style={[
+                styles.messageRow,
+                { backgroundColor: theme.card, borderColor: message.isRead ? theme.border : theme.primary },
+              ]}
             >
-              <View style={[styles.messageIcon, !message.isRead && styles.messageIconUnread]}>
-                <Mail size={17} color={!message.isRead ? '#2367A8' : '#64748B'} />
+              <View style={[styles.messageIcon, { backgroundColor: theme.secondary }]}>
+                <Mail size={17} color={message.isRead ? theme.mutedForeground : theme.primary} />
               </View>
               <View style={styles.messageBody}>
                 <View style={styles.messageHeader}>
@@ -159,16 +168,26 @@ export default function MessagesListScreen() {
                   {getPreview(message.messageText)}
                 </Text>
                 <View style={styles.messageFooter}>
-                  <View style={[styles.statusDot, message.isRead ? styles.readDot : styles.unreadDot]} />
-                  <Text style={[styles.statusLabel, message.isRead ? styles.readLabel : styles.unreadLabel]}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: message.isRead ? theme.mutedForeground : theme.primary },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.statusLabel,
+                      { color: message.isRead ? theme.mutedForeground : theme.primary },
+                    ]}
+                  >
                     {message.isRead ? 'Read' : 'Unread'}
                   </Text>
                 </View>
               </View>
             </Pressable>
           ))}
-          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#16794B" /> : null}
-          {!hasMore ? <Text style={styles.endNote}>End of messages</Text> : null}
+          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color={theme.primary} /> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of messages</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -183,10 +202,8 @@ const styles = StyleSheet.create({
   headerMeta: { minWidth: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   unreadCount: { fontSize: 12, fontWeight: '700' },
   content: { padding: 12, gap: 10, paddingBottom: 24 },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, padding: 13, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 7, backgroundColor: '#FFFFFF' },
-  unreadMessage: { borderColor: '#BFD7EC', backgroundColor: '#F7FBFF' },
-  messageIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: '#F1F5F9' },
-  messageIconUnread: { backgroundColor: '#EAF3FB' },
+  messageRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, padding: 13, borderWidth: 1, borderRadius: 7 },
+  messageIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
   messageBody: { flex: 1, gap: 8 },
   messageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   messageTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
@@ -194,15 +211,11 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 13, lineHeight: 19 },
   messageFooter: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
-  unreadDot: { backgroundColor: '#2367A8' },
-  readDot: { backgroundColor: '#94A3B8' },
   statusLabel: { fontSize: 10, fontWeight: '600' },
-  unreadLabel: { color: '#2367A8' },
-  readLabel: { color: '#64748B' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  emptyIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#EAF3FB' },
+  emptyIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   stateTitle: { marginTop: 12, fontSize: 17, fontWeight: '700' },
   stateText: { marginTop: 7, textAlign: 'center' },
   loadMore: { marginVertical: 12 },
-  endNote: { textAlign: 'center', color: '#64748B', fontSize: 11, paddingVertical: 8 },
+  endNote: { textAlign: 'center', fontSize: 11, paddingVertical: 8 },
 });

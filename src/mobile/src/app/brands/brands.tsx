@@ -18,6 +18,8 @@ import { BrandItem } from '@/models/brand';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { useColorScheme } from 'nativewind';
+import { THEME } from '@/lib/theme';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -29,6 +31,8 @@ function formatDate(value?: string) {
 
 export default function BrandsScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/brands/brands');
   const service = React.useMemo(() => new BrandServiceClient(), []);
 
@@ -176,14 +180,14 @@ export default function BrandsScreen() {
           <Icon as={ChevronLeft} size={22} className='text-foreground' />
         </Button>
         <Text className='text-foreground' style={styles.headerTitle}>Brand</Text>
-        <View style={styles.headerCount}>
-          <Text style={styles.headerCountText}>{brands.length}</Text>
+        <View style={[styles.headerCount, { backgroundColor: theme.secondary }]}>
+          <Text style={[styles.headerCountText, { color: theme.foreground }]}>{brands.length}</Text>
         </View>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={[styles.emptyState, styles.permissionState]}>
-          <ActivityIndicator size='large' color='#16794B' />
+          <ActivityIndicator size='large' color={theme.primary} />
           <Text className='text-muted-foreground' style={styles.permissionText}>Checking permissions...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -191,35 +195,35 @@ export default function BrandsScreen() {
       ) : (
         <>
       <View style={styles.toolbar}>
-        <View style={styles.searchBox}>
-          <Search size={15} color='#64748B' />
+        <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <Search size={15} color={theme.mutedForeground} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder='Search brands'
-            placeholderTextColor='#94A3B8'
-            style={styles.searchInput}
+            placeholderTextColor={theme.mutedForeground}
+            style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize='none'
             autoCorrect={false}
           />
           {query ? (
             <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel='Clear search'>
-              <X size={14} color='#64748B' />
+              <X size={14} color={theme.mutedForeground} />
             </Pressable>
           ) : null}
         </View>
-        <View style={styles.segmented}>
+        <View style={[styles.segmented, { backgroundColor: theme.muted }]}>
           {(['all', 'active', 'inactive'] as const).map((option) => {
             const selected = statusFilter === option;
             return (
               <Pressable
                 key={option}
                 onPress={() => setStatusFilter(option)}
-                style={[styles.segment, selected && styles.segmentSelected]}
+                style={[styles.segment, selected && [styles.segmentSelected, { backgroundColor: theme.card, shadowColor: theme.foreground }]]}
                 accessibilityRole='button'
                 accessibilityState={{ selected }}
               >
-                <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                <Text style={[styles.segmentText, { color: theme.mutedForeground }, selected && [styles.segmentTextSelected, { color: theme.foreground }]]}>
                   {option === 'all' ? 'All' : option === 'active' ? 'Active' : 'Inactive'}
                 </Text>
               </Pressable>
@@ -238,7 +242,7 @@ export default function BrandsScreen() {
       >
         {loading && !refreshing ? (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="large" />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className='text-muted-foreground' style={styles.emptyText}>Loading brands...</Text>
           </View>
         ) : brands.length === 0 ? (
@@ -250,7 +254,7 @@ export default function BrandsScreen() {
             <Text className='text-muted-foreground' style={styles.emptyText}>No brands match your search.</Text>
           </View>
         ) : (
-          <View style={styles.surface}>
+          <View style={[styles.surface, { borderColor: theme.border, backgroundColor: theme.card }]}>
             {visibleBrands.map((brand, index) => (
               <Pressable
                 key={brand.id}
@@ -258,18 +262,18 @@ export default function BrandsScreen() {
                 accessibilityRole='button'
                 accessibilityLabel={`Edit ${brand.brand}`}
               >
-                <View style={[styles.row, index === visibleBrands.length - 1 && styles.rowLast]}>
-                  <Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text>
+                <View style={[styles.row, { borderBottomColor: theme.border }, index === visibleBrands.length - 1 && styles.rowLast]}>
+                  <Text style={[styles.indexText, { color: theme.mutedForeground }]}>{String(index + 1).padStart(2, '0')}</Text>
                   <View style={styles.rowInfo}>
                     <Text className='text-foreground' style={styles.brandName} numberOfLines={1}>
                       {brand.brand}
                     </Text>
-                    <Text style={styles.brandMeta} numberOfLines={1}>
+                    <Text style={[styles.brandMeta, { color: theme.mutedForeground }]} numberOfLines={1}>
                       Updated {formatDate(brand.updatedAtUtc || brand.createdAtUtc)}
                     </Text>
                   </View>
-                  <View style={[styles.chip, brand.isActive ? styles.chipActive : styles.chipInactive]}>
-                    <Text style={[styles.chipText, brand.isActive ? styles.chipTextActive : styles.chipTextInactive]}>
+                  <View style={[styles.chip, { borderColor: brand.isActive ? theme.chart2 : theme.border, backgroundColor: theme.card }]}>
+                    <Text style={[styles.chipText, { color: brand.isActive ? theme.chart2 : theme.mutedForeground }]}>
                       {brand.isActive ? 'Active' : 'Inactive'}
                     </Text>
                   </View>
@@ -280,9 +284,9 @@ export default function BrandsScreen() {
                     accessibilityRole='button'
                     accessibilityLabel={`Delete ${brand.brand}`}
                   >
-                    <Trash2 size={16} color='#B42318' />
+                    <Trash2 size={16} color={theme.destructive} />
                   </Pressable>
-                  <ChevronRight size={16} color='#94A3B8' />
+                  <ChevronRight size={16} color={theme.mutedForeground} />
                 </View>
               </Pressable>
             ))}
@@ -290,7 +294,7 @@ export default function BrandsScreen() {
         )}
         {loadingMore ? (
           <View style={styles.loadMoreRow}>
-            <ActivityIndicator size='small' />
+            <ActivityIndicator size='small' color={theme.primary} />
             <Text className='text-muted-foreground'>Loading more...</Text>
           </View>
         ) : null}
@@ -304,21 +308,21 @@ export default function BrandsScreen() {
 
       <Pressable
         onPress={openCreateModal}
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.primary, shadowColor: theme.foreground }]}
         accessibilityRole='button'
         accessibilityLabel='Add brand'
       >
-        <Plus size={24} color='#FFFFFF' />
+        <Plus size={24} color={theme.primaryForeground} />
       </Pressable>
 
       <Modal visible={modalVisible} transparent animationType='slide' onRequestClose={closeModal}>
-        <KeyboardAvoidingView className='bg-[hsla(0,0%,0%,0.5)]' style={styles.modalOverlay}
+        <KeyboardAvoidingView style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className='bg-card border-border' style={styles.modalSheet}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.card, borderTopColor: theme.primary }]}>
             <View style={styles.modalHeader}>
               <Text variant='h4' className='text-foreground'>{editingBrand ? 'Edit brand' : 'Add brand'}</Text>
               <Pressable onPress={closeModal} style={styles.closeButton}>
-                <Icon as={X} size={20} color="#4b5563" />
+                <Icon as={X} size={20} color={theme.mutedForeground} />
               </Pressable>
             </View>
 
@@ -333,15 +337,20 @@ export default function BrandsScreen() {
 
             <View style={styles.switchRow}>
               <Text className='text-foreground' style={styles.switchLabel}>Is Active</Text>
-              <Switch value={editingBrand?.isActive} onValueChange={(value) => setEditingBrand((prev: BrandItem | null) => ({ ...prev, isActive: value } as (BrandItem | null)))} />
+              <Switch
+                value={editingBrand?.isActive}
+                onValueChange={(value) => setEditingBrand((prev: BrandItem | null) => ({ ...prev, isActive: value } as (BrandItem | null)))}
+                trackColor={{ false: theme.muted, true: theme.primary }}
+                thumbColor={theme.card}
+              />
             </View>
 
             <View style={styles.modalActions}>
               <Button variant='outline' size='sm' onPress={closeModal} style={styles.modalButton}>
                 <Text className='text-foreground'>Cancel</Text>
               </Button>
-              <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, styles.saveButton]}>
-                {saving ? <ActivityIndicator size='small' color="#fff" /> : <Text className='text-primary-foreground'>Save</Text>}
+              <Button variant='default' size='sm' onPress={handleSubmit} disabled={saving} style={[styles.modalButton, { backgroundColor: theme.primary }]}>
+                {saving ? <ActivityIndicator size='small' color={theme.primaryForeground} /> : <Text style={{ color: theme.primaryForeground }}>Save</Text>}
               </Button>
             </View>
           </View>
@@ -392,12 +401,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E2E8F0',
   },
   headerCountText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#334155',
   },
   toolbar: {
     paddingHorizontal: 16,
@@ -412,21 +419,17 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
   },
   searchInput: {
     flex: 1,
     height: '100%',
     fontSize: 13,
-    color: '#0F172A',
   },
   segmented: {
     flexDirection: 'row',
     padding: 3,
     borderRadius: 8,
-    backgroundColor: '#E2E8F0',
   },
   segment: {
     flex: 1,
@@ -436,8 +439,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentSelected: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
@@ -446,10 +447,8 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
   },
   segmentTextSelected: {
-    color: '#0F172A',
     fontWeight: '800',
   },
   headerSpacer: {
@@ -465,10 +464,8 @@ const styles = StyleSheet.create({
   },
   surface: {
     borderWidth: 1,
-    borderColor: '#D9DEE5',
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
   },
   row: {
     minHeight: 58,
@@ -477,7 +474,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#CBD5E1',
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -486,7 +482,6 @@ const styles = StyleSheet.create({
     width: 22,
     fontSize: 11,
     fontWeight: '700',
-    color: '#94A3B8',
     fontVariant: ['tabular-nums'],
   },
   rowInfo: {
@@ -500,7 +495,6 @@ const styles = StyleSheet.create({
   },
   brandMeta: {
     fontSize: 10,
-    color: '#64748B',
   },
   chip: {
     borderRadius: 4,
@@ -508,11 +502,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  chipActive: { borderColor: '#34D399', backgroundColor: '#FFFFFF' },
-  chipInactive: { borderColor: '#CBD5E1', backgroundColor: '#FFFFFF' },
   chipText: { fontSize: 10, fontWeight: '700' },
-  chipTextActive: { color: '#047857' },
-  chipTextInactive: { color: '#64748B' },
   deleteButton: {
     width: 28,
     height: 28,
@@ -528,8 +518,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2367A8',
-    shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -552,7 +540,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
     borderTopWidth: 3,
-    borderTopColor: '#2367A8',
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 24,
@@ -599,8 +586,5 @@ const styles = StyleSheet.create({
   modalButton: {
     minWidth: 96,
     borderRadius: 6,
-  },
-  saveButton: {
-    backgroundColor: '#2367A8',
   },
 });

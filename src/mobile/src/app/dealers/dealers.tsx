@@ -9,13 +9,13 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
   KeyboardAvoidingView,
   Platform,
   Switch,
 } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import * as ImagePicker from 'expo-image-picker';
 import {
   Plus,
@@ -42,16 +42,13 @@ import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
-
-const COLORS = {
-  muted: '#64748B',
-  border: '#D9DEE5',
-  rowBorder: '#CBD5E1',
-  green: '#16794B',
-};
+import { useColorScheme } from 'nativewind';
+import { THEME } from '@/lib/theme';
 
 export default function DealersScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/dealers');
   const service = React.useMemo(() => new DealerServiceClient(), []);
 
@@ -291,7 +288,7 @@ export default function DealersScreen() {
 
   return (
     <SafeAreaView className="bg-background" style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+      <StatusBar />
 
       <View
         className="bg-background border-b border-border"
@@ -312,15 +309,15 @@ export default function DealersScreen() {
           accessibilityLabel="New dealer"
           onPress={() => router.push('/dealers/new')}
           disabled={permissionState !== 'authorized'}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
-          <Plus size={18} color="#FFFFFF" />
+          <Plus size={18} color={theme.primaryForeground} />
         </Pressable>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -333,7 +330,7 @@ export default function DealersScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.green}
+            tintColor={theme.primary}
           />
         }
         onScroll={handleScroll}
@@ -341,7 +338,7 @@ export default function DealersScreen() {
       >
         {loading && !refreshing ? (
           <View style={styles.centeredState}>
-            <ActivityIndicator size="large" color={COLORS.green} />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.stateText}>
               Loading dealers...
             </Text>
@@ -357,7 +354,7 @@ export default function DealersScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.tableHeader}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
               <Text
                 style={[styles.headerCell, styles.headerInfo]}
               >{`Dealer · ${dealers.length}${hasMore ? '+' : ''}`}</Text>
@@ -376,7 +373,7 @@ export default function DealersScreen() {
                   key={dealer.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Dealer ${dealer.dealerName}`}
-                  style={styles.row}
+                  style={[styles.row, { borderBottomColor: theme.border, backgroundColor: theme.card }]}
                   onPress={() =>
                     router.push({
                       pathname: '/dealers/view',
@@ -384,7 +381,7 @@ export default function DealersScreen() {
                     })
                   }
                 >
-                  <View style={styles.logoWrapper}>
+                  <View style={[styles.logoWrapper, { backgroundColor: theme.muted }]}>
                     {dealer.logoUrl ? (
                       <Image
                         source={{ uri: dealer.logoUrl }}
@@ -392,7 +389,7 @@ export default function DealersScreen() {
                         resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.logoPlaceholder}>
+                      <View style={[styles.logoPlaceholder, { backgroundColor: theme.secondary }]}>
                         <Icon
                           as={ImageIcon}
                           size={18}
@@ -425,17 +422,13 @@ export default function DealersScreen() {
                     <View
                       style={[
                         styles.statusPill,
-                        dealer.isActive
-                          ? styles.statusActive
-                          : styles.statusInactive,
+                        { backgroundColor: theme.secondary },
                       ]}
                     >
                       <Text
                         style={[
                           styles.statusText,
-                          dealer.isActive
-                            ? styles.statusTextActive
-                            : styles.statusTextInactive,
+                          { color: dealer.isActive ? theme.chart2 : theme.destructive },
                         ]}
                       >
                         {dealer.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -455,7 +448,7 @@ export default function DealersScreen() {
         )}
         {loadingMore ? (
           <View style={styles.loadMoreRow}>
-            <ActivityIndicator size="small" color={COLORS.green} />
+            <ActivityIndicator size="small" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.loadMoreText}>
               Loading more...
             </Text>
@@ -470,12 +463,11 @@ export default function DealersScreen() {
         animationType="slide"
         onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-            className="bg-card border-border"
-            style={styles.modalSheet}
+            style={[styles.modalSheet, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
@@ -488,7 +480,7 @@ export default function DealersScreen() {
                   {editingDealer?.id ? 'Edit Dealer' : 'Add Dealer'}
                 </Text>
                 <Pressable onPress={closeModal} style={styles.closeButton}>
-                  <Icon as={X} size={20} color="#4b5563" />
+                  <Icon as={X} size={20} color={theme.mutedForeground} />
                 </Pressable>
               </View>
 
@@ -604,7 +596,7 @@ export default function DealersScreen() {
                 Dealer Logo
               </Label>
               {logoImage ? (
-                <View style={styles.logoPreviewContainer}>
+                <View style={[styles.logoPreviewContainer, { borderColor: theme.border }]}>
                   <Image
                     source={{ uri: logoImage }}
                     style={styles.logoPreview}
@@ -635,7 +627,7 @@ export default function DealersScreen() {
                 <Text className="text-foreground" style={styles.switchLabel}>
                   Is Active
                 </Text>
-                <Switch
+                  <Switch
                   value={editingDealer?.isActive}
                   onValueChange={(value) =>
                     setEditingDealer(
@@ -643,7 +635,9 @@ export default function DealersScreen() {
                         ({ ...prev, isActive: value }) as DealerItem,
                     )
                   }
-                />
+                    trackColor={{ false: theme.muted, true: theme.primary }}
+                    thumbColor={theme.card}
+                  />
               </View>
 
               <View style={styles.modalActions}>
@@ -660,12 +654,12 @@ export default function DealersScreen() {
                   size="sm"
                   onPress={handleSubmit}
                   disabled={saving}
-                  style={styles.modalButton}
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
                 >
                   {saving ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={theme.primaryForeground} />
                   ) : (
-                    <Text className="text-primary-foreground">Save</Text>
+                    <Text style={{ color: theme.primaryForeground }}>Save</Text>
                   )}
                 </Button>
               </View>
@@ -704,7 +698,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.green,
   },
   scrollView: {
     flex: 1,
@@ -718,13 +711,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F1F5F9',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   headerCell: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -745,14 +735,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
-    backgroundColor: '#FFFFFF',
   },
   logoWrapper: {
     width: 44,
     height: 44,
     borderRadius: 6,
-    backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -766,7 +753,6 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E5E7EB',
   },
   infoColumn: {
     flex: 1,
@@ -789,22 +775,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  statusActive: {
-    backgroundColor: '#D1FAE5',
-  },
-  statusInactive: {
-    backgroundColor: '#FEE2E2',
-  },
   statusText: {
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.4,
-  },
-  statusTextActive: {
-    color: '#047857',
-  },
-  statusTextInactive: {
-    color: '#B91C1C',
   },
   centeredState: {
     flex: 1,
@@ -828,7 +802,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
     paddingTop: 60, // Preserves status bar gap
   },
@@ -882,7 +855,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#d1d5db',
   },
   logoPreview: {
     width: '100%',

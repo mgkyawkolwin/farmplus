@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { useColorScheme } from 'nativewind';
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -23,6 +24,7 @@ import { container, DI_TOKENS } from "@/di";
 import { Sale } from "@/models/sale";
 import { ICustomerService } from "@/services/customerService";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from '@/lib/theme';
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -49,6 +51,8 @@ function formatDate(value: string) {
 
 export default function CustomerSalesScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/customers/sales');
   const { customerId } = useLocalSearchParams<{ customerId?: string }>();
   const [sales, setSales] = React.useState<Sale[]>([]);
@@ -127,14 +131,14 @@ export default function CustomerSalesScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && sales.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading sales...
           </Text>
@@ -174,7 +178,7 @@ export default function CustomerSalesScreen() {
           {sales.map((sale) => (
             <Pressable
               key={sale.id}
-              style={styles.saleCard}
+              style={[styles.saleCard, { borderColor: theme.border, backgroundColor: theme.card }]}
               onPress={() =>
                 router.push({
                   pathname: "/sales/view",
@@ -195,7 +199,7 @@ export default function CustomerSalesScreen() {
                   size={16}
                 />
               </View>
-              <View style={styles.amountRow}>
+              <View style={[styles.amountRow, { borderTopColor: theme.border }]}>
                 <View>
                   <Text className="text-muted-foreground" style={styles.label}>
                     Total
@@ -211,7 +215,7 @@ export default function CustomerSalesScreen() {
                   <Text
                     style={[
                       styles.amount,
-                      { color: sale.balance > 0 ? "#B45309" : "#047857" },
+                      { color: sale.balance > 0 ? theme.chart4 : theme.chart2 },
                     ]}
                   >
                     {formatMoney(sale.balance)}
@@ -221,9 +225,9 @@ export default function CustomerSalesScreen() {
             </Pressable>
           ))}
           {loadingMore ? (
-            <ActivityIndicator size="small" color="#16794B" />
+            <ActivityIndicator size="small" color={theme.primary} />
           ) : null}
-          {!hasMore ? <Text style={styles.endNote}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.endNote, { color: theme.mutedForeground }]}>End of list</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -248,9 +252,7 @@ const styles = StyleSheet.create({
   content: { padding: 12, gap: 10, paddingBottom: 24 },
   saleCard: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
     padding: 12,
     gap: 12,
   },
@@ -261,7 +263,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E2E8F0",
     paddingTop: 10,
   },
   amountRight: { alignItems: "flex-end" },
@@ -275,5 +276,5 @@ const styles = StyleSheet.create({
   },
   stateTitle: { fontSize: 17, fontWeight: "600" },
   stateText: { marginTop: 8, textAlign: "center" },
-  endNote: { textAlign: "center", color: "#64748B", fontSize: 11 },
+  endNote: { textAlign: "center", fontSize: 11 },
 });

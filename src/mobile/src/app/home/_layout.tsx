@@ -2,6 +2,7 @@
 
 import React from "react";
 import { router, Tabs } from "expo-router";
+import { useColorScheme } from "nativewind";
 import { ActivityIndicator, View } from "react-native";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -13,8 +14,11 @@ import {
 import { Text } from "@/components/ui/text";
 import { getSelectedShopId } from "@/lib/authStorage";
 import { notifySelectedShopChanged } from "@/lib/selectedShop";
+import { THEME } from "@/lib/theme";
 
 export default function HomeTabsLayout() {
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
   const [shopSelectionReady, setShopSelectionReady] = React.useState(false);
 
   React.useEffect(() => {
@@ -45,7 +49,7 @@ export default function HomeTabsLayout() {
         className="flex-1 bg-background"
         style={{ alignItems: "center", justifyContent: "center" }}
       >
-        <ActivityIndicator size="large" color="#16794B" />
+        <ActivityIndicator size="large" color={theme.chart2} />
       </View>
     );
   }
@@ -53,9 +57,9 @@ export default function HomeTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: { backgroundColor: "#fff" },
-        tabBarInactiveTintColor: "hsl(0,0%,39%)",
-        tabBarActiveTintColor: "hsl(210,100%,50%)",
+        tabBarStyle: { backgroundColor: theme.tab, borderTopColor: theme.border },
+        tabBarInactiveTintColor: theme.mutedForeground,
+        tabBarActiveTintColor: theme.primary,
         headerShown: false,
         headerTitle: "",
         tabBarLabelStyle: { fontSize: 12 },

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import {
   Building2,
   CalendarDays,
@@ -22,14 +23,20 @@ import UnauthorizedView from '@/components/unauthorized-view';
 import { Supplier } from '@/models/supplier';
 import { SupplierServiceClient } from '@/services/supplierService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 const supplierService = new SupplierServiceClient();
 
-const TONE_COLORS = {
-  green: '#16794B',
-  blue: '#2367A8',
-  amber: '#9A6700',
-  red: '#B42318',
+type ThemeColors = typeof THEME.light;
+type MetricTone = 'green' | 'blue' | 'amber' | 'red';
+
+const getToneColor = (tone: MetricTone, theme: ThemeColors) => {
+  switch (tone) {
+    case 'green': return theme.chart2;
+    case 'blue': return theme.chart1;
+    case 'amber': return theme.chart4;
+    case 'red': return theme.destructive;
+  }
 };
 
 function Metric({
@@ -37,40 +44,35 @@ function Metric({
   value,
   icon,
   tone,
+  theme,
 }: {
   label: string;
   value: string;
   icon: typeof Building2;
-  tone: 'green' | 'blue' | 'amber' | 'red';
+  tone: MetricTone;
+  theme: ThemeColors;
 }) {
   const MetricIcon = icon;
-  const toneStyle = tone === 'green'
-    ? styles.metricgreen
-    : tone === 'blue'
-      ? styles.metricblue
-      : tone === 'amber'
-        ? styles.metricamber
-        : styles.metricred;
 
   return (
-    <View style={[styles.metricCard, toneStyle, { borderTopColor: TONE_COLORS[tone] }]}>
+    <View style={[styles.metricCard, { backgroundColor: theme.card, borderColor: theme.border, borderTopColor: getToneColor(tone, theme) }]}>
       <View style={styles.metricHeader}>
-        <View style={styles.metricIcon}>
-          <MetricIcon size={16} color={TONE_COLORS[tone]} />
+        <View style={[styles.metricIcon, { backgroundColor: theme.secondary }]}>
+          <MetricIcon size={16} color={getToneColor(tone, theme)} />
         </View>
-        <Text className="text-muted-foreground" style={styles.metricLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.metricLabel, { color: theme.mutedForeground }]} numberOfLines={1}>{label}</Text>
       </View>
-      <Text className="text-foreground" style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.metricValue, { color: theme.foreground }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     </View>
   );
 }
 
-function RecentSupplierRow({ supplier }: { supplier: Supplier }) {
+function RecentSupplierRow({ supplier, theme }: { supplier: Supplier; theme: ThemeColors }) {
   const lastUpdated = supplier.updatedAtUtc ?? supplier.createdAtUtc ?? null;
   const isActive = supplier.isActive !== false;
 
   return (
-    <View style={styles.supplierRow}>
+    <View style={[styles.supplierRow, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
       <View style={styles.supplierCell}>
         <Text className="text-foreground" style={styles.supplierName} numberOfLines={1}>{supplier.supplierName}</Text>
         <View style={styles.metaRow}>
@@ -84,8 +86,8 @@ function RecentSupplierRow({ supplier }: { supplier: Supplier }) {
         {lastUpdated ? new Date(lastUpdated).toLocaleDateString() : '-'}
       </Text>
       <View style={styles.statusColumn}>
-        <View style={[styles.statusPill, isActive ? styles.statusActive : styles.statusInactive]}>
-          <Text style={[styles.statusText, isActive ? styles.statusTextActive : styles.statusTextInactive]}>
+        <View style={[styles.statusPill, { backgroundColor: theme.secondary }]}>
+          <Text style={[styles.statusText, { color: isActive ? theme.chart2 : theme.destructive }]}>
             {isActive ? 'ACTIVE' : 'INACTIVE'}
           </Text>
         </View>
@@ -104,6 +106,8 @@ export function SupplierDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/dashboard');
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -156,27 +160,27 @@ export function SupplierDashboardContent({
   }, [suppliers, recentSuppliers]);
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, { backgroundColor: theme.background }]}>
       {showHeader ? (
-        <View className="bg-background border-b border-border" style={styles.headerBar}>
+        <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
           <Button variant="ghost" onPress={onBack ?? (() => router.back())} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text className="text-foreground" style={styles.headerTitle}>{title}</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>{title}</Text>
           <View style={styles.headerButton} />
         </View>
       ) : null}
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && suppliers.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading suppliers...</Text>
         </View>
       ) : (
@@ -189,25 +193,25 @@ export function SupplierDashboardContent({
         >
           <View style={styles.metricsGrid}>
             {metrics.map((metric) => (
-              <Metric key={metric.label} label={metric.label} value={metric.value} icon={metric.icon} tone={metric.tone} />
+              <Metric key={metric.label} label={metric.label} value={metric.value} icon={metric.icon} tone={metric.tone} theme={theme} />
             ))}
           </View>
 
           <View style={styles.actionRow}>
             <Button
-              style={[styles.actionButton, styles.actionPrimary]}
+              style={[styles.actionButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}
               onPress={() => router.push('/suppliers/new' as Parameters<typeof router.push>[0])}
             >
-              <CirclePlus size={18} color="#FFFFFF" />
-              <Text style={[styles.actionLabel, styles.actionPrimaryLabel]}>New Supplier</Text>
+              <CirclePlus size={18} color={theme.primaryForeground} />
+              <Text style={[styles.actionLabel, { color: theme.primaryForeground }]}>New Supplier</Text>
             </Button>
             <Button
               variant="outline"
-              style={[styles.actionButton, styles.actionSecondary]}
+              style={[styles.actionButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
               onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
             >
-              <ClipboardList size={18} color="#16794B" />
-              <Text style={[styles.actionLabel, styles.actionSecondaryLabel]}>View Suppliers</Text>
+              <ClipboardList size={18} color={theme.primary} />
+              <Text style={[styles.actionLabel, { color: theme.primary }]}>View Suppliers</Text>
             </Button>
           </View>
 
@@ -218,15 +222,15 @@ export function SupplierDashboardContent({
               </View>
               <Button
                 variant="ghost"
-                style={styles.seeAllButton}
+                style={[styles.seeAllButton, { backgroundColor: theme.secondary, borderColor: theme.border }]}
                 onPress={() => router.push('/suppliers/list' as Parameters<typeof router.push>[0])}
               >
-                <Text style={styles.seeAllText}>View all</Text>
-                <ChevronRight size={14} color="#16794B" />
+                <Text style={[styles.seeAllText, { color: theme.primary }]}>View all</Text>
+                <ChevronRight size={14} color={theme.primary} />
               </Button>
             </View>
 
-            <View style={styles.tableHeader}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
               <Text className="text-muted-foreground" style={[styles.headerCell, styles.supplierColumn]}>Supplier</Text>
               <Text className="text-muted-foreground" style={[styles.headerCell, styles.updatedColumn]}>Updated</Text>
               <Text className="text-muted-foreground" style={[styles.headerCell, styles.statusHeaderColumn]}>Status</Text>
@@ -236,7 +240,7 @@ export function SupplierDashboardContent({
                 <Text className="text-muted-foreground">No suppliers found.</Text>
               </View>
             ) : (
-              recentSuppliers.map((supplier) => <RecentSupplierRow key={supplier.id} supplier={supplier} />)
+              recentSuppliers.map((supplier) => <RecentSupplierRow key={supplier.id} supplier={supplier} theme={theme} />)
             )}
           </View>
         </ScrollView>
@@ -253,32 +257,24 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 28, gap: 20 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metricCard: { width: '48%', minHeight: 88, borderRadius: 6, borderWidth: 1, borderTopWidth: 3, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'space-between', gap: 10 },
-  metricgreen: { backgroundColor: '#F4FAF6', borderColor: '#D5E9DC' },
-  metricblue: { backgroundColor: '#F3F8FC', borderColor: '#D6E6F3' },
-  metricamber: { backgroundColor: '#FFFAEE', borderColor: '#EFE2BF' },
-  metricred: { backgroundColor: '#FFF5F4', borderColor: '#F0D8D5' },
   metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metricIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFFAA' },
+  metricIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   metricLabel: { flex: 1, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   metricValue: { fontSize: 18, fontWeight: '800' },
   actionRow: { flexDirection: 'row', gap: 10 },
   actionButton: { flex: 1, minHeight: 46, gap: 8, borderRadius: 6 },
-  actionPrimary: { backgroundColor: '#16794B', borderWidth: 1, borderColor: '#16794B' },
-  actionSecondary: { backgroundColor: '#F4FAF6', borderWidth: 1, borderColor: '#16794B' },
   actionLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
-  actionPrimaryLabel: { color: '#FFFFFF' },
-  actionSecondaryLabel: { color: '#16794B' },
   recentSection: { gap: 0 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
-  seeAllButton: { minHeight: 30, paddingHorizontal: 10, paddingVertical: 0, flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 999, borderWidth: 1, borderColor: '#CDE8D6', backgroundColor: '#F4FAF6' },
-  seeAllText: { fontSize: 11, fontWeight: '700', color: '#16794B', letterSpacing: 0.2 },
-  tableHeader: { minHeight: 32, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, backgroundColor: '#F1F5F9', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#D9DEE5' },
+  seeAllButton: { minHeight: 30, paddingHorizontal: 10, paddingVertical: 0, flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 999, borderWidth: 1 },
+  seeAllText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+  tableHeader: { minHeight: 32, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderTopWidth: 1, borderBottomWidth: 1 },
   headerCell: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   supplierColumn: { flex: 1 },
   updatedColumn: { width: 82, textAlign: 'right' },
   statusHeaderColumn: { width: 76, textAlign: 'right' },
-  supplierRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1', gap: 8 },
+  supplierRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, gap: 8 },
   supplierCell: { flex: 1, gap: 3 },
   supplierName: { fontSize: 12, fontWeight: '600' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -286,11 +282,7 @@ const styles = StyleSheet.create({
   supplierUpdated: { width: 82, textAlign: 'right', fontSize: 11 },
   statusColumn: { width: 76, alignItems: 'flex-end' },
   statusPill: { borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 },
-  statusActive: { backgroundColor: '#D1FAE5' },
-  statusInactive: { backgroundColor: '#FEE2E2' },
   statusText: { fontSize: 8.5, fontWeight: '800', letterSpacing: 0.4 },
-  statusTextActive: { color: '#047857' },
-  statusTextInactive: { color: '#B91C1C' },
   emptyState: { paddingVertical: 26, alignItems: 'center' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 8 },

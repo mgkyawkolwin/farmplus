@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleS
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -16,12 +17,15 @@ import { usePagePermission } from '@/lib/usePagePermission';
 import { container, DI_TOKENS } from '@/di';
 import { RoleItem } from '@/models/role';
 import { IRoleService } from '@/services/roleService';
+import { THEME } from '@/lib/theme';
 
 const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
 const PAGE_SIZE = 20;
 
 export default function RoleListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/roles/list');
   const [roles, setRoles] = React.useState<RoleItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -99,14 +103,14 @@ export default function RoleListScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && roles.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading roles...</Text>
         </View>
       ) : roles.length === 0 ? (
@@ -132,8 +136,8 @@ export default function RoleListScreen() {
           }}
         >
           {roles.map((role) => (
-            <View key={role.id} style={styles.roleRow}>
-              <View style={styles.roleIcon}>
+            <View key={role.id} style={[styles.roleRow, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.roleIcon, { backgroundColor: theme.muted }]}>
                 <Icon className="text-muted-foreground" as={ShieldCheck} size={20} />
               </View>
               <Text className="text-foreground" style={styles.roleName} numberOfLines={1}>{role.role}</Text>
@@ -155,7 +159,7 @@ export default function RoleListScreen() {
               </Pressable>
             </View>
           ))}
-          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#2563EB" /> : null}
+          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color={theme.primary} /> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -180,7 +184,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 10,
     padding: 12,
   },
@@ -190,7 +193,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
   },
   roleName: { flex: 1, fontSize: 15, fontWeight: '600' },
   iconButton: { padding: 7 },

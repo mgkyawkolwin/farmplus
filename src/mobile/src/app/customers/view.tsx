@@ -6,14 +6,15 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleProp,
   StyleSheet,
   TextStyle,
   View,
   ViewStyle,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, Mail, MapPin, Pencil, Phone } from "lucide-react-native";
+import { useColorScheme } from 'nativewind';
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import UnauthorizedView from "@/components/unauthorized-view";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,6 +27,7 @@ import { CustomerItem } from "@/models/customer";
 import { ICustomerService } from "@/services/customerService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from '@/lib/theme';
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
@@ -33,6 +35,8 @@ const customerService = container.resolve<ICustomerService>(
 
 export default function CustomerViewScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const permissionState = usePagePermission('/customers/view');
   const customerId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -68,20 +72,20 @@ export default function CustomerViewScreen() {
 
   if (permissionState !== 'authorized' || !customer) {
     return (
-      <SafeAreaView style={styles.page}>
-        <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
-        <View style={styles.headerBar}>
+      <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+        <StatusBar />
+        <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={styles.headerTitle}>Customer</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Customer</Text>
           <View style={styles.headerButton} />
         </View>
         {permissionState === 'denied' ? (
           <UnauthorizedView />
         ) : (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#16794B" />
+            <ActivityIndicator size="large" color={theme.primary} />
             <Text className="text-muted-foreground" style={styles.stateText}>
               {permissionState === 'checking' ? 'Checking permission...' : 'Loading customer...'}
             </Text>
@@ -140,10 +144,10 @@ export default function CustomerViewScreen() {
   const recentPayments = customer.recentPayments ?? [];
 
   return (
-    <SafeAreaView style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+      <StatusBar />
 
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Button
           variant="ghost"
           onPress={() => router.back()}
@@ -151,7 +155,7 @@ export default function CustomerViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={styles.headerTitle}>Customer</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Customer</Text>
         <Button
           variant="ghost"
           onPress={() =>
@@ -167,39 +171,35 @@ export default function CustomerViewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profilePanel}>
-          <View style={styles.avatarWrap}>
+        <View style={[styles.profilePanel, { backgroundColor: theme.card, borderColor: theme.border, borderTopColor: theme.primary }]}>
+          <View style={[styles.avatarWrap, { backgroundColor: theme.secondary }]}>
             {customer.profilePictureUrl ? (
               <Image
                 source={{ uri: customer.profilePictureUrl }}
                 style={styles.avatarImage}
               />
             ) : (
-              <Text style={styles.avatarInitial}>{initial}</Text>
+              <Text style={[styles.avatarInitial, { color: theme.primary }]}>{initial}</Text>
             )}
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.customerName} numberOfLines={1}>
+            <Text style={[styles.customerName, { color: theme.foreground }]} numberOfLines={1}>
               {customer.name}
             </Text>
-            <Text style={styles.customerSince}>
+            <Text style={[styles.customerSince, { color: theme.mutedForeground }]}>
               Customer since {createdAtText}
             </Text>
             <View
               style={[
                 styles.statusPill,
-                customer.isActive
-                  ? styles.statusPillActive
-                  : styles.statusPillInactive,
+                { backgroundColor: theme.secondary },
               ]}
             >
               <Text
                 style={[
                   styles.statusText,
-                  customer.isActive
-                    ? styles.statusTextActive
-                    : styles.statusTextInactive,
+                  { color: customer.isActive ? theme.chart2 : theme.destructive },
                 ]}
               >
                 {customer.isActive ? "ACTIVE" : "INACTIVE"}
@@ -208,17 +208,17 @@ export default function CustomerViewScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionHeading}>Contact</Text>
-        <View style={styles.panel}>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Contact</Text>
+        <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           {detailRows.map((row, index) => (
             <View
               key={row.label}
               style={[
                 styles.contactRow,
-                index < detailRows.length - 1 ? styles.rowDivider : null,
+                index < detailRows.length - 1 ? [styles.rowDivider, { borderBottomColor: theme.border }] : null,
               ]}
             >
-              <View style={styles.contactIconWrap}>
+              <View style={[styles.contactIconWrap, { backgroundColor: theme.muted }]}>
                 <Icon
                   className="text-muted-foreground"
                   as={row.icon}
@@ -226,8 +226,8 @@ export default function CustomerViewScreen() {
                 />
               </View>
               <View style={styles.contactText}>
-                <Text style={styles.fieldLabel}>{row.label}</Text>
-                <Text style={styles.fieldValue} numberOfLines={1}>
+                <Text style={[styles.fieldLabel, { color: theme.mutedForeground }]}>{row.label}</Text>
+                <Text style={[styles.fieldValue, { color: theme.foreground }]} numberOfLines={1}>
                   {row.value}
                 </Text>
               </View>
@@ -235,7 +235,7 @@ export default function CustomerViewScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={row.label}
                 onPress={row.action}
-                style={styles.actionButton}
+                style={[styles.actionButton, { borderColor: theme.border, backgroundColor: theme.card }]}
               >
                 <Icon className="text-foreground" as={row.icon} size={14} />
               </Pressable>
@@ -243,33 +243,37 @@ export default function CustomerViewScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionHeading}>Summary</Text>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Summary</Text>
         <View style={styles.kpiGrid}>
           <KpiTile
             label="Total Sales"
             value={formatMoney(customer.totalSales)}
-            accent={styles.accentBlue}
+            accent={{ borderTopColor: theme.chart1, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Total Orders"
             value={(customer.totalOrders ?? 0).toLocaleString("en-US")}
-            accent={styles.accentSlate}
+            accent={{ borderTopColor: theme.mutedForeground, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Total Paid"
             value={formatMoney(customer.totalPaid)}
-            accent={styles.accentGreen}
+            accent={{ borderTopColor: theme.chart2, backgroundColor: theme.secondary }}
+            theme={theme}
           />
           <KpiTile
             label="Outstanding"
             value={formatMoney(customer.totalOutstanding)}
-            accent={owesBalance ? styles.accentAmber : styles.accentGreen}
-            valueStyle={owesBalance ? styles.valueAmber : null}
+            accent={{ borderTopColor: owesBalance ? theme.chart4 : theme.chart2, backgroundColor: theme.secondary }}
+            valueStyle={owesBalance ? { color: theme.chart4 } : undefined}
+            theme={theme}
           />
         </View>
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeading}>Recent Sales</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Sales</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() =>
@@ -279,11 +283,11 @@ export default function CustomerViewScreen() {
               })
             }
           >
-            <Text style={styles.viewAllText}>View all</Text>
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
           </Pressable>
         </View>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
+        <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Total</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Balance</Text>
@@ -292,7 +296,7 @@ export default function CustomerViewScreen() {
             <Pressable
               key={sale.id}
               accessibilityRole="button"
-              style={styles.tableRow}
+              style={[styles.tableRow, { borderBottomColor: theme.border }]}
               onPress={() =>
                 router.push({
                   pathname: "/sales/view",
@@ -300,30 +304,24 @@ export default function CustomerViewScreen() {
                 })
               }
             >
-              <Text style={[styles.cell, styles.dateCol]}>
+              <Text style={[styles.cell, styles.dateCol, { color: theme.foreground }]}>
                 {new Date(sale.saleDate).toLocaleDateString()}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(sale.netTotal)}
               </Text>
-              <Text
-                style={[
-                  styles.cell,
-                  styles.amountCol,
-                  sale.balance > 0 ? styles.cellAmber : null,
-                ]}
-              >
+              <Text style={[styles.cell, styles.amountCol, { color: sale.balance > 0 ? theme.chart4 : theme.foreground }]}>
                 {formatMoney(sale.balance)}
               </Text>
             </Pressable>
           ))}
           {recentSales.length === 0 ? (
-            <Text style={styles.emptyText}>No sales recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No sales recorded.</Text>
           ) : null}
         </View>
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeading}>Recent Payments</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Payments</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() =>
@@ -333,11 +331,11 @@ export default function CustomerViewScreen() {
               })
             }
           >
-            <Text style={styles.viewAllText}>View all</Text>
+            <Text style={[styles.viewAllText, { color: theme.primary }]}>View all</Text>
           </Pressable>
         </View>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
+        <View style={[styles.table, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.dateCol]}>Date</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>Amount</Text>
             <Text style={[styles.headerCell, styles.amountCol]}>
@@ -348,7 +346,7 @@ export default function CustomerViewScreen() {
             <Pressable
               key={payment.id}
               accessibilityRole="button"
-              style={styles.tableRow}
+              style={[styles.tableRow, { borderBottomColor: theme.border }]}
               onPress={() =>
                 router.push({
                   pathname: "/sales/view",
@@ -356,19 +354,19 @@ export default function CustomerViewScreen() {
                 })
               }
             >
-              <Text style={[styles.cell, styles.dateCol]}>
+              <Text style={[styles.cell, styles.dateCol, { color: theme.foreground }]}>
                 {new Date(payment.paidAt).toLocaleDateString()}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(payment.amount)}
               </Text>
-              <Text style={[styles.cell, styles.amountCol]}>
+              <Text style={[styles.cell, styles.amountCol, { color: theme.foreground }]}>
                 {formatMoney(payment.balanceAfter)}
               </Text>
             </Pressable>
           ))}
           {recentPayments.length === 0 ? (
-            <Text style={styles.emptyText}>No payments recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No payments recorded.</Text>
           ) : null}
         </View>
       </ScrollView>
@@ -380,33 +378,23 @@ type KpiTileProps = {
   label: string;
   value: string;
   accent: StyleProp<ViewStyle>;
+  theme: typeof THEME.light;
   valueStyle?: StyleProp<TextStyle>;
 };
 
-function KpiTile({ label, value, accent, valueStyle }: KpiTileProps) {
+function KpiTile({ label, value, accent, theme, valueStyle }: KpiTileProps) {
   return (
     <View style={[styles.kpiTile, accent]}>
-      <Text style={styles.kpiLabel}>{label}</Text>
-      <Text style={[styles.kpiValue, valueStyle]} numberOfLines={1}>
+      <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.kpiValue, { color: theme.foreground }, valueStyle]} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  rowBorder: "#CBD5E1",
-  green: "#16794B",
-  greenTint: "#F4FAF6",
-  blue: "#2367A8",
-  amber: "#9A6700",
-};
-
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#FFFFFF" },
+  page: { flex: 1 },
   loadingState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   stateText: { marginTop: 8, textAlign: "center" },
   headerBar: {
@@ -415,9 +403,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerButton: { minWidth: 40 },
   headerTitle: {
@@ -425,7 +411,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: COLORS.ink,
   },
   content: { padding: 16, gap: 12, paddingBottom: 32 },
   profilePanel: {
@@ -435,10 +420,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderTopWidth: 3,
-    borderColor: COLORS.border,
-    borderTopColor: COLORS.green,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
   },
   avatarWrap: {
     width: 56,
@@ -447,13 +429,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.greenTint,
   },
   avatarImage: { width: "100%", height: "100%" },
-  avatarInitial: { fontSize: 22, fontWeight: "800", color: COLORS.green },
+  avatarInitial: { fontSize: 22, fontWeight: "800" },
   profileInfo: { flex: 1, minWidth: 0, gap: 3 },
-  customerName: { fontSize: 18, fontWeight: "800", color: COLORS.ink },
-  customerSince: { fontSize: 12, color: COLORS.muted },
+  customerName: { fontSize: 18, fontWeight: "800" },
+  customerSince: { fontSize: 12 },
   statusPill: {
     alignSelf: "flex-start",
     marginTop: 4,
@@ -461,29 +442,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  statusPillActive: { backgroundColor: "#D1FAE5" },
-  statusPillInactive: { backgroundColor: "#FEE2E2" },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
-  statusTextActive: { color: "#047857" },
-  statusTextInactive: { color: "#B91C1C" },
   sectionHeading: {
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  viewAllText: { fontSize: 12, fontWeight: "700", color: COLORS.green },
+  viewAllText: { fontSize: 12, fontWeight: "700" },
   panel: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
   contactRow: {
@@ -495,7 +469,6 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
   },
   contactIconWrap: {
     width: 32,
@@ -503,7 +476,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F1F5F9",
   },
   contactText: { flex: 1, minWidth: 0, gap: 2 },
   fieldLabel: {
@@ -511,18 +483,15 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
-  fieldValue: { fontSize: 14, fontWeight: "600", color: COLORS.ink },
+  fieldValue: { fontSize: 14, fontWeight: "600" },
   actionButton: {
     width: 32,
     height: 32,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
   },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   kpiTile: {
@@ -531,31 +500,18 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderTopWidth: 3,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
   },
-  accentBlue: { borderTopColor: COLORS.blue, backgroundColor: "#F5F9FF" },
-  accentGreen: {
-    borderTopColor: COLORS.green,
-    backgroundColor: COLORS.greenTint,
-  },
-  accentAmber: { borderTopColor: COLORS.amber, backgroundColor: "#FFFBEB" },
-  accentSlate: { borderTopColor: COLORS.muted, backgroundColor: "#F8FAFC" },
   kpiLabel: {
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
-  kpiValue: { fontSize: 15, fontWeight: "800", color: COLORS.ink },
-  valueAmber: { color: COLORS.amber },
+  kpiValue: { fontSize: 15, fontWeight: "800" },
   table: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
   tableHeader: {
@@ -563,16 +519,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 32,
     paddingHorizontal: 12,
-    backgroundColor: "#F1F5F9",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerCell: {
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
   tableRow: {
     flexDirection: "row",
@@ -581,16 +534,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
   },
-  cell: { fontSize: 12, color: COLORS.ink },
-  cellAmber: { color: COLORS.amber, fontWeight: "700" },
+  cell: { fontSize: 12 },
+  cellAmber: { fontWeight: "700" },
   dateCol: { flex: 1.2 },
   amountCol: { flex: 1, textAlign: "right" },
   emptyText: {
     padding: 14,
     textAlign: "center",
     fontSize: 12,
-    color: COLORS.muted,
   },
 });

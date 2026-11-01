@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Mail, MapPin, Phone, Plus, UserRound } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -23,12 +24,15 @@ import { container, DI_TOKENS } from '@/di';
 import User from '@/models/user';
 import { IUserService } from '@/services/userService';
 import LoadingOverlay from '@/components/loadingOverlay';
+import { THEME } from '@/lib/theme';
 
 const userService = container.resolve<IUserService>(DI_TOKENS.IUserService);
 const PAGE_SIZE = 20;
 
 export default function UserListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/users/list');
   const [users, setUsers] = React.useState<User[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -87,14 +91,14 @@ export default function UserListScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && users.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2563EB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading users...</Text>
         </View>
       ) : users.length === 0 ? (
@@ -125,9 +129,9 @@ export default function UserListScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Edit ${user.displayName || user.userName}`}
               onPress={() => router.push(`/users/edit?id=${encodeURIComponent(user.id)}` as Parameters<typeof router.push>[0])}
-              style={styles.userRow}
+              style={[styles.userRow, { backgroundColor: theme.card, borderColor: theme.border }]}
             >
-              <View style={styles.avatar}>
+              <View style={[styles.avatar, { backgroundColor: theme.muted }]}>
                 <Icon className="text-muted-foreground" as={UserRound} size={20} />
               </View>
               <View style={styles.userDetails}>
@@ -135,8 +139,13 @@ export default function UserListScreen() {
                   <Text className="text-foreground" style={styles.userName} numberOfLines={1}>
                     {user.displayName || user.userName || 'Unnamed user'}
                   </Text>
-                  <View style={user.isActive === false ? styles.inactiveBadge : styles.activeBadge}>
-                    <Text style={user.isActive === false ? styles.inactiveBadgeText : styles.activeBadgeText}>
+                  <View style={[user.isActive === false ? styles.inactiveBadge : styles.activeBadge, { backgroundColor: theme.secondary }]}>
+                    <Text
+                      style={[
+                        user.isActive === false ? styles.inactiveBadgeText : styles.activeBadgeText,
+                        { color: user.isActive === false ? theme.destructive : theme.chart2 },
+                      ]}
+                    >
                       {user.isActive === false ? 'Inactive' : 'Active'}
                     </Text>
                   </View>
@@ -169,7 +178,7 @@ export default function UserListScreen() {
               </View>
             </Pressable>
           ))}
-          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color="#2563EB" /> : null}
+          {loadingMore ? <ActivityIndicator style={styles.loadMore} size="small" color={theme.primary} /> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -193,7 +202,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 10,
     padding: 12,
   },
@@ -203,7 +211,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
   },
   userDetails: { flex: 1, gap: 4 },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -211,10 +218,10 @@ const styles = StyleSheet.create({
   userMeta: { fontSize: 12 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   detailText: { flex: 1, fontSize: 12 },
-  activeBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#DCFCE7' },
-  activeBadgeText: { fontSize: 11, fontWeight: '600', color: '#166534' },
-  inactiveBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#FEE2E2' },
-  inactiveBadgeText: { fontSize: 11, fontWeight: '600', color: '#991B1B' },
+  activeBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  activeBadgeText: { fontSize: 11, fontWeight: '600' },
+  inactiveBadge: { borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  inactiveBadgeText: { fontSize: 11, fontWeight: '600' },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   stateTitle: { fontSize: 17, fontWeight: '600' },
   stateText: { marginTop: 8, textAlign: 'center' },

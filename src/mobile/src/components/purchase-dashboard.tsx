@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, usePathname, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import {
   CalendarDays,
   ChevronLeft,
@@ -23,6 +24,7 @@ import { Purchase } from '@/models/purchase';
 import { PurchaseServiceClient } from '@/services/purchaseService';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { RolePermissionServiceClient } from '@/services/rolePermissionService';
+import { THEME } from '@/lib/theme';
 
 const purchaseService = new PurchaseServiceClient();
 const permissionService = new RolePermissionServiceClient();
@@ -31,42 +33,43 @@ function formatMoney(value: number) {
   return `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} MMK`;
 }
 
-const TONE_COLORS = {
-  green: '#16794B',
-  blue: '#2367A8',
-  amber: '#9A6700',
-  red: '#B42318',
-};
+type ThemeColors = typeof THEME.light;
+type MetricTone = 'green' | 'blue' | 'amber' | 'red';
+
+function getToneColor(tone: MetricTone, theme: ThemeColors) {
+  switch (tone) {
+    case 'green': return theme.chart2;
+    case 'blue': return theme.chart1;
+    case 'amber': return theme.chart4;
+    case 'red': return theme.destructive;
+  }
+}
 
 function Metric({
   label,
   value,
   icon,
   tone,
+  theme,
 }: {
   label: string;
   value: string;
   icon: typeof HandCoins;
-  tone: 'green' | 'blue' | 'amber' | 'red';
+  tone: MetricTone;
+  theme: ThemeColors;
 }) {
   const MetricIcon = icon;
-  const toneStyle = tone === 'green'
-    ? styles.metricgreen
-    : tone === 'blue'
-      ? styles.metricblue
-      : tone === 'amber'
-        ? styles.metricamber
-        : styles.metricred;
+  const toneColor = getToneColor(tone, theme);
 
   return (
-    <View style={[styles.metricCard, toneStyle, { borderTopColor: TONE_COLORS[tone] }]}>
+    <View style={[styles.metricCard, { backgroundColor: theme.secondary, borderColor: theme.border, borderTopColor: toneColor }]}>
       <View style={styles.metricHeader}>
-        <View style={styles.metricIcon}>
-          <MetricIcon size={16} color={TONE_COLORS[tone]} />
+        <View style={[styles.metricIcon, { backgroundColor: theme.card }]}>
+          <MetricIcon size={16} color={toneColor} />
         </View>
-        <Text className="text-muted-foreground" style={styles.metricLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.metricLabel, { color: theme.mutedForeground }]} numberOfLines={1}>{label}</Text>
       </View>
-      <Text className="text-foreground" style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.metricValue, { color: theme.foreground }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     </View>
   );
 }
@@ -99,6 +102,8 @@ export function PurchaseDashboardContent({
   onBack?: () => void;
 }) {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const pathname = usePathname();
   const permissionKey = pathname === '/home/purchases' ? '/home/purchases' : '/purchases/dashboard';
   const [purchases, setPurchases] = React.useState<Purchase[]>([]);
@@ -240,7 +245,7 @@ export function PurchaseDashboardContent({
         >
           <View style={styles.metricsGrid}>
             {metrics.map((metric) => (
-              <Metric key={metric.label} label={metric.label} value={metric.value} icon={metric.icon} tone={metric.tone} />
+              <Metric key={metric.label} label={metric.label} value={metric.value} icon={metric.icon} tone={metric.tone} theme={theme} />
             ))}
           </View>
 
@@ -304,12 +309,8 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 28, gap: 20 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metricCard: { width: '48%', minHeight: 88, borderRadius: 6, borderWidth: 1, borderTopWidth: 3, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'space-between', gap: 10 },
-  metricgreen: { backgroundColor: '#F4FAF6', borderColor: '#D5E9DC' },
-  metricblue: { backgroundColor: '#F3F8FC', borderColor: '#D6E6F3' },
-  metricamber: { backgroundColor: '#FFFAEE', borderColor: '#EFE2BF' },
-  metricred: { backgroundColor: '#FFF5F4', borderColor: '#F0D8D5' },
   metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metricIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFFAA' },
+  metricIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   metricLabel: { flex: 1, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   metricValue: { fontSize: 18, fontWeight: '800' },
   actionRow: { flexDirection: 'row', gap: 10 },

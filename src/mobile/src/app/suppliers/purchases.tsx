@@ -10,6 +10,7 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from 'nativewind';
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,6 +20,7 @@ import { Purchase } from "@/models/purchase";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from '@/lib/theme';
 
 const PAGE_SIZE = 20;
 
@@ -28,6 +30,8 @@ function formatMoney(value: number) {
 
 export default function SupplierPurchasesScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/suppliers/purchases');
   const { supplierId } = useLocalSearchParams<{ supplierId?: string }>();
   const service = React.useMemo(() => new SupplierServiceClient(), []);
@@ -106,14 +110,14 @@ export default function SupplierPurchasesScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground">Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && purchases.length === 0 ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       ) : purchases.length === 0 ? (
         <View style={styles.centered}>
@@ -149,7 +153,7 @@ export default function SupplierPurchasesScreen() {
           {purchases.map((purchase) => (
             <Pressable
               key={purchase.id}
-              style={styles.card}
+              style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}
               onPress={() =>
                 router.push({
                   pathname: "/purchases/view",
@@ -167,7 +171,7 @@ export default function SupplierPurchasesScreen() {
                   size={16}
                 />
               </View>
-              <View style={styles.summary}>
+              <View style={[styles.summary, { borderTopColor: theme.border }]}>
                 <View>
                   <Text className="text-muted-foreground" style={styles.label}>
                     Items
@@ -188,9 +192,9 @@ export default function SupplierPurchasesScreen() {
             </Pressable>
           ))}
           {loadingMore ? (
-            <ActivityIndicator size="small" color="#4f46e5" />
+            <ActivityIndicator size="small" color={theme.primary} />
           ) : null}
-          {!hasMore ? <Text style={styles.end}>End of list</Text> : null}
+          {!hasMore ? <Text style={[styles.end, { color: theme.mutedForeground }]}>End of list</Text> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -217,9 +221,7 @@ const styles = StyleSheet.create({
   content: { padding: 12, gap: 10, paddingBottom: 24 },
   card: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
     padding: 12,
     gap: 10,
   },
@@ -230,10 +232,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E2E8F0",
   },
   total: { alignItems: "flex-end" },
   label: { fontSize: 11, marginBottom: 3 },
   value: { fontSize: 14, fontWeight: "700" },
-  end: { textAlign: "center", color: "#64748B", fontSize: 11 },
+  end: { textAlign: "center", fontSize: 11 },
 });

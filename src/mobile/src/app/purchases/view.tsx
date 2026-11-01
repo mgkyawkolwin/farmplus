@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Package, Pencil, Trash2 } from 'lucide-react-native';
 
@@ -16,8 +17,10 @@ import { container, DI_TOKENS } from '@/di';
 import { Purchase } from '@/models/purchase';
 import { IPurchaseService } from '@/services/purchaseService';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 const purchaseService = container.resolve<IPurchaseService>(DI_TOKENS.IPurchaseService);
+type ThemeColors = typeof THEME.light;
 
 function money(value: number) {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,12 +32,13 @@ function formatDateTime(value?: string) {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
 }
 
-function ActionButton({ label, icon, onPress, disabled, color }: {
+function ActionButton({ label, icon, onPress, disabled, color, theme }: {
   label: string;
   icon: React.ComponentProps<typeof Icon>['as'];
   onPress: () => void;
   disabled?: boolean;
   color: string;
+  theme: ThemeColors;
 }) {
   return (
     <Pressable
@@ -44,7 +48,7 @@ function ActionButton({ label, icon, onPress, disabled, color }: {
       accessibilityLabel={label}
       style={[styles.actionButton, disabled && styles.actionButtonDisabled]}
     >
-      <View style={[styles.actionIcon, { backgroundColor: `${color}1A` }]}>
+      <View style={[styles.actionIcon, { backgroundColor: theme.secondary }]}>
         <Icon as={icon} size={20} color={color} />
       </View>
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>
@@ -52,17 +56,19 @@ function ActionButton({ label, icon, onPress, disabled, color }: {
   );
 }
 
-function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function SummaryRow({ label, value, strong, theme }: { label: string; value: string; strong?: boolean; theme: ThemeColors }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={[styles.summaryLabel, strong && styles.summaryLabelStrong]}>{label}</Text>
-      <Text style={[styles.summaryValue, strong && styles.summaryValueStrong]}>{value}</Text>
+      <Text style={[styles.summaryLabel, { color: strong ? theme.foreground : theme.mutedForeground }, strong && styles.summaryLabelStrong]}>{label}</Text>
+      <Text style={[styles.summaryValue, { color: theme.foreground }, strong && styles.summaryValueStrong]}>{value}</Text>
     </View>
   );
 }
 
 export default function PurchaseViewScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/purchases/view');
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const purchaseId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -135,67 +141,67 @@ export default function PurchaseViewScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading && !purchase ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading purchase...</Text>
         </View>
       ) : purchase ? (
         <ScrollView contentContainerStyle={styles.content}>
           <ShopBanner name={purchase.shopName} emptyText="Recorded before shops existed" />
 
-          <View style={styles.panel}>
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.titleRow}>
               <View style={styles.titleInfo}>
-                <Text style={styles.eyebrow}>Purchase Order</Text>
-                <Text style={styles.docNo}>#{purchase.id.slice(0, 8).toUpperCase()}</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Purchase Order</Text>
+                <Text style={[styles.docNo, { color: theme.foreground }]}>#{purchase.id.slice(0, 8).toUpperCase()}</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <View style={styles.infoCell}>
-                <Text style={styles.eyebrow}>Supplier</Text>
-                <Text style={styles.infoValue} numberOfLines={2}>{purchase.supplierName}</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Supplier</Text>
+                <Text style={[styles.infoValue, { color: theme.foreground }]} numberOfLines={2}>{purchase.supplierName}</Text>
               </View>
               <View style={styles.infoCell}>
-                <Text style={styles.eyebrow}>Date</Text>
-                <Text style={styles.infoValue}>{formatDateTime(purchase.purchaseDate)}</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Date</Text>
+                <Text style={[styles.infoValue, { color: theme.foreground }]}>{formatDateTime(purchase.purchaseDate)}</Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <View style={styles.infoCell}>
-                <Text style={styles.eyebrow}>Products</Text>
-                <Text style={styles.infoValue}>{items.length || purchase.totalProducts}</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Products</Text>
+                <Text style={[styles.infoValue, { color: theme.foreground }]}>{items.length || purchase.totalProducts}</Text>
               </View>
               <View style={styles.infoCell}>
-                <Text style={styles.eyebrow}>Total Qty</Text>
-                <Text style={styles.infoValue}>{totalQty}</Text>
+                <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Total Qty</Text>
+                <Text style={[styles.infoValue, { color: theme.foreground }]}>{totalQty}</Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Items ({items.length})</Text>
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items ({items.length})</Text>
 
             {items.length === 0 ? (
-              <Text style={styles.emptyText}>No item details available.</Text>
+              <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No item details available.</Text>
             ) : items.map((item, index) => (
-              <View key={item.id ?? `${item.productId}-${index}`} style={styles.itemCard}>
-                <View style={styles.itemIcon}>
+              <View key={item.id ?? `${item.productId}-${index}`} style={[styles.itemCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <View style={[styles.itemIcon, { backgroundColor: theme.secondary }]}>
                   <Icon className="text-muted-foreground" as={Package} size={16} />
                 </View>
                 <View style={styles.itemBody}>
                   <View style={styles.itemTop}>
                     <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{item.productName}</Text>
-                    <Text style={styles.itemTotal}>{money(item.lineTotal)}</Text>
+                    <Text style={[styles.itemTotal, { color: theme.foreground }]}>{money(item.lineTotal)}</Text>
                   </View>
-                  <Text style={styles.productMeta} numberOfLines={1}>
+                  <Text style={[styles.productMeta, { color: theme.mutedForeground }]} numberOfLines={1}>
                     {item.quantity}{item.unit ? ` ${item.unit}` : ''} × {money(item.unitPrice)}
                   </Text>
                 </View>
@@ -203,30 +209,32 @@ export default function PurchaseViewScreen() {
             ))}
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Summary</Text>
-            <SummaryRow label="Subtotal" value={money(purchase.subTotal)} />
-            <SummaryRow label="Tax" value={money(purchase.tax)} />
-            <SummaryRow label="Discount" value={`- ${money(purchase.discount)}`} />
-            <View style={styles.divider} />
-            <SummaryRow label="Net Total" value={money(purchase.netTotal)} strong />
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Summary</Text>
+            <SummaryRow label="Subtotal" value={money(purchase.subTotal)} theme={theme} />
+            <SummaryRow label="Tax" value={money(purchase.tax)} theme={theme} />
+            <SummaryRow label="Discount" value={`- ${money(purchase.discount)}`} theme={theme} />
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <SummaryRow label="Net Total" value={money(purchase.netTotal)} strong theme={theme} />
           </View>
         </ScrollView>
       ) : null}
 
       {purchase ? (
-        <View style={styles.actionBar}>
+        <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
           <ActionButton
             label="Edit"
             icon={Pencil}
-            color="#2563EB"
+            color={theme.primary}
+            theme={theme}
             disabled={deleting}
             onPress={() => router.push(`/purchases/edit?id=${encodeURIComponent(purchase.id)}` as Parameters<typeof router.push>[0])}
           />
           <ActionButton
             label="Delete"
             icon={Trash2}
-            color="#DC2626"
+            color={theme.destructive}
+            theme={theme}
             disabled={deleting}
             onPress={confirmDelete}
           />
@@ -244,41 +252,39 @@ const styles = StyleSheet.create({
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   stateText: { marginTop: 8 },
   content: { padding: 12, paddingBottom: 28, gap: 12 },
-  panel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12 },
+  panel: { borderWidth: 1, borderRadius: 10, padding: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   titleInfo: { flex: 1 },
-  eyebrow: { fontSize: 9, color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  docNo: { fontSize: 22, fontWeight: '800', color: '#0F172A', marginTop: 2 },
+  eyebrow: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  docNo: { fontSize: 22, fontWeight: '800', marginTop: 2 },
   infoRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
   infoCell: { flex: 1, minWidth: 0 },
-  infoValue: { fontSize: 13, fontWeight: '600', color: '#1E293B', marginTop: 2 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
+  infoValue: { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
     marginBottom: 6,
   },
-  itemIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  itemIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   itemBody: { flex: 1, minWidth: 0 },
   itemTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  itemTotal: { fontSize: 12, fontWeight: '800', color: '#0F172A' },
+  itemTotal: { fontSize: 12, fontWeight: '800' },
   productName: { flex: 1, fontSize: 12, fontWeight: '600' },
-  productMeta: { fontSize: 10, color: '#64748B', marginTop: 1 },
-  emptyText: { fontSize: 12, color: '#64748B', paddingVertical: 12, textAlign: 'center' },
+  productMeta: { fontSize: 10, marginTop: 1 },
+  emptyText: { fontSize: 12, paddingVertical: 12, textAlign: 'center' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
-  summaryLabel: { fontSize: 12, color: '#475569' },
-  summaryLabelStrong: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  summaryValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
+  summaryLabel: { fontSize: 12 },
+  summaryLabelStrong: { fontSize: 14, fontWeight: '800' },
+  summaryValue: { fontSize: 12, fontWeight: '600' },
   summaryValueStrong: { fontSize: 15, fontWeight: '800' },
-  divider: { height: 1, backgroundColor: '#CBD5E1', marginVertical: 6 },
-  actionBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
+  divider: { height: 1, marginVertical: 6 },
+  actionBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1 },
   actionButton: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
   actionButtonDisabled: { opacity: 0.35 },
   actionIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

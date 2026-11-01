@@ -24,6 +24,7 @@ import {
   Wallet,
 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from "nativewind";
 
 import {
   BarChart,
@@ -43,30 +44,33 @@ import { InventoryMovement, ProductItem } from "@/models/product";
 import { getInventoryProducts } from "@/services/inventoryService";
 import { IProductService } from "@/services/productService";
 import { useSelectedShopChanged } from "@/lib/selectedShop";
+import { THEME } from "@/lib/theme";
 import { usePagePermission } from "@/lib/usePagePermission";
 
 const productService = container.resolve<IProductService>(DI_TOKENS.IProductService);
 
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  green: "#16794B",
-  blue: "#2367A8",
-  amber: "#9A6700",
-  red: "#B42318",
-  purple: "#7C3AED",
-  slate: "#94A3B8",
-};
+type ThemeColors = typeof THEME.light;
+
+function getColors(theme: ThemeColors) {
+  return {
+    ink: theme.foreground,
+    muted: theme.mutedForeground,
+    border: theme.border,
+    green: theme.chart2,
+    blue: theme.chart1,
+    amber: theme.chart4,
+    red: theme.destructive,
+    purple: theme.chart5,
+    slate: theme.chart3,
+  };
+}
 
 type Tone = "green" | "blue" | "amber" | "red";
 
-const TONES: Record<Tone, { fg: string; bg: string; border: string }> = {
-  green: { fg: "#16794B", bg: "#F4FAF6", border: "#D5E9DC" },
-  blue: { fg: "#2367A8", bg: "#F3F8FC", border: "#D6E6F3" },
-  amber: { fg: "#9A6700", bg: "#FFFAEE", border: "#EFE2BF" },
-  red: { fg: "#B42318", bg: "#FFF5F4", border: "#F0D8D5" },
-};
+function getToneColors(tone: Tone, theme: ThemeColors) {
+  const colors = getColors(theme);
+  return { fg: colors[tone], bg: theme.secondary, border: theme.border };
+}
 
 const PAGE_SIZE = 500;
 const DAY = 86_400_000;
@@ -97,28 +101,31 @@ function Section({
   title,
   subtitle,
   onViewAll,
+  theme,
   children,
 }: {
   title: string;
   subtitle?: string;
   onViewAll?: () => void;
+  theme: ThemeColors;
   children: React.ReactNode;
 }) {
+  const colors = getColors(theme);
   return (
     <View>
       <View style={styles.sectionHeading}>
         <View style={styles.sectionTitleBlock}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+            <Text style={[styles.sectionTitle, { color: colors.ink }]}>{title}</Text>
+          {subtitle ? <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>{subtitle}</Text> : null}
         </View>
         {onViewAll ? (
           <Pressable style={styles.seeAll} onPress={onViewAll}>
-            <Text style={styles.seeAllText}>View all</Text>
-            <ChevronRight size={14} color={COLORS.green} />
+            <Text style={[styles.seeAllText, { color: colors.green }]}>View all</Text>
+            <ChevronRight size={14} color={colors.green} />
           </Pressable>
         ) : null}
       </View>
-      <View style={styles.panel}>{children}</View>
+      <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>{children}</View>
     </View>
   );
 }
@@ -129,14 +136,16 @@ function Kpi({
   caption,
   icon: IconComponent,
   tone,
+  theme,
 }: {
   label: string;
   value: string;
   caption: string;
   icon: typeof Wallet;
   tone: Tone;
+  theme: ThemeColors;
 }) {
-  const palette = TONES[tone];
+  const palette = getToneColors(tone, theme);
   return (
     <View
       style={[
@@ -149,15 +158,15 @@ function Kpi({
       ]}
     >
       <View style={styles.kpiHeader}>
-        <View style={styles.kpiIcon}>
+        <View style={[styles.kpiIcon, { backgroundColor: theme.secondary }]}>
           <IconComponent size={16} color={palette.fg} />
         </View>
-        <Text style={styles.kpiLabel} numberOfLines={1}>{label}</Text>
+          <Text style={[styles.kpiLabel, { color: theme.mutedForeground }]} numberOfLines={1}>{label}</Text>
       </View>
-      <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+      <Text style={[styles.kpiValue, { color: theme.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
         {value}
       </Text>
-      <Text style={styles.kpiCaption} numberOfLines={1}>{caption}</Text>
+      <Text style={[styles.kpiCaption, { color: theme.mutedForeground }]} numberOfLines={1}>{caption}</Text>
     </View>
   );
 }
@@ -168,6 +177,9 @@ type MovementTypeStats = { name: string; quantity: number; events: number };
 
 export default function InventoryReportDashboardScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === "dark" ? THEME.dark : THEME.light;
+  const colors = getColors(theme);
   const permissionState = usePagePermission('/reports/inventories/dashboard');
   const [products, setProducts] = React.useState<ProductItem[]>([]);
   const [movements, setMovements] = React.useState<InventoryMovement[]>([]);
@@ -338,9 +350,9 @@ export default function InventoryReportDashboardScreen() {
     ...report.categories.slice(0, 5).map((category, index) => ({
       label: category.name,
       value: category.value,
-      color: [COLORS.green, COLORS.blue, COLORS.amber, COLORS.purple, COLORS.red][index],
+      color: [colors.green, colors.blue, colors.amber, colors.purple, colors.red][index],
     })),
-    ...(otherCategoryValue > 0 ? [{ label: "Other", value: otherCategoryValue, color: COLORS.slate }] : []),
+    ...(otherCategoryValue > 0 ? [{ label: "Other", value: otherCategoryValue, color: colors.slate }] : []),
   ];
   const stockListRoute = "/inventory/list" as Href;
   const openProduct = (id: string) => router.push({ pathname: "/inventory/view", params: { id } } as Href);
@@ -357,7 +369,7 @@ export default function InventoryReportDashboardScreen() {
       </View>
 
       {permissionState === 'checking' ? (
-        <View style={styles.centeredState}><ActivityIndicator size="large" color="#16794B" /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
+        <View style={styles.centeredState}><ActivityIndicator size="large" color={colors.green} /><Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text></View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : <ScrollView
@@ -368,58 +380,58 @@ export default function InventoryReportDashboardScreen() {
         }} />}
       >
         <View>
-          <Text style={styles.eyebrow}>Inventory analytics</Text>
-          <Text style={styles.title}>Inventory overview</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.eyebrow, { color: colors.green }]}>Inventory analytics</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>Inventory overview</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             {count(products.length)} SKUs · current stock and movements for the selected shop when active
           </Text>
         </View>
 
         <View style={styles.kpiGrid}>
-          <Kpi label="Stock on hand" value={count(report.stockUnits)} caption="Units across all products" icon={Boxes} tone="green" />
-          <Kpi label="Stock value" value={money(report.stockValue)} caption="At current sale price" icon={Wallet} tone="blue" />
-          <Kpi label="Active products" value={count(report.activeProducts)} caption={`${count(products.length - report.activeProducts)} inactive`} icon={Package} tone="green" />
-          <Kpi label="Low stock SKUs" value={count(report.lowStockProducts.length)} caption="At or below minimum" icon={AlertTriangle} tone={report.lowStockProducts.length > 0 ? "amber" : "green"} />
-          <Kpi label="Out of stock" value={count(report.outOfStockProducts.length)} caption="SKUs at zero" icon={AlertTriangle} tone={report.outOfStockProducts.length > 0 ? "red" : "green"} />
-          <Kpi label="Stock in" value={count(report.stockIn)} caption="Units in movement history" icon={TrendingUp} tone="green" />
-          <Kpi label="Stock out" value={count(report.stockOut)} caption="Units out, excluding transfers" icon={TrendingDown} tone="amber" />
-          <Kpi label="Transfer movement" value={count(report.transferUnits)} caption="Units moved between shops" icon={Repeat} tone="blue" />
-          <Kpi label="Damage recorded" value={count(report.damageUnits)} caption="Units written off" icon={AlertTriangle} tone={report.damageUnits > 0 ? "red" : "green"} />
-          <Kpi label="Events · 30 days" value={count(report.movementsLast30)} caption={`${count(report.newProductsLast30)} new SKUs`} icon={CalendarDays} tone="blue" />
+          <Kpi label="Stock on hand" value={count(report.stockUnits)} caption="Units across all products" icon={Boxes} tone="green" theme={theme} />
+          <Kpi label="Stock value" value={money(report.stockValue)} caption="At current sale price" icon={Wallet} tone="blue" theme={theme} />
+          <Kpi label="Active products" value={count(report.activeProducts)} caption={`${count(products.length - report.activeProducts)} inactive`} icon={Package} tone="green" theme={theme} />
+          <Kpi label="Low stock SKUs" value={count(report.lowStockProducts.length)} caption="At or below minimum" icon={AlertTriangle} tone={report.lowStockProducts.length > 0 ? "amber" : "green"} theme={theme} />
+          <Kpi label="Out of stock" value={count(report.outOfStockProducts.length)} caption="SKUs at zero" icon={AlertTriangle} tone={report.outOfStockProducts.length > 0 ? "red" : "green"} theme={theme} />
+          <Kpi label="Stock in" value={count(report.stockIn)} caption="Units in movement history" icon={TrendingUp} tone="green" theme={theme} />
+          <Kpi label="Stock out" value={count(report.stockOut)} caption="Units out, excluding transfers" icon={TrendingDown} tone="amber" theme={theme} />
+          <Kpi label="Transfer movement" value={count(report.transferUnits)} caption="Units moved between shops" icon={Repeat} tone="blue" theme={theme} />
+          <Kpi label="Damage recorded" value={count(report.damageUnits)} caption="Units written off" icon={AlertTriangle} tone={report.damageUnits > 0 ? "red" : "green"} theme={theme} />
+          <Kpi label="Events · 30 days" value={count(report.movementsLast30)} caption={`${count(report.newProductsLast30)} new SKUs`} icon={CalendarDays} tone="blue" theme={theme} />
         </View>
 
-        <Section title="Stock movement trend" subtitle="Last 12 months · units in vs out, excluding transfers">
+        <Section title="Stock movement trend" subtitle="Last 12 months · units in vs out, excluding transfers" theme={theme}>
           <LineChart
             labels={report.monthly.map((month) => month.label)}
             series={[
-              { name: "Stock in", color: COLORS.green, values: report.monthly.map((month) => month.stockIn) },
-              { name: "Stock out", color: COLORS.amber, values: report.monthly.map((month) => month.stockOut) },
+              { name: "Stock in", color: colors.green, values: report.monthly.map((month) => month.stockIn) },
+              { name: "Stock out", color: colors.amber, values: report.monthly.map((month) => month.stockOut) },
             ]}
           />
         </Section>
 
-        <Section title="Movement events" subtitle="Recorded movement count by month">
+        <Section title="Movement events" subtitle="Recorded movement count by month" theme={theme}>
           <BarChart
             data={report.monthly.map((month) => ({ label: month.label, values: [month.events] }))}
-            series={[{ name: "Movement events", color: COLORS.blue }]}
+            series={[{ name: "Movement events", color: colors.blue }]}
             height={160}
           />
         </Section>
 
-        <Section title="Stock health" subtitle="Current SKU availability">
+        <Section title="Stock health" subtitle="Current SKU availability" theme={theme}>
           <DonutChart
             centerLabel="Products"
             centerValue={count(products.length)}
             slices={[
-              { label: "Healthy", value: report.healthyStock, color: COLORS.green },
-              { label: "Low stock", value: report.lowStockProducts.length, color: COLORS.amber },
-              { label: "Out of stock", value: report.outOfStockProducts.length, color: COLORS.red },
+              { label: "Healthy", value: report.healthyStock, color: colors.green },
+              { label: "Low stock", value: report.lowStockProducts.length, color: colors.amber },
+              { label: "Out of stock", value: report.outOfStockProducts.length, color: colors.red },
             ]}
             formatValue={count}
           />
         </Section>
 
-        <Section title="Inventory value by category" subtitle="Current stock × current sale price">
+        <Section title="Inventory value by category" subtitle="Current stock × current sale price" theme={theme}>
           <DonutChart
             centerLabel="Stock value"
             centerValue={compactNumber(report.stockValue)}
@@ -428,79 +440,79 @@ export default function InventoryReportDashboardScreen() {
           />
         </Section>
 
-        <Section title="Movement type" subtitle="Units represented by recorded event type">
+        <Section title="Movement type" subtitle="Units represented by recorded event type" theme={theme}>
           <RankedBars
             items={report.typeStats.slice(0, 8).map((type) => ({
               label: type.name,
               value: type.quantity,
               caption: `${count(type.events)} events`,
             }))}
-            color={COLORS.purple}
+            color={colors.purple}
             formatValue={count}
             emptyText="No stock movements recorded."
           />
         </Section>
 
-        <Section title="Products with most movement" subtitle="Absolute units moved">
+        <Section title="Products with most movement" subtitle="Absolute units moved" theme={theme}>
           <RankedBars
             items={report.topProducts.map((product) => ({
               label: product.name,
               value: product.units,
               caption: `${count(product.events)} events`,
             }))}
-            color={COLORS.blue}
+            color={colors.blue}
             formatValue={count}
             emptyText="No stock movements recorded."
           />
         </Section>
 
-        <Section title="Reorder attention" subtitle="Out-of-stock or at/below minimum" onViewAll={() => router.push(stockListRoute)}>
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Stock</Text>
-              <Text style={[styles.th, styles.tdNum]}>Minimum</Text>
+        <Section title="Reorder attention" subtitle="Out-of-stock or at/below minimum" onViewAll={() => router.push(stockListRoute)} theme={theme}>
+          <View style={[styles.table, { borderColor: theme.border }]}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.secondary }]}>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Product</Text>
+              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>Stock</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Minimum</Text>
             </View>
             {report.outOfStockProducts.concat(report.lowStockProducts).slice(0, 8).map((product) => (
-              <Pressable key={product.id} style={styles.tableRow} onPress={() => openProduct(product.id)}>
+              <Pressable key={product.id} style={[styles.tableRow, { borderTopColor: theme.border }]} onPress={() => openProduct(product.id)}>
                 <View style={styles.tdWide}>
-                  <Text style={styles.td} numberOfLines={1}>{product.name}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{product.category || "Uncategorized"}</Text>
+                  <Text style={[styles.td, { color: colors.ink }]} numberOfLines={1}>{product.name}</Text>
+                  <Text style={[styles.tdSub, { color: colors.muted }]} numberOfLines={1}>{product.category || "Uncategorized"}</Text>
                 </View>
-                <Text style={[styles.td, styles.tdSmall, styles.amber]}>{count(product.currentStock ?? 0)}</Text>
-                <Text style={[styles.td, styles.tdNum]}>{count(product.minimumStock ?? 0)}</Text>
+                <Text style={[styles.td, styles.tdSmall, { color: colors.amber, fontWeight: "700" }]}>{count(product.currentStock ?? 0)}</Text>
+                <Text style={[styles.td, styles.tdNum, { color: colors.ink }]}>{count(product.minimumStock ?? 0)}</Text>
               </Pressable>
             ))}
             {report.outOfStockProducts.length + report.lowStockProducts.length === 0 ? (
-              <Text style={styles.empty}>All products are above minimum stock.</Text>
+              <Text style={[styles.empty, { color: colors.muted }]}>All products are above minimum stock.</Text>
             ) : null}
           </View>
         </Section>
 
-        <Section title="Recent stock movements" subtitle="Latest selected-shop events">
-          <View style={styles.table}>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.tdWide]}>Product</Text>
-              <Text style={[styles.th, styles.tdSmall]}>Type</Text>
-              <Text style={[styles.th, styles.tdNum]}>Qty</Text>
-              <Text style={[styles.th, styles.tdNum]}>Date</Text>
+        <Section title="Recent stock movements" subtitle="Latest selected-shop events" theme={theme}>
+          <View style={[styles.table, { borderColor: theme.border }]}>
+            <View style={[styles.tableHeader, { backgroundColor: theme.secondary }]}>
+              <Text style={[styles.th, styles.tdWide, { color: colors.muted }]}>Product</Text>
+              <Text style={[styles.th, styles.tdSmall, { color: colors.muted }]}>Type</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Qty</Text>
+              <Text style={[styles.th, styles.tdNum, { color: colors.muted }]}>Date</Text>
             </View>
             {report.recentMovements.map((movement) => (
-              <Pressable key={movement.id} style={styles.tableRow} onPress={() => openProduct(movement.productId)}>
+              <Pressable key={movement.id} style={[styles.tableRow, { borderTopColor: theme.border }]} onPress={() => openProduct(movement.productId)}>
                 <View style={styles.tdWide}>
-                  <Text style={styles.td} numberOfLines={1}>{movement.productName}</Text>
-                  <Text style={styles.tdSub} numberOfLines={1}>{movement.shopName}</Text>
+                  <Text style={[styles.td, { color: colors.ink }]} numberOfLines={1}>{movement.productName}</Text>
+                  <Text style={[styles.tdSub, { color: colors.muted }]} numberOfLines={1}>{movement.shopName}</Text>
                 </View>
-                <Text style={[styles.td, styles.tdSmall]} numberOfLines={1}>{movement.type}</Text>
-                <Text style={[styles.td, styles.tdNum, movement.quantity < 0 ? styles.red : styles.green]}>
+                <Text style={[styles.td, styles.tdSmall, { color: colors.ink }]} numberOfLines={1}>{movement.type}</Text>
+                <Text style={[styles.td, styles.tdNum, { color: movement.quantity < 0 ? colors.red : colors.green, fontWeight: "700" }]}>
                   {movement.quantity > 0 ? "+" : ""}{count(movement.quantity)}
                 </Text>
-                <Text style={[styles.td, styles.tdNum]} numberOfLines={1}>
+                <Text style={[styles.td, styles.tdNum, { color: colors.ink }]} numberOfLines={1}>
                   {new Date(timestamp(movement.createdAtUtc)).toLocaleDateString()}
                 </Text>
               </Pressable>
             ))}
-            {report.recentMovements.length === 0 ? <Text style={styles.empty}>No stock movements recorded.</Text> : null}
+            {report.recentMovements.length === 0 ? <Text style={[styles.empty, { color: colors.muted }]}>No stock movements recorded.</Text> : null}
           </View>
         </Section>
       </ScrollView>}
@@ -514,36 +526,33 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 40 },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "600" },
   content: { padding: 16, gap: 16, paddingBottom: 32 },
-  eyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.green },
-  title: { fontSize: 22, fontWeight: "800", color: COLORS.ink },
-  subtitle: { fontSize: 12, color: COLORS.muted, marginTop: 2 },
+  eyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 0.6, textTransform: "uppercase" },
+  title: { fontSize: 22, fontWeight: "800" },
+  subtitle: { fontSize: 12, marginTop: 2 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   kpi: { width: "48%", padding: 12, gap: 6, borderWidth: 1, borderTopWidth: 3, borderRadius: 6 },
   kpiHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  kpiIcon: { width: 26, height: 26, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
-  kpiLabel: { flex: 1, fontSize: 10, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", color: COLORS.muted },
-  kpiValue: { fontSize: 18, fontWeight: "800", color: COLORS.ink },
-  kpiCaption: { fontSize: 11, color: COLORS.muted },
+  kpiIcon: { width: 26, height: 26, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  kpiLabel: { flex: 1, fontSize: 10, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase" },
+  kpiValue: { fontSize: 18, fontWeight: "800" },
+  kpiCaption: { fontSize: 11 },
   sectionHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   sectionTitleBlock: { flex: 1 },
-  sectionTitle: { fontSize: 14, fontWeight: "800", color: COLORS.ink },
-  sectionSubtitle: { fontSize: 11, color: COLORS.muted, marginTop: 1 },
+  sectionTitle: { fontSize: 14, fontWeight: "800" },
+  sectionSubtitle: { fontSize: 11, marginTop: 1 },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAllText: { fontSize: 12, fontWeight: "700", color: COLORS.green },
-  panel: { padding: 14, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, backgroundColor: "#FFFFFF" },
-  table: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, overflow: "hidden" },
-  tableHeader: { flexDirection: "row", alignItems: "center", minHeight: 30, paddingHorizontal: 10, gap: 6, backgroundColor: "#F1F5F9" },
-  th: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase", color: COLORS.muted },
-  tableRow: { flexDirection: "row", alignItems: "center", minHeight: 40, paddingHorizontal: 10, paddingVertical: 6, gap: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#CBD5E1" },
-  td: { fontSize: 12, color: COLORS.ink },
-  tdSub: { fontSize: 10, color: COLORS.muted },
+  seeAllText: { fontSize: 12, fontWeight: "700" },
+  panel: { padding: 14, borderWidth: 1, borderRadius: 8 },
+  table: { borderWidth: 1, borderRadius: 6, overflow: "hidden" },
+  tableHeader: { flexDirection: "row", alignItems: "center", minHeight: 30, paddingHorizontal: 10, gap: 6 },
+  th: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4, textTransform: "uppercase" },
+  tableRow: { flexDirection: "row", alignItems: "center", minHeight: 40, paddingHorizontal: 10, paddingVertical: 6, gap: 6, borderTopWidth: StyleSheet.hairlineWidth },
+  td: { fontSize: 12 },
+  tdSub: { fontSize: 10 },
   tdWide: { flex: 2, minWidth: 0 },
   tdSmall: { flex: 1, textAlign: "right" },
   tdNum: { flex: 1.1, textAlign: "right" },
-  amber: { color: COLORS.amber, fontWeight: "700" },
-  green: { color: COLORS.green, fontWeight: "700" },
-  red: { color: COLORS.red, fontWeight: "700" },
   centeredState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   stateText: { marginTop: 8, textAlign: "center" },
-  empty: { padding: 14, textAlign: "center", fontSize: 12, color: COLORS.muted },
+  empty: { padding: 14, textAlign: "center", fontSize: 12 },
 });

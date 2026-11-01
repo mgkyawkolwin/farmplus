@@ -4,13 +4,14 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, Mail, MapPin, Pencil, Phone } from "lucide-react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from 'nativewind';
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -20,15 +21,7 @@ import { Supplier } from "@/models/supplier";
 import { SupplierServiceClient } from "@/services/supplierService";
 import SnackBar from "@/components/ui/snack-bar";
 import { usePagePermission } from "@/lib/usePagePermission";
-
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  rowBorder: "#CBD5E1",
-  green: "#16794B",
-  greenTint: "#F4FAF6",
-};
+import { THEME } from '@/lib/theme';
 
 function money(value: number) {
   return `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })} MMK`;
@@ -36,6 +29,8 @@ function money(value: number) {
 
 export default function SupplierViewScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const permissionState = usePagePermission('/suppliers/view');
   const service = React.useMemo(() => new SupplierServiceClient(), []);
@@ -65,17 +60,17 @@ export default function SupplierViewScreen() {
 
   if (permissionState !== 'authorized' || loading || !supplier) {
     return (
-      <SafeAreaView style={styles.page}>
-        <View style={styles.headerBar}>
+      <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+        <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
           <Button variant="ghost" onPress={() => router.back()} style={styles.headerButton}>
             <Icon className="text-foreground" as={ChevronLeft} size={22} />
           </Button>
-          <Text style={styles.headerTitle}>Supplier</Text>
+          <Text style={[styles.headerTitle, { color: theme.foreground }]}>Supplier</Text>
           <View style={styles.headerButton} />
         </View>
         {permissionState === 'denied' ? <UnauthorizedView /> : (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground">
             {permissionState === 'checking' ? 'Checking permission...' : 'Loading supplier...'}
           </Text>
@@ -104,10 +99,10 @@ export default function SupplierViewScreen() {
   const purchases = supplier.recentPurchases ?? [];
 
   return (
-    <SafeAreaView style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={[styles.page, { backgroundColor: theme.background }]}>
+      <StatusBar />
 
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, { backgroundColor: theme.background, borderBottomColor: theme.border }]}>
         <Button
           variant="ghost"
           onPress={() => router.back()}
@@ -115,7 +110,7 @@ export default function SupplierViewScreen() {
         >
           <Icon className="text-foreground" as={ChevronLeft} size={22} />
         </Button>
-        <Text style={styles.headerTitle}>Supplier</Text>
+        <Text style={[styles.headerTitle, { color: theme.foreground }]}>Supplier</Text>
         <Button
           variant="ghost"
           onPress={() =>
@@ -131,39 +126,35 @@ export default function SupplierViewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profilePanel}>
-          <View style={styles.logoWrap}>
+        <View style={[styles.profilePanel, { backgroundColor: theme.card, borderColor: theme.border, borderTopColor: theme.primary }]}>
+          <View style={[styles.logoWrap, { backgroundColor: theme.secondary }]}>
             {supplier.logoUrl ? (
               <Image
                 source={{ uri: supplier.logoUrl }}
                 style={styles.logoImage}
               />
             ) : (
-              <Text style={styles.logoInitial}>{initial}</Text>
+              <Text style={[styles.logoInitial, { color: theme.primary }]}>{initial}</Text>
             )}
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.supplierName} numberOfLines={1}>
+            <Text style={[styles.supplierName, { color: theme.foreground }]} numberOfLines={1}>
               {supplier.supplierName}
             </Text>
-            <Text style={styles.supplierMeta} numberOfLines={1}>
+            <Text style={[styles.supplierMeta, { color: theme.mutedForeground }]} numberOfLines={1}>
               {subtitle}
             </Text>
             <View
               style={[
                 styles.statusPill,
-                supplier.isActive
-                  ? styles.statusPillActive
-                  : styles.statusPillInactive,
+                { backgroundColor: theme.secondary },
               ]}
             >
               <Text
                 style={[
                   styles.statusText,
-                  supplier.isActive
-                    ? styles.statusTextActive
-                    : styles.statusTextInactive,
+                  { color: supplier.isActive ? theme.chart2 : theme.destructive },
                 ]}
               >
                 {supplier.isActive ? "ACTIVE" : "INACTIVE"}
@@ -172,17 +163,17 @@ export default function SupplierViewScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionHeading}>Contact & Location</Text>
-        <View style={styles.panel}>
+        <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Contact & Location</Text>
+        <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
           {detailRows.map((row, index) => (
             <View
               key={row.label}
               style={[
                 styles.detailRow,
-                index < detailRows.length - 1 ? styles.rowDivider : null,
+                index < detailRows.length - 1 ? [styles.rowDivider, { borderBottomColor: theme.border }] : null,
               ]}
             >
-              <View style={styles.detailIconWrap}>
+              <View style={[styles.detailIconWrap, { backgroundColor: theme.muted }]}>
                 <Icon
                   className="text-muted-foreground"
                   as={row.icon}
@@ -190,8 +181,8 @@ export default function SupplierViewScreen() {
                 />
               </View>
               <View style={styles.detailText}>
-                <Text style={styles.fieldLabel}>{row.label}</Text>
-                <Text style={styles.fieldValue} numberOfLines={2}>
+                <Text style={[styles.fieldLabel, { color: theme.mutedForeground }]}>{row.label}</Text>
+                <Text style={[styles.fieldValue, { color: theme.foreground }]} numberOfLines={2}>
                   {row.value}
                 </Text>
               </View>
@@ -200,7 +191,7 @@ export default function SupplierViewScreen() {
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionHeading}>Recent Purchases</Text>
+          <Text style={[styles.sectionHeading, { color: theme.mutedForeground }]}>Recent Purchases</Text>
           <Pressable
             accessibilityRole="button"
             hitSlop={8}
@@ -211,11 +202,11 @@ export default function SupplierViewScreen() {
               })
             }
           >
-            <Text style={styles.viewAll}>View all</Text>
+            <Text style={[styles.viewAll, { color: theme.primary }]}>View all</Text>
           </Pressable>
         </View>
-        <View style={styles.panel}>
-          <View style={styles.tableHeader}>
+        <View style={[styles.panel, { borderColor: theme.border, backgroundColor: theme.card }]}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderBottomColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.colDate]}>Date</Text>
             <Text style={[styles.headerCell, styles.colNumber]}>Items</Text>
             <Text style={[styles.headerCell, styles.colAmount]}>Total</Text>
@@ -225,6 +216,7 @@ export default function SupplierViewScreen() {
               key={purchase.id}
               style={[
                 styles.tableRow,
+                { borderBottomColor: theme.border },
                 index < purchases.length - 1 ? styles.rowDivider : null,
               ]}
               onPress={() =>
@@ -234,19 +226,19 @@ export default function SupplierViewScreen() {
                 })
               }
             >
-              <Text style={[styles.cellText, styles.colDate]}>
+              <Text style={[styles.cellText, styles.colDate, { color: theme.foreground }]}>
                 {new Date(purchase.purchaseDate).toLocaleDateString()}
               </Text>
-              <Text style={[styles.cellText, styles.colNumber]}>
+              <Text style={[styles.cellText, styles.colNumber, { color: theme.foreground }]}>
                 {purchase.totalProducts}
               </Text>
-              <Text style={[styles.cellText, styles.colAmount]}>
+              <Text style={[styles.cellText, styles.colAmount, { color: theme.foreground }]}>
                 {money(purchase.netTotal)}
               </Text>
             </Pressable>
           ))}
           {purchases.length === 0 ? (
-            <Text style={styles.emptyText}>No purchases recorded.</Text>
+            <Text style={[styles.emptyText, { color: theme.mutedForeground }]}>No purchases recorded.</Text>
           ) : null}
         </View>
       </ScrollView>
@@ -255,16 +247,14 @@ export default function SupplierViewScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#FFFFFF" },
+  page: { flex: 1 },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerButton: { minWidth: 40 },
   headerTitle: {
@@ -272,7 +262,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: COLORS.ink,
   },
   content: { padding: 16, gap: 12, paddingBottom: 32 },
   loadingState: { flex: 1, alignItems: "center", justifyContent: "center" },
@@ -283,10 +272,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderTopWidth: 3,
-    borderColor: COLORS.border,
-    borderTopColor: COLORS.green,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
   },
   logoWrap: {
     width: 56,
@@ -295,13 +281,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.greenTint,
   },
   logoImage: { width: "100%", height: "100%" },
-  logoInitial: { fontSize: 22, fontWeight: "800", color: COLORS.green },
+  logoInitial: { fontSize: 22, fontWeight: "800" },
   profileInfo: { flex: 1, minWidth: 0, gap: 3 },
-  supplierName: { fontSize: 18, fontWeight: "800", color: COLORS.ink },
-  supplierMeta: { fontSize: 12, color: COLORS.muted },
+  supplierName: { fontSize: 18, fontWeight: "800" },
+  supplierMeta: { fontSize: 12 },
   statusPill: {
     alignSelf: "flex-start",
     marginTop: 4,
@@ -309,34 +294,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  statusPillActive: { backgroundColor: "#D1FAE5" },
-  statusPillInactive: { backgroundColor: "#FEE2E2" },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
-  statusTextActive: { color: "#047857" },
-  statusTextInactive: { color: "#B91C1C" },
   sectionHeading: {
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
   sectionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  viewAll: { fontSize: 12, fontWeight: "700", color: COLORS.green },
+  viewAll: { fontSize: 12, fontWeight: "700" },
   panel: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
-    backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
   },
   detailRow: {
     flexDirection: "row",
@@ -351,7 +328,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F1F5F9",
   },
   detailText: { flex: 1, minWidth: 0, gap: 2 },
   fieldLabel: {
@@ -359,20 +335,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: COLORS.muted,
   },
-  fieldValue: { fontSize: 14, fontWeight: "600", color: COLORS.ink },
+  fieldValue: { fontSize: 14, fontWeight: "600" },
   tableHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: "#F1F5F9",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   headerCell: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -384,7 +356,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  cellText: { fontSize: 13, fontWeight: "600", color: COLORS.ink },
+  cellText: { fontSize: 13, fontWeight: "600" },
   colDate: { flex: 1.2 },
   colNumber: { flex: 0.8, textAlign: "right" },
   colAmount: { flex: 1.2, textAlign: "right" },
@@ -392,6 +364,5 @@ const styles = StyleSheet.create({
     padding: 16,
     textAlign: "center",
     fontSize: 13,
-    color: COLORS.muted,
   },
 });

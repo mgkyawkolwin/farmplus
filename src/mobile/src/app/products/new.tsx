@@ -4,10 +4,10 @@ import * as React from "react";
 import {
   ActivityIndicator,
   Image,
-  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import { useColorScheme } from "nativewind";
 import { ChevronLeft } from "lucide-react-native";
@@ -33,6 +33,7 @@ import { CategoryServiceClient } from "@/services/categoryService";
 import { UnitServiceClient } from "@/services/unitService";
 import { normalizeMediaFile } from "@/lib/mediaFile";
 import { usePagePermission } from "@/lib/usePagePermission";
+import { THEME } from "@/lib/theme";
 
 const productService = container.resolve<IProductService>(
   DI_TOKENS.IProductService,
@@ -42,6 +43,7 @@ export default function NewProductScreen() {
   const router = useRouter();
   const permissionState = usePagePermission('/products/new');
   const { colorScheme } = useColorScheme() ?? { colorScheme: "light" };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const [loading, setLoading] = React.useState(false);
   const [loadingOptions, setLoadingOptions] = React.useState(false);
   const [brands, setBrands] = React.useState<DropdownModelItem[]>([]);
@@ -239,10 +241,7 @@ export default function NewProductScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar
-        className="bg-background"
-        barStyle={colorScheme === "light" ? "light-content" : "dark-content"}
-      />
+      <StatusBar />
       <LoadingOverlay isLoading={loading} />
 
       <View
@@ -264,7 +263,7 @@ export default function NewProductScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.permissionState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.permissionText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -439,14 +438,14 @@ export default function NewProductScreen() {
             <Text className="text-foreground">Cancel</Text>
           </Button>
           <Button
-            style={styles.submitButton}
+            style={[styles.submitButton, { backgroundColor: theme.primary }]}
             onPress={handleSubmit}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={theme.primaryForeground} size="small" />
             ) : (
-              <Text className="text-background font-semibold">Save</Text>
+              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Save</Text>
             )}
           </Button>
         </View>

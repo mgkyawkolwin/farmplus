@@ -5,6 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } fro
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, ChevronDown, ChevronLeft, Save } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -18,12 +19,15 @@ import { PermissionPage } from '@/models/rolePermission';
 import { RoleItem } from '@/models/role';
 import { IRoleService } from '@/services/roleService';
 import { RolePermissionServiceClient } from '@/services/rolePermissionService';
+import { THEME } from '@/lib/theme';
 
 const roleService = container.resolve<IRoleService>(DI_TOKENS.IRoleService);
 const permissionService = new RolePermissionServiceClient();
 
 export default function RolePermissionsScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/rolepermissions');
   const [roles, setRoles] = React.useState<RoleItem[]>([]);
   const [pages, setPages] = React.useState<PermissionPage[]>([]);
@@ -137,14 +141,14 @@ export default function RolePermissionsScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2367A8" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#2367A8" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading permissions...</Text>
         </View>
       ) : roles.length === 0 ? (
@@ -152,12 +156,12 @@ export default function RolePermissionsScreen() {
           <Text className="text-foreground" style={styles.emptyTitle}>No roles found</Text>
           <Text className="text-muted-foreground" style={styles.stateText}>Create a role to manage page access.</Text>
           <Button style={styles.createRoleButton} onPress={() => router.push('/roles/new' as Parameters<typeof router.push>[0])}>
-            <Text className="text-background font-semibold">Create Role</Text>
+            <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Create Role</Text>
           </Button>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          <Pressable style={styles.roleSelect} onPress={() => setRolePickerVisible(true)}>
+          <Pressable style={[styles.roleSelect, { borderColor: theme.border }]} onPress={() => setRolePickerVisible(true)}>
             <View style={styles.roleSelectText}>
               <Text className="text-muted-foreground" style={styles.eyebrow}>ROLE</Text>
               <Text className="text-foreground" style={styles.roleName}>{selectedRole?.role ?? 'Choose a role'}</Text>
@@ -169,10 +173,10 @@ export default function RolePermissionsScreen() {
             const allSelected = groupPages.every((page) => selectedKeys.has(page.key));
             return (
               <View key={group} style={styles.group}>
-                <View style={styles.groupHeader}>
+                <View style={[styles.groupHeader, { borderBottomColor: theme.border }]}>
                   <Text className="text-foreground" style={styles.groupTitle}>{group}</Text>
                   <Pressable accessibilityRole="button" onPress={() => toggleGroup(groupPages.map((page) => page.key))}>
-                    <Text style={styles.groupAction}>{allSelected ? 'Clear group' : 'Select group'}</Text>
+                    <Text style={[styles.groupAction, { color: theme.primary }]}>{allSelected ? 'Clear group' : 'Select group'}</Text>
                   </Pressable>
                 </View>
                 {groupPages.map((page) => {
@@ -183,10 +187,16 @@ export default function RolePermissionsScreen() {
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked }}
                       onPress={() => toggleKey(page.key)}
-                      style={styles.permissionRow}
+                      style={[styles.permissionRow, { borderBottomColor: theme.border }]}
                     >
-                      <View style={[styles.checkbox, checked ? styles.checkboxChecked : null]}>
-                        {checked ? <Check size={14} color="#FFFFFF" /> : null}
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: theme.border },
+                          checked ? { backgroundColor: theme.primary, borderColor: theme.primary } : null,
+                        ]}
+                      >
+                        {checked ? <Check size={14} color={theme.primaryForeground} /> : null}
                       </View>
                       <View style={styles.permissionInfo}>
                         <Text className="text-foreground" style={styles.permissionTitle}>{page.title}</Text>
@@ -202,16 +212,16 @@ export default function RolePermissionsScreen() {
       )}
 
       <Modal transparent visible={rolePickerVisible} animationType="slide" onRequestClose={() => setRolePickerVisible(false)}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setRolePickerVisible(false)} />
-          <View style={styles.rolePicker}>
-            <View style={styles.sheetHandle} />
+          <View style={[styles.rolePicker, { backgroundColor: theme.card }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
             <Text className="text-foreground" style={styles.pickerTitle}>Select Role</Text>
             <ScrollView>
               {roles.map((role) => (
                 <Pressable
                   key={role.id}
-                  style={styles.roleOption}
+                  style={[styles.roleOption, { borderBottomColor: theme.border }]}
                   onPress={() => {
                     setRolePickerVisible(false);
                     void loadRolePermissions(role.id);
@@ -234,17 +244,16 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 42 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700' },
   content: { padding: 16, paddingBottom: 32, gap: 16 },
-  roleSelect: { minHeight: 62, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderColor: '#D9DEE5', borderRadius: 6 },
+  roleSelect: { minHeight: 62, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderWidth: 1, borderRadius: 6 },
   roleSelectText: { gap: 3 },
   eyebrow: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   roleName: { fontSize: 15, fontWeight: '700' },
   group: { gap: 0 },
-  groupHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#D9DEE5' },
+  groupHeader: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
   groupTitle: { fontSize: 14, fontWeight: '800' },
-  groupAction: { color: '#2367A8', fontSize: 12, fontWeight: '700' },
-  permissionRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E8F0' },
-  checkbox: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#94A3B8', borderRadius: 4 },
-  checkboxChecked: { backgroundColor: '#2367A8', borderColor: '#2367A8' },
+  groupAction: { fontSize: 12, fontWeight: '700' },
+  permissionRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  checkbox: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 4 },
   permissionInfo: { flex: 1, gap: 2 },
   permissionTitle: { fontSize: 13, fontWeight: '600' },
   permissionPath: { fontSize: 10 },
@@ -252,9 +261,9 @@ const styles = StyleSheet.create({
   stateText: { marginTop: 8, textAlign: 'center' },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   createRoleButton: { marginTop: 16 },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066' },
-  rolePicker: { maxHeight: '70%', padding: 20, paddingBottom: 28, borderTopLeftRadius: 12, borderTopRightRadius: 12, backgroundColor: '#FFFFFF' },
-  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12, backgroundColor: '#CBD5E1' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
+  rolePicker: { maxHeight: '70%', padding: 20, paddingBottom: 28, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12 },
   pickerTitle: { marginBottom: 10, fontSize: 16, fontWeight: '700' },
-  roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#CBD5E1' },
+  roleOption: { minHeight: 44, justifyContent: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
 });

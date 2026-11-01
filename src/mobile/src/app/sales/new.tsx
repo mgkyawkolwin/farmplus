@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronLeft, Package, Plus, Search, Trash2, User, X } from 'lucide-react-native';
 
@@ -18,6 +19,7 @@ import { container, DI_TOKENS } from '@/di';
 import { getSelectedShopId } from '@/lib/authStorage';
 import { useSelectedShopChanged } from '@/lib/selectedShop';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 import { CustomerItem } from '@/models/customer';
 import { ProductItem } from '@/models/product';
 import { ICustomerService } from '@/services/customerService';
@@ -37,19 +39,21 @@ function money(value: number) {
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function SummaryRow({ label, value, strong, color }: { label: string; value: string; strong?: boolean; color?: string }) {
+type ThemeColors = typeof THEME.light;
+
+function SummaryRow({ label, value, strong, color, theme }: { label: string; value: string; strong?: boolean; color?: string; theme: ThemeColors }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={[styles.summaryLabel, strong && styles.summaryLabelStrong]}>{label}</Text>
-      <Text style={[styles.summaryValue, strong && styles.summaryValueStrong, color ? { color } : null]}>{value}</Text>
+      <Text style={[styles.summaryLabel, { color: strong ? theme.foreground : theme.mutedForeground }, strong && styles.summaryLabelStrong]}>{label}</Text>
+      <Text style={[styles.summaryValue, { color: theme.foreground }, strong && styles.summaryValueStrong, color ? { color } : null]}>{value}</Text>
     </View>
   );
 }
 
-function InputRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InputRow({ label, children, theme }: { label: string; children: React.ReactNode; theme: ThemeColors }) {
   return (
     <View style={styles.inputRow}>
-      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={[styles.summaryLabel, { color: theme.mutedForeground }]}>{label}</Text>
       <View style={styles.inputRowControl}>{children}</View>
     </View>
   );
@@ -57,6 +61,8 @@ function InputRow({ label, children }: { label: string; children: React.ReactNod
 
 export default function NewSaleScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/sales/new');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [products, setProducts] = React.useState<ProductItem[]>([]);
@@ -206,14 +212,14 @@ export default function NewSaleScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : loading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.chart2} />
           <Text className="text-muted-foreground" style={styles.stateText}>Loading sale options...</Text>
         </View>
       ) : (
@@ -225,15 +231,15 @@ export default function NewSaleScreen() {
             emptyText={shopLoaded ? 'No shop selected. Choose one from the top bar first.' : undefined}
           />
 
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Customer</Text>
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Customer</Text>
             <Pressable
               onPress={() => setCustomerPickerVisible(true)}
-              style={styles.customerSelector}
+              style={[styles.customerSelector, { backgroundColor: theme.card, borderColor: theme.border }]}
               accessibilityRole="button"
               accessibilityLabel="Choose customer"
             >
-              <View style={styles.customerSelectorIcon}>
+              <View style={[styles.customerSelectorIcon, { backgroundColor: theme.secondary }]}>
                 <Icon className="text-muted-foreground" as={User} size={14} />
               </View>
               <Text className="text-foreground" style={styles.customerSelectorText} numberOfLines={1}>
@@ -243,37 +249,37 @@ export default function NewSaleScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.panel}>
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderInfo}>
-                <Text style={styles.sectionTitle}>Items ({selectedProducts.length})</Text>
-                <Text style={styles.helperText}>Stock is deducted after saving.</Text>
+                <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items ({selectedProducts.length})</Text>
+                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>Stock is deducted after saving.</Text>
               </View>
               <Pressable
                 onPress={() => setPickerVisible(true)}
                 disabled={saving}
                 accessibilityRole="button"
                 accessibilityLabel="Add product"
-                style={styles.addButton}
+                style={[styles.addButton, { borderColor: theme.chart2, backgroundColor: theme.secondary }]}
               >
-                <Icon as={Plus} size={14} color="#16794B" />
-                <Text style={styles.addButtonText}>Add</Text>
+                <Icon as={Plus} size={14} color={theme.chart2} />
+                <Text style={[styles.addButtonText, { color: theme.chart2 }]}>Add</Text>
               </Pressable>
             </View>
 
             {selectedProducts.length === 0 ? (
-              <View style={styles.emptyProducts}>
-                <Text style={styles.helperText}>No products added yet.</Text>
+              <View style={[styles.emptyProducts, { borderColor: theme.border }]}>
+                <Text style={[styles.helperText, { color: theme.mutedForeground }]}>No products added yet.</Text>
               </View>
             ) : selectedProducts.map(({ product, quantity }) => (
-              <View key={product.id} style={styles.lineCard}>
+              <View key={product.id} style={[styles.lineCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <View style={styles.lineHeader}>
-                  <View style={styles.lineIcon}>
+                  <View style={[styles.lineIcon, { backgroundColor: theme.secondary }]}>
                     <Icon className="text-muted-foreground" as={Package} size={16} />
                   </View>
                   <View style={styles.productInfo}>
                     <Text className="text-foreground" style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                    <Text style={styles.helperText} numberOfLines={1}>
+                    <Text style={[styles.helperText, { color: theme.mutedForeground }]} numberOfLines={1}>
                       {money(product.salePrice ?? 0)} each · {product.currentStock ?? 0} available
                     </Text>
                   </View>
@@ -286,8 +292,8 @@ export default function NewSaleScreen() {
                     <Icon className="text-destructive" as={Trash2} size={16} />
                   </Pressable>
                 </View>
-                <View style={styles.quantityRow}>
-                  <Text style={styles.qtyLabel}>Qty</Text>
+                <View style={[styles.quantityRow, { borderTopColor: theme.border }]}>
+                  <Text style={[styles.qtyLabel, { color: theme.mutedForeground }]}>Qty</Text>
                   <Input
                     value={quantity}
                     onChangeText={(value) => updateQuantity(product.id, value)}
@@ -295,7 +301,7 @@ export default function NewSaleScreen() {
                     editable={!saving}
                     style={styles.quantityInput}
                   />
-                  <Text style={styles.lineTotal}>
+                  <Text style={[styles.lineTotal, { color: theme.foreground }]}>
                     {money((Number(quantity) || 0) * (product.salePrice ?? 0))}
                   </Text>
                 </View>
@@ -303,10 +309,10 @@ export default function NewSaleScreen() {
             ))}
           </View>
 
-          <View style={styles.panel}>
-            <Text style={styles.sectionTitle}>Summary</Text>
-            <SummaryRow label="Subtotal" value={money(subtotal)} />
-            <InputRow label="Discount">
+          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Summary</Text>
+            <SummaryRow label="Subtotal" value={money(subtotal)} theme={theme} />
+            <InputRow label="Discount" theme={theme}>
               <Input
                 value={discount}
                 onChangeText={setDiscount}
@@ -315,7 +321,7 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <InputRow label="Tax %">
+            <InputRow label="Tax %" theme={theme}>
               <Input
                 value={taxRate}
                 onChangeText={setTaxRate}
@@ -324,10 +330,10 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <SummaryRow label="Tax Amount" value={money(taxAmount)} />
-            <View style={styles.divider} />
-            <SummaryRow label="Net Total" value={money(netTotal)} strong />
-            <InputRow label="Paid">
+            <SummaryRow label="Tax Amount" value={money(taxAmount)} theme={theme} />
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <SummaryRow label="Net Total" value={money(netTotal)} strong theme={theme} />
+            <InputRow label="Paid" theme={theme}>
               <Input
                 value={paidAmount}
                 onChangeText={setPaidAmount}
@@ -336,24 +342,24 @@ export default function NewSaleScreen() {
                 style={styles.compactInput}
               />
             </InputRow>
-            <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? '#B45309' : '#047857'} />
+            <SummaryRow label="Balance" value={money(balance)} strong color={balance > 0 ? theme.chart4 : theme.chart2} theme={theme} />
           </View>
         </ScrollView>
 
-        <View style={styles.actionBar}>
+        <View style={[styles.actionBar, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
           <View style={styles.actionTotal}>
-            <Text style={styles.eyebrow}>Net Total</Text>
-            <Text style={styles.actionTotalValue} numberOfLines={1}>{money(netTotal)}</Text>
+            <Text style={[styles.eyebrow, { color: theme.mutedForeground }]}>Net Total</Text>
+            <Text style={[styles.actionTotalValue, { color: theme.foreground }]} numberOfLines={1}>{money(netTotal)}</Text>
           </View>
           <Button onPress={submitSale} disabled={saving || selectedProducts.length === 0} style={styles.saveButton}>
-            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text className="text-background font-semibold">Complete Sale</Text>}
+            {saving ? <ActivityIndicator size="small" color={theme.primaryForeground} /> : <Text className="text-background font-semibold">Complete Sale</Text>}
           </Button>
         </View>
         </>
       )}
 
       <Modal visible={customerPickerVisible} transparent animationType="slide" onRequestClose={closeCustomerPicker}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeCustomerPicker} />
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View className="bg-background" style={styles.customerSheet}>
@@ -371,14 +377,14 @@ export default function NewSaleScreen() {
                       setCustomerId(WALK_IN);
                       closeCustomerPicker();
                     }}
-                    style={styles.customerChoiceRow}
+                    style={[styles.customerChoiceRow, { backgroundColor: theme.card, borderColor: theme.border }]}
                   >
                     <Text className="text-foreground" style={styles.customerChoiceText}>Walk-in Customer</Text>
                   </Pressable>
 
                   <Pressable
                     onPress={() => setCustomerPickerStage('list')}
-                    style={styles.customerChoiceRow}
+                    style={[styles.customerChoiceRow, { backgroundColor: theme.card, borderColor: theme.border }]}
                   >
                     <Text className="text-foreground" style={styles.customerChoiceText}>Choose Customer</Text>
                   </Pressable>
@@ -395,14 +401,14 @@ export default function NewSaleScreen() {
                     </Button>
                   </View>
 
-                  <View style={styles.searchBox}>
+                  <View style={[styles.searchBox, { borderColor: theme.border }]}>
                     <Icon className="text-muted-foreground" as={Search} size={16} />
                     <TextInput
                       value={customerSearch}
                       onChangeText={setCustomerSearch}
                       placeholder="Search customers"
-                      placeholderTextColor="#9CA3AF"
-                      style={styles.searchInput}
+                      placeholderTextColor={theme.mutedForeground}
+                      style={[styles.searchInput, { color: theme.foreground }]}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
@@ -419,13 +425,13 @@ export default function NewSaleScreen() {
                           setCustomerId(customer.id);
                           closeCustomerPicker();
                         }}
-                        style={styles.customerOption}
+                        style={[styles.customerOption, { borderBottomColor: theme.border }]}
                       >
                         <View style={styles.customerAvatarWrap}>
                           {customer.profilePictureUrl ? (
                             <Image source={{ uri: customer.profilePictureUrl }} style={styles.customerAvatarImage} />
                           ) : (
-                            <View style={styles.customerAvatarFallback}>
+                            <View style={[styles.customerAvatarFallback, { backgroundColor: theme.secondary }]}>
                               <Icon className="text-muted-foreground" as={User} size={18} />
                             </View>
                           )}
@@ -448,7 +454,7 @@ export default function NewSaleScreen() {
       </Modal>
 
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
-        <View style={styles.modalBackdrop}>
+        <View style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setPickerVisible(false)} />
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
             <View className="bg-background" style={styles.productSheet}>
@@ -458,14 +464,14 @@ export default function NewSaleScreen() {
                   <Icon className="text-foreground" as={X} size={20} />
                 </Button>
               </View>
-              <View style={styles.searchBox}>
+              <View style={[styles.searchBox, { borderColor: theme.border }]}>
                 <Icon className="text-muted-foreground" as={Search} size={16} />
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
                   placeholder="Search products"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.searchInput}
+                  placeholderTextColor={theme.mutedForeground}
+                  style={[styles.searchInput, { color: theme.foreground }]}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
@@ -482,9 +488,9 @@ export default function NewSaleScreen() {
                     <Pressable
                       onPress={() => addProduct(product)}
                       disabled={stock <= 0 || added}
-                      style={[styles.productOption, (stock <= 0 || added) && styles.productOptionDisabled]}
+                      style={[styles.productOption, { borderBottomColor: theme.border }, (stock <= 0 || added) && styles.productOptionDisabled]}
                     >
-                      <View style={styles.productOptionIcon}>
+                      <View style={[styles.productOptionIcon, { backgroundColor: theme.secondary }]}>
                         <Icon className="text-muted-foreground" as={Package} size={18} />
                       </View>
                       <View style={styles.productOptionInfo}>
@@ -512,37 +518,37 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 44 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' },
   content: { padding: 12, paddingBottom: 24, gap: 12 },
-  panel: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 8 },
-  eyebrow: { fontSize: 9, color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  panel: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 8 },
+  eyebrow: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sectionHeaderInfo: { flex: 1 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: 0.4 },
-  helperText: { fontSize: 11, color: '#64748B' },
-  addButton: { height: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, borderWidth: 1, borderColor: '#16794B', borderRadius: 6, backgroundColor: '#F4FAF6' },
-  addButtonText: { fontSize: 12, fontWeight: '700', color: '#16794B' },
-  emptyProducts: { paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: '#CBD5E1', borderRadius: 8 },
-  lineCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  helperText: { fontSize: 11 },
+  addButton: { height: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, borderWidth: 1, borderRadius: 6 },
+  addButtonText: { fontSize: 12, fontWeight: '700' },
+  emptyProducts: { paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 8 },
+  lineCard: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
   lineHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  lineIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  lineIcon: { width: 28, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   productInfo: { flex: 1, minWidth: 0, gap: 1 },
   productName: { fontSize: 13, fontWeight: '600' },
   removeButton: { padding: 6 },
-  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E2E8F0' },
-  qtyLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.4 },
+  quantityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  qtyLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   quantityInput: { width: 64, height: 34, textAlign: 'center', paddingVertical: 0 },
-  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '800', color: '#0F172A' },
+  lineTotal: { flex: 1, textAlign: 'right', fontSize: 13, fontWeight: '800' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
-  summaryLabel: { fontSize: 12, color: '#475569' },
-  summaryLabelStrong: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  summaryValue: { fontSize: 12, fontWeight: '600', color: '#1E293B' },
+  summaryLabel: { fontSize: 12 },
+  summaryLabelStrong: { fontSize: 14, fontWeight: '800' },
+  summaryValue: { fontSize: 12, fontWeight: '600' },
   summaryValueStrong: { fontSize: 15, fontWeight: '800' },
   inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   inputRowControl: { width: 120 },
   compactInput: { height: 34, textAlign: 'right', paddingVertical: 0 },
-  divider: { height: 1, backgroundColor: '#CBD5E1', marginVertical: 4 },
-  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' },
+  divider: { height: 1, marginVertical: 4 },
+  actionBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1 },
   actionTotal: { flex: 1, minWidth: 0 },
-  actionTotalValue: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  actionTotalValue: { fontSize: 18, fontWeight: '800' },
   saveButton: { minWidth: 150 },
   centeredState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 8 },
@@ -551,15 +557,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#D9DEE5',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
   },
-  customerSelectorIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E2E8F0' },
+  customerSelectorIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   customerSelectorText: { flex: 1, fontSize: 14, fontWeight: '600' },
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.38)' },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
   sheetWrap: { justifyContent: 'flex-end', maxHeight: '90%' },
   customerSheet: { height: '90%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   productSheet: { height: '82%', borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
@@ -570,22 +574,19 @@ const styles = StyleSheet.create({
     minHeight: 56,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: '#F9FAFB',
   },
   customerChoiceText: { fontSize: 16, fontWeight: '600' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, marginBottom: 8 },
-  searchInput: { flex: 1, height: '100%', color: '#111827', fontSize: 14 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 8 },
+  searchInput: { flex: 1, height: '100%', fontSize: 14 },
   customerOption: {
     minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D1D5DB',
     paddingVertical: 10,
   },
   customerAvatarWrap: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden' },
@@ -595,13 +596,12 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E5E7EB',
   },
   customerOptionInfo: { flex: 1, gap: 3 },
   customerNameText: { fontSize: 15, fontWeight: '600' },
-  productOption: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D1D5DB', paddingVertical: 9 },
+  productOption: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 9 },
   productOptionDisabled: { opacity: 0.5 },
-  productOptionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6F4' },
+  productOptionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   productOptionInfo: { flex: 1, gap: 4 },
   emptyPicker: { paddingVertical: 24, textAlign: 'center' },
 });

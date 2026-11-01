@@ -8,10 +8,10 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {

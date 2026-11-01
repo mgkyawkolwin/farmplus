@@ -7,11 +7,11 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   TextInput,
   View,
 } from "react-native";
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from 'nativewind';
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -33,21 +34,11 @@ import { usePagePermission } from "@/lib/usePagePermission";
 import { CustomerItem } from "@/models/customer";
 import { ICustomerService } from "@/services/customerService";
 import LoadingOverlay from "@/components/loadingOverlay";
+import { THEME } from '@/lib/theme';
 
 const customerService = container.resolve<ICustomerService>(
   DI_TOKENS.ICustomerService,
 );
-
-const COLORS = {
-  ink: "#0F172A",
-  muted: "#64748B",
-  border: "#D9DEE5",
-  rowBorder: "#CBD5E1",
-  green: "#16794B",
-  greenTint: "#F4FAF6",
-  greenBorder: "#CDE8D6",
-  amber: "#9A6700",
-};
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -63,6 +54,8 @@ function formatMoney(amount: number | undefined) {
 
 export default function CustomerListScreen() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/customers/list');
   const [customers, setCustomers] = React.useState<CustomerItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -193,7 +186,7 @@ export default function CustomerListScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+      <StatusBar />
       <LoadingOverlay isLoading={loading} />
 
       <View
@@ -215,29 +208,29 @@ export default function CustomerListScreen() {
           accessibilityLabel="New customer"
           onPress={() => router.push("/customers/new")}
           disabled={permissionState !== 'authorized'}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
         >
-          <Plus size={18} color="#FFFFFF" />
+          <Plus size={18} color={theme.primaryForeground} />
         </Pressable>
       </View>
 
       {permissionState === 'checking' ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
         <UnauthorizedView />
       ) : <>
-      <View style={styles.toolbar}>
-        <View style={styles.searchBox}>
+      <View style={[styles.toolbar, { backgroundColor: theme.card }]}>
+        <View style={[styles.searchBox, { borderColor: theme.border, backgroundColor: theme.muted }]}>
           <Icon className="text-muted-foreground" as={Search} size={16} />
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
             placeholder="Search by customer name"
-            placeholderTextColor="#94A3B8"
-            style={styles.searchInput}
+            placeholderTextColor={theme.mutedForeground}
+            style={[styles.searchInput, { color: theme.foreground }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -254,13 +247,13 @@ export default function CustomerListScreen() {
                 onPress={() => setActiveFilter(filter.key)}
                 style={[
                   styles.filterChip,
-                  isSelected && styles.filterChipActive,
+                  isSelected && { borderColor: theme.primary, backgroundColor: theme.secondary },
                 ]}
               >
                 <Text
                   style={[
                     styles.filterText,
-                    isSelected && styles.filterTextActive,
+                    { color: isSelected ? theme.primary : theme.mutedForeground },
                   ]}
                 >
                   {filter.label}
@@ -273,7 +266,7 @@ export default function CustomerListScreen() {
 
       {loading && customers.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={COLORS.green} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground" style={styles.stateText}>
             Loading customers...
           </Text>
@@ -289,7 +282,7 @@ export default function CustomerListScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.tableHeader}>
+          <View style={[styles.tableHeader, { backgroundColor: theme.muted, borderColor: theme.border }]}>
             <Text style={[styles.headerCell, styles.headerInfo]}>
               {`Customer · ${customers.length}${hasMore ? "+" : ""}`}
             </Text>
@@ -323,7 +316,8 @@ export default function CustomerListScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Customer ${customer.name}`}
                   style={[
-                    styles.row
+                    styles.row,
+                    { borderBottomColor: theme.border, backgroundColor: theme.card },
                   ]}
                   onPress={() =>
                     router.push({
@@ -332,14 +326,14 @@ export default function CustomerListScreen() {
                     })
                   }
                 >
-                  <View style={styles.avatarWrap}>
+                  <View style={[styles.avatarWrap, { backgroundColor: theme.muted }]}>
                     {customer.profilePictureUrl ? (
                       <Image
                         source={{ uri: customer.profilePictureUrl }}
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <View style={styles.avatarFallback}>
+                      <View style={[styles.avatarFallback, { backgroundColor: theme.secondary }]}>
                         <Icon
                           className="text-muted-foreground"
                           as={User}
@@ -361,17 +355,13 @@ export default function CustomerListScreen() {
                       <View
                         style={[
                           styles.statusPill,
-                          isActive
-                            ? styles.statusActive
-                            : styles.statusInactive,
+                          { backgroundColor: theme.secondary },
                         ]}
                       >
                         <Text
                           style={[
                             styles.statusText,
-                            isActive
-                              ? styles.statusTextActive
-                              : styles.statusTextInactive,
+                            { color: isActive ? theme.chart2 : theme.destructive },
                           ]}
                         >
                           {isActive ? "ACTIVE" : "INACTIVE"}
@@ -412,21 +402,21 @@ export default function CustomerListScreen() {
                     <Text
                       style={[
                         styles.outstandingValue,
-                        { color: owes ? COLORS.amber : COLORS.ink },
+                        { color: owes ? theme.chart4 : theme.foreground },
                       ]}
                       numberOfLines={1}
                     >
                       {formatMoney(customer.totalOutstanding)}
                     </Text>
                   </View>
-                  <ChevronRight size={16} color="#94A3B8" />
+                  <ChevronRight size={16} color={theme.mutedForeground} />
                 </Pressable>
               );
             })}
 
             {loadingMore ? (
               <View style={styles.loadMoreContainer}>
-                <ActivityIndicator size="small" color={COLORS.green} />
+                <ActivityIndicator size="small" color={theme.primary} />
                 <Text
                   className="text-muted-foreground"
                   style={styles.loadMoreText}
@@ -466,13 +456,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.green,
   },
   toolbar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 10,
-    backgroundColor: "#FFFFFF",
   },
   searchBox: {
     flexDirection: "row",
@@ -480,12 +468,10 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 42,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#F8FAFC",
   },
-  searchInput: { flex: 1, fontSize: 14, color: COLORS.ink },
+  searchInput: { flex: 1, fontSize: 14 },
   filterRow: { flexDirection: "row", gap: 8 },
   filterChip: {
     flex: 1,
@@ -494,33 +480,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: "#FFFFFF",
-  },
-  filterChipActive: {
-    borderColor: COLORS.green,
-    backgroundColor: COLORS.greenTint,
   },
   filterText: {
-    color: COLORS.muted,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
-  filterTextActive: { color: COLORS.green },
   tableHeader: {
     minHeight: 34,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#F1F5F9",
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
   headerCell: {
-    color: COLORS.muted,
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
@@ -537,16 +512,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.rowBorder,
-    backgroundColor: "#FFFFFF",
   },
-  rowPressed: { backgroundColor: COLORS.greenTint },
   avatarWrap: {
     width: 44,
     height: 44,
     borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#E5E7EB",
   },
   avatarImage: { width: "100%", height: "100%", borderRadius: 22 },
   avatarFallback: {
@@ -554,7 +525,6 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E5E7EB",
   },
   infoColumn: { flex: 1, minWidth: 0, gap: 4 },
   amountColumn: { width: 104, alignItems: "flex-end" },
@@ -563,11 +533,7 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   customerDetail: { flex: 1, fontSize: 12 },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  statusActive: { backgroundColor: "#D1FAE5" },
-  statusInactive: { backgroundColor: "#FEE2E2" },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
-  statusTextActive: { color: "#047857" },
-  statusTextInactive: { color: "#B91C1C" },
   outstandingValue: { fontSize: 14, fontWeight: "800" },
   loadMoreContainer: {
     flexDirection: "row",

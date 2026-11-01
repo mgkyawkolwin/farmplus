@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { ActivityIndicator, Image, Pressable, StatusBar, StyleSheet, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { ChevronLeft, Image as ImageIcon, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -18,10 +20,12 @@ import { normalizeMediaFile } from '@/lib/mediaFile';
 import SnackBar from '@/components/ui/snack-bar';
 import UnauthorizedView from '@/components/unauthorized-view';
 import { usePagePermission } from '@/lib/usePagePermission';
+import { THEME } from '@/lib/theme';
 
 export default function NewDealerScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const theme = colorScheme === 'dark' ? THEME.dark : THEME.light;
   const permissionState = usePagePermission('/dealers/new');
   const service = React.useMemo(() => new DealerServiceClient(), []);
 
@@ -113,10 +117,7 @@ export default function NewDealerScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" style={styles.page}>
-      <StatusBar
-        className="bg-background"
-        barStyle={colorScheme === 'light' ? 'light-content' : 'dark-content'}
-      />
+      <StatusBar />
 
       <View className="bg-background border-b border-border" style={styles.headerBar}>
         <Button variant="ghost" onPress={() => router.back()} style={styles.backButton}>
@@ -130,7 +131,7 @@ export default function NewDealerScreen() {
 
       {permissionState === 'checking' ? (
         <View style={styles.permissionState}>
-          <ActivityIndicator size="large" color="#16794B" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text className="text-muted-foreground">Checking permission...</Text>
         </View>
       ) : permissionState === 'denied' ? (
@@ -145,9 +146,9 @@ export default function NewDealerScreen() {
         <View style={styles.logoSection}>
           <Pressable onPress={pickLogo} disabled={loading}>
             {logoImage ? (
-              <Image source={{ uri: logoImage }} style={styles.logoImage} />
+              <Image source={{ uri: logoImage }} style={[styles.logoImage, { borderColor: theme.border }]} />
             ) : (
-              <View style={styles.logoPlaceholder}>
+              <View style={[styles.logoPlaceholder, { borderColor: theme.border, backgroundColor: theme.muted }]}>
                 <Icon className="text-muted-foreground" as={ImageIcon} size={28} />
               </View>
             )}
@@ -162,7 +163,7 @@ export default function NewDealerScreen() {
 
         <View style={styles.field}>
           <Label className="text-foreground">
-            Dealer Name <Text className="text-red-500">*</Text>
+            Dealer Name <Text style={{ color: theme.destructive }}>*</Text>
           </Label>
           <Input
             placeholder="Enter dealer name"
@@ -259,9 +260,9 @@ export default function NewDealerScreen() {
           </Button>
           <Button style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={theme.primaryForeground} size="small" />
             ) : (
-              <Text className="text-background font-semibold">Create Dealer</Text>
+              <Text className="font-semibold" style={{ color: theme.primaryForeground }}>Create Dealer</Text>
             )}
           </Button>
         </View>
@@ -290,15 +291,12 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
   },
   logoPlaceholder: {
     width: 96,
     height: 96,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
