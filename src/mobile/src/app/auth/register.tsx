@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { ThemedStatusBar as StatusBar } from "@/components/themed-status-bar";
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Leaf, ShieldCheck } from 'lucide-react-native';
+import { ShieldCheck } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -64,7 +64,7 @@ export default function RegisterScreen() {
       >
         <View style={styles.brand}>
           <View style={[styles.brandMark, { backgroundColor: theme.primary }]}>
-            <Icon as={Leaf} size={23} color={theme.primaryForeground} />
+            <Image source={require('@/assets/images/Farmplus shop.png')} style={styles.brandLogo} />
           </View>
           <Text style={[styles.brandName, { color: theme.foreground }]}>FARM PLUS</Text>
           <Text style={[styles.brandCaption, { color: theme.mutedForeground }]}>{t('auth.brandCaption')}</Text>
@@ -164,6 +164,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+  },
+  brandLogo: {
+    width: 36,
+    height: 36,
   },
   brandName: {
     fontSize: 15,

@@ -2,16 +2,45 @@ import '../global.css';
 import '@/i18n/i18n';
 
 import { Stack } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { PortalHost } from '@rn-primitives/portal';
 import { AuthContextProvider } from '@/lib/authContextProvider';
 import SnackBar from '@/components/ui/snack-bar';
 import  { useColorScheme } from 'nativewind';
+import { getStoredColorScheme, storeColorScheme } from '@/lib/colorSchemeStorage';
 
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme() ?? { colorScheme: 'light' };
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const [isColorSchemeLoaded, setIsColorSchemeLoaded] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadColorScheme() {
+      let scheme = await getStoredColorScheme().catch(() => null);
+      if (!scheme) {
+        scheme = 'light';
+        storeColorScheme(scheme);
+      }
+
+      if (isActive) {
+        setColorScheme(scheme);
+        setIsColorSchemeLoaded(true);
+      }
+    }
+
+    loadColorScheme();
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!isColorSchemeLoaded) {
+    return null;
+  }
 
   return (
     <AuthContextProvider>

@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, Globe, Moon } from 'lucide-react-native';
 // 1. Import useColorScheme from nativewind, NOT react-native
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
+import { storeColorScheme } from '@/lib/colorSchemeStorage';
 
 interface LanguageOption {
   code: string;
@@ -60,7 +61,9 @@ export default function SettingsScreen() {
 
   // 3. Update the theme toggle handler
   const handleDarkModeToggle = (value: boolean) => {
-    setColorScheme(value ? 'dark' : 'light');
+    const scheme = value ? 'dark' : 'light';
+    setColorScheme(scheme);
+    storeColorScheme(scheme);
   };
 
   return (

@@ -243,7 +243,6 @@ public class ProductService : IProductService
         ValidationHelper.ValidateRequiredString(_localizer, "Category", request.Category);
         ValidationHelper.ValidateRequiredString(_localizer, "Unit", request.Unit);
         ValidationHelper.ValidateNull(_localizer, "SalePrice", request.SalePrice);
-        ValidationHelper.ValidateNull(_localizer, "CurrentStock", request.CurrentStock);
         ValidationHelper.ValidateNull(_localizer, "MinimumStock", request.MinimumStock);
 
         var normalizedName = request.Name!.Trim();
@@ -253,7 +252,7 @@ public class ProductService : IProductService
         var normalizedUnit = request.Unit!.Trim();
 
         // Initial stock is stored against the selected shop, so a shop is needed when stock is entered.
-        var stockShop = request.CurrentStock!.Value > 0 ? await _shopStock.RequireCurrentShopAsync() : null;
+        var stockShop = request.CurrentStock is > 0 ? await _shopStock.RequireCurrentShopAsync() : null;
 
         var productExists = await _dbContext.Products.AnyAsync(p => p.Name.ToLower() == normalizedName.ToLower() && p.MainTenantId == Guid.Parse(_currentUserService.TenantId!));
         if (productExists)
